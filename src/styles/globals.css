@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Google Fonts — Nunito */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+
+:root {
+  --color-primary:      #005653;
+  --color-primary-dark: #003d3a;
+  --color-primary-light:#00706c;
+  --color-green:        #059669;
+  --color-orange:       #d97706;
+  --color-red:          #dc2626;
+  --color-bg:           #ecfdf5;
+  --color-border:       #a7d4d0;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body { font-family: 'Nunito', sans-serif; background: var(--color-bg); }
+
+/* Scrollbar */
+::-webkit-scrollbar        { width: 5px; height: 5px; }
+::-webkit-scrollbar-thumb  { background: #a7d4d0; border-radius: 10px; }
+::-webkit-scrollbar-track  { background: transparent; }
+
+/* Animations */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.fade-up { animation: fadeUp 0.3s ease both; }
+.spin     { animation: spin 1s linear infinite; }
+
+/* Input global */
+.inp {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 7px;
+  font-size: 13px;
+  color: #002e2c;
+  background: #fff;
+  font-family: 'Nunito', sans-serif;
+  transition: border-color 0.15s;
+  outline: none;
+}
+.inp:focus { border-color: var(--color-primary); }
+
+/* Table row hover */
+.row-hover:hover { background: #ecfdf5 !important; }
