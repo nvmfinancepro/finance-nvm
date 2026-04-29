@@ -2369,30 +2369,18 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, onUpdateClie
  );
  }
 
- // ─────────────────────────────────────────────────────────────
- // BLOC PRÉVISIONNEL — à coller dans ClientSpace de NVMFinance.jsx
- // Juste avant la ligne :  return null;
- // Les hooks moisPrev/setMoisPrev et adjPrev/setAdjPrev doivent
- // être déclarés en haut de ClientSpace (déjà fait dans NVMFinance.jsx)
- // ─────────────────────────────────────────────────────────────
-
  if (view === "previsionnel") {
-   const N  = CUR_Y;     // 2026 — année en cours
-   const N1 = N-1;       // 2025 — base historique principale
-   const N2 = N-2;       // 2024
-   const N3 = N-3;       // 2023
-   const NF = N+1;       // 2027 — année future complète à projeter
+   const N  = CUR_Y;
+   const N1 = N-1;
+   const N2 = N-2;
+   const N3 = N-3;
+   const NF = N+1;
 
-   // moisPrev peut maintenant couvrir mai 2026 → déc 2027
-   // On encode : 0-11 = mois de N (jan→déc 2026), 12-23 = mois de NF (jan→déc 2027)
-   // moisPrev est un index global 0-23
-   const moisGlobal = moisPrev; // 0-23
-   const moisAnnee  = moisGlobal < 12 ? N : NF;   // 2026 ou 2027
-   const moisLocal  = moisGlobal % 12;             // 0-11
-   // adj est indexé par mois : { 0: {ca:2, sal:15}, 3: {taux_marge:1.5}, ... }
+   const moisGlobal = moisPrev;
+   const moisAnnee  = moisGlobal < 12 ? N : NF;
+   const mi = moisPrev;
    const adj = adjPrev;
-   const mi=moisPrev;  // déclaré ICI avant adjM qui en dépend
-   const adjM = adj[mi] || {};  // ajustements du mois sélectionné
+   const adjM = adj[mi] || {};
    const setAdjM = (id, val) => {
      const cur = adj[mi] || {};
      const newMonthAdj = {...cur, [id]: val};
@@ -2404,41 +2392,30 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, onUpdateClie
    const getAdjM = (id) => adjM[id] !== undefined ? parseFloat(adjM[id]) : 0;
    const hasAdjM = (id) => adjM[id] !== undefined && parseFloat(adjM[id]) !== 0;
 
-   // ── Lecture imports réels uniquement (pas de fallback kpis)
-   // getI(yr, mi, field) : lit les données importées pour l'année yr, mois mi
    const getI = (yr, mi, field) => {
      const key=`${yr}-${String(mi+1).padStart(2,"0")}`;
      const rv=(type)=>(client.imports||[]).filter(i=>i.type===type&&i.mois===key).flatMap(i=>i.rows);
      const vR=rv("ventes_produits"), cR=rv("charges"), sR=rv("salaires");
      if(field==="ca")     return vR.reduce((s,r)=>s+parseFloat(r.ca_ht||0),0);
      if(field==="marge")  return vR.reduce((s,r)=>s+parseFloat(r.marge_ht||0),0);
-     if(field==="chF")    return cR.filter(r=>r.type==="fixe")    .reduce((s,r)=>s+parseFloat(r.montant_ht||0),0);
+     if(field==="chF")    return cR.filter(r=>r.type==="fixe").reduce((s,r)=>s+parseFloat(r.montant_ht||0),0);
      if(field==="chV")    return cR.filter(r=>r.type==="variable").reduce((s,r)=>s+parseFloat(r.montant_ht||0),0);
      if(field==="chA")    return cR.filter(r=>!r.type||r.type==="autre").reduce((s,r)=>s+parseFloat(r.montant_ht||0),0);
      if(field==="sal")    return sR.reduce((s,r)=>s+parseFloat(r.salaire_brut||0)+parseFloat(r.cotisations_patronales||0),0);
      return 0;
    };
    const hasI=(yr,mi)=>(client.imports||[]).some(i=>i.mois===`${yr}-${String(mi+1).padStart(2,"0")}`&&["ventes_produits","charges","salaires"].includes(i.type));
-   // Pour 2027 : un mois est dispo seulement si le mois correspondant de 2026 est importé
-   const hasI27=(mi)=>hasI(N,mi); // 2027 basé sur réel 2026
 
-   // ── Taux de croissance
    const tx=(a,b)=>(a>0&&b>0)?Math.round(((b-a)/a*100)*10)/10:null;
-   // Taux de projection : tendance historique + ajustement mensuel
    const txProj=(v3,v2,v1,id)=>{
      const t1=tx(v2,v1), t2=tx(v3,v2);
      const base = t1!==null&&t2!==null ? Math.round((t2/3+t1*2/3)*10)/10 : (t1??t2??0);
      return hasAdjM(id) ? base+getAdjM(id) : base;
    };
 
-
-
-   // ── Historique par mois — base selon l'année affichée
-   // 2026 : base N1(2025) / N2(2024) / N3(2023)
-   // 2027 : base N(2026 réel) / N1(2025) / N2(2024)
-   const base1 = moisAnnee===N ? N1 : N;   // année de référence principale
-   const base2 = moisAnnee===N ? N2 : N1;  // année précédente
-   const base3 = moisAnnee===N ? N3 : N2;  // il y a 2 ans
+   const base1 = moisAnnee===N ? N1 : N;
+   const base2 = moisAnnee===N ? N2 : N1;
+   const base3 = moisAnnee===N ? N3 : N2;
 
    const v3ca=getI(base3,mi,"ca"),  v2ca=getI(base2,mi,"ca"),  v1ca=getI(base1,mi,"ca");
    const v3mg=getI(base3,mi,"marge"),v2mg=getI(base2,mi,"marge"),v1mg=getI(base1,mi,"marge");
@@ -2448,52 +2425,37 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, onUpdateClie
    const v3sal=getI(base3,mi,"sal"),v2sal=getI(base2,mi,"sal"),v1sal=getI(base1,mi,"sal");
    const v1ch=v1chF+v1chV+v1chA, v2ch=v2chF+v2chV+v2chA, v3ch=v3chF+v3chV+v3chA;
 
-   // ── Ratios annuels N1 (plus robuste que mensuel)
-   // Ratios annuels — base selon l'année projetée
-   const rBase1 = moisAnnee===N ? N1 : N;   // base principale pour ratios
+   const rBase1 = moisAnnee===N ? N1 : N;
    const rBase2 = moisAnnee===N ? N2 : N1;
    const annSum=(field)=>Array.from({length:12},(_,m2)=>getI(rBase1,m2,field)).reduce((s,v)=>s+v,0);
    const ann2Sum=(field)=>Array.from({length:12},(_,m2)=>getI(rBase2,m2,field)).reduce((s,v)=>s+v,0);
    const annCA1=annSum("ca"), annCA2=ann2Sum("ca");
-   // Taux de marge annuel N1 (base principale)
    const tauxMargeN1 = annCA1>0 ? Math.round(annSum("marge")/annCA1*1000)/10 : 60;
    const tauxMargeN2 = annCA2>0 ? Math.round(ann2Sum("marge")/annCA2*1000)/10 : tauxMargeN1;
-   // Ratio chV/CA annuel N1
    const ratioChVN1 = annCA1>0 ? Math.round(annSum("chV")/annCA1*1000)/10 : 0;
    const ratioChVN2 = annCA2>0 ? Math.round(ann2Sum("chV")/annCA2*1000)/10 : ratioChVN1;
 
-   // ── Valeurs ajustées (avec éventuel +/- du dirigeant)
    const txCA   = txProj(v3ca,v2ca,v1ca,"ca");
-   // Taux de marge : moyenne pondérée N1/N2 + ajustement éventuel
    const tauxMgBase = annCA2>0 ? Math.round((tauxMargeN2/3+tauxMargeN1*2/3)*10)/10 : tauxMargeN1;
    const tauxMgFinal = getAdjM("taux_marge")!==0 ? tauxMgBase+getAdjM("taux_marge") : tauxMgBase;
-   // Ratio chV : idem
    const ratioChVBase = annCA2>0 ? Math.round((ratioChVN2/3+ratioChVN1*2/3)*10)/10 : ratioChVN1;
    const ratioChVFinal = getAdjM("ratio_chv")!==0 ? ratioChVBase+getAdjM("ratio_chv") : ratioChVBase;
-   // Charges fixes : taux croissance + ajustement
    const txChF = txProj(v3chF,v2chF,v1chF,"chF");
-   // Autres charges : taux croissance + ajustement
    const txChA = txProj(v3chA,v2chA,v1chA,"chA");
-   // Salaires : taux croissance + ajustement
    const txSal = txProj(v3sal,v2sal,v1sal,"sal");
 
-   // ── Projections
    const projCA  = v1ca>0  ? Math.round(v1ca*(1+txCA/100))   : 0;
-   // Marge : taux du mois N1 si dispo, sinon taux annuel
    const tauxMgMois = v1ca>0 ? v1mg/v1ca*100 : tauxMgFinal;
    const tauxMgEff  = hasAdjM("taux_marge") ? tauxMgMois+getAdjM("taux_marge") : tauxMgMois;
-   const projMg  = projCA>0? Math.round(projCA*tauxMgEff/100) : 0;  // CA prévu × taux marge mois
+   const projMg  = projCA>0? Math.round(projCA*tauxMgEff/100) : 0;
    const projChF = v1chF>0 ? Math.round(v1chF*(1+txChF/100)) : 0;
-   // Charges variables : ratio du mois N1 si dispo (plus précis), sinon ratio annuel
-   // Si projCA augmente → projChV augmente proportionnellement (c'est la dépendance au CA)
    const ratioChVMois = v1ca>0 ? v1chV/v1ca*100 : ratioChVFinal;
    const ratioChVEff  = hasAdjM("ratio_chv") ? ratioChVMois+getAdjM("ratio_chv") : ratioChVMois;
-   const projChV = projCA>0? Math.round(projCA*ratioChVEff/100): 0;  // CA prévu × ratio mois
+   const projChV = projCA>0? Math.round(projCA*ratioChVEff/100): 0;
    const projChA = v1chA>0 ? Math.round(v1chA*(1+txChA/100)) : 0;
    const projCh  = projChF+projChV+projChA;
    const projSal = v1sal>0 ? Math.round(v1sal*(1+txSal/100)) : 0;
 
-   // ── Calculés depuis contrats (pas d'ajustement)
    const projAm = (client.investissements||[]).reduce((s,inv)=>{
      const debut=inv.dateMEP?new Date(inv.dateMEP):new Date(N1,0,1);
      const mDebut=debut.getFullYear()*12+debut.getMonth();
@@ -2513,7 +2475,6 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, onUpdateClie
    const projRbrt=projEbe-projAm;
    const projIS=Math.max(0,Math.round(projRbrt*isD.taux/100));
    const projResult=projRbrt-projIS;
-   // IS acomptes : base N-1
    const isN1Tot=isD.totalPrecedent||Array.from({length:12},(_,m2)=>{
      const mg=getI(N1,m2,"marge"),chF=getI(N1,m2,"chF"),chV=getI(N1,m2,"chV"),chA=getI(N1,m2,"chA"),sal=getI(N1,m2,"sal");
      const r=mg-chF-chV-chA-sal-projAm; return Math.max(0,Math.round(r*isD.taux/100));
@@ -2522,16 +2483,11 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, onUpdateClie
    const treso=client.tresorerie?.soldeInitial||client.kpis?.tresorerie||0;
    const fluxProj=Math.round(projCA*0.95-(projCh+projSal)*0.95-projRemb-acompteMens);
 
-   // ── Historiques résultats
    const v1ebe=v1mg-v1ch-v1sal, v1rbrt=v1ebe-projAm, v1is=Math.max(0,Math.round(v1rbrt*isD.taux/100)), v1res=v1rbrt-v1is;
    const v2ebe=v2mg-v2ch-v2sal, v2rbrt=v2ebe-projAm;
    const v3ebe=v3mg-v3ch-v3sal, v3rbrt=v3ebe-projAm;
    const calcNet=(mg,ch,sal)=>{const r=mg-ch-sal-projAm;return r-Math.max(0,Math.round(r*isD.taux/100));};
 
-   // ── KPIs annuels
-   // ── KPIs annuels — couvre les mois restants de N + toute l'année NF (N+1)
-   // Mois à projeter : de CUR_M (avril=3) à novembre de NF → index 0-23
-   // Taux global annuel N2→N1 (sur tous les mois ayant des données)
    const txGlobal = (field) => {
      let tot1=0, tot2=0;
      for(let m2=0;m2<12;m2++){ tot1+=getI(rBase1,m2,field); tot2+=getI(rBase2,m2,field); }
@@ -2542,13 +2498,12 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, onUpdateClie
    const txChA_ann = txGlobal("chA");
    const txSal_ann = txGlobal("sal");
 
-   // Mois à projeter : de CUR_M (mois courant) jusqu'à déc NF (index 0-23)
-   const moisDebut = CUR_M; // on part du mois courant
-   const allMoisProj = Array.from({length:24-moisDebut},(_,i)=>moisDebut+i); // ex: [3,4,...,23]
+   const moisDebut = CUR_M;
+   const allMoisProj = Array.from({length:24-moisDebut},(_,i)=>moisDebut+i);
 
    const annCA_proj = allMoisProj.reduce((s,g)=>{
      const mL=g%12, mA=g<12?N:NF;
-     const baseAnn=g<12?N1:N;  // 2026 basé N1, 2027 basé N réel
+     const baseAnn=g<12?N1:N;
      const b=getI(baseAnn,mL,"ca");
      const adjM2=adj[g]||{}, aM2=(id)=>adjM2[id]!==undefined?parseFloat(adjM2[id]):0;
      const txAdj = aM2("ca")!==0 ? txCA_ann+aM2("ca") : txCA_ann;
@@ -2590,18 +2545,15 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, onUpdateClie
      if(cumR>0&&seuilMois===null){seuilMois=mL; seuilAnnee=mA;}
    }
 
-   // ── Données réelles pour le mois affiché (N ou NF selon moisAnnee)
    const keyAff=`${moisAnnee}-${String(mi+1).padStart(2,"0")}`;
    const hasRN=(client.imports||[]).some(i=>i.mois===keyAff&&["ventes_produits","charges","salaires"].includes(i.type));
    const rNca=hasRN?getI(moisAnnee,mi,"ca"):null, rNmg=hasRN?getI(moisAnnee,mi,"marge"):null;
    const rNchF=hasRN?getI(moisAnnee,mi,"chF"):null, rNchV=hasRN?getI(moisAnnee,mi,"chV"):null;
    const rNchA=hasRN?getI(moisAnnee,mi,"chA"):null, rNsal=hasRN?getI(moisAnnee,mi,"sal"):null;
 
-   // ── Helpers render
    const fTx=tx=>tx===null?<span style={{fontSize:10,color:C.textLight}}>—</span>:<span style={{fontSize:11,fontWeight:700,color:tx>0?C.green:tx<0?C.red:C.textLight}}>{tx>0?"+":""}{tx.toFixed(1)}%</span>;
    const fRatio=r=><span style={{fontSize:11,fontWeight:700,color:C.primary}}>{r.toFixed(1)}% CA</span>;
 
-   // Bouton ajustement "+/-" par mois
    const AdjBtn=({id,unit="%",title})=>{
      const val = getAdjM(id);
      const isSet = hasAdjM(id);
@@ -2618,7 +2570,6 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, onUpdateClie
      );
    };
 
-   // Écarts : prévu N vs réel N1 (tendance attendue)
    const Ec=({v1,pN,inv=false})=>{
      if(!v1||!pN) return <><td style={cM}>—</td><td style={cM}>—</td></>;
      const e=pN-v1, p=v1!==0?Math.round(e/Math.abs(v1)*100):0;
@@ -2650,7 +2601,6 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, onUpdateClie
    const Fixe=()=><td style={cAu}><span style={{fontSize:10,color:"#185FA5",fontWeight:700}}>contrat</span></td>;
    const Calc=()=><td style={cAu}><span style={{fontSize:10,color:C.textLight}}>calculé</span></td>;
 
-   // Ligne historique + proj + ajust + écart
    const Row=({label,sub,v3,v2,v1,txDisp,adjId,adjUnit="%",adjTitle,projVal,reel,inv=false,isTot=false,isBlu=false,noAdj=false})=>(
      <tr style={isTot?{background:C.bg}:isBlu?{background:"#edf5ff"}:{}}>
        <td style={isTot?{...cL,fontWeight:800}:label.startsWith("→")?cSub:cL}>{label.replace("→","").trim()}{label.startsWith("→")&&<span style={{marginRight:4,color:C.textLight}}>→</span>}
@@ -2670,7 +2620,6 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, onUpdateClie
      <div style={{padding:24}} className="fade-up">
        <PageHeader title="Prévisionnel hybride" sub={`Projection ${N} · Marge et charges variables calculées depuis le CA prévu · Ajustement disponible pour chaque exception`} hidePicker/>
 
-       {/* KPIs */}
        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:16}}>
          <KpiCard label={`CA prévu ${N} (annuel)`} value={fmt(annCA_proj)} sub={`${txCA>0?"+":""}${txCA.toFixed(1)}% vs ${N1}`} color={C.primary}/>
          <KpiCard label={`Résultat net prévu ${N}`} value={fmt(annRes_proj)} sub="12 mois cumulés" color={annRes_proj>=0?C.green:C.red}/>
@@ -2678,7 +2627,6 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, onUpdateClie
          <KpiCard label="IS acompte mensuel" value={fmt(acompteMens)} sub={`Base IS ${N1} · taux ${isD.taux}%`} color={C.orange}/>
        </div>
 
-       {/* Encart logique */}
        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
          <div style={{padding:"10px 14px",background:C.bg,border:`1px solid ${C.green}33`,borderRadius:8,fontSize:12,color:C.textMid,lineHeight:1.7}}>
            <strong style={{color:C.primary}}>Logique automatique :</strong><br/>
@@ -2694,17 +2642,15 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, onUpdateClie
          </div>
        </div>
 
-       {/* Onglets mois — N puis NF */}
        {[{yr:N,label:`${N}`,offset:0},{yr:NF,label:`${NF}`,offset:12}].map(({yr,label,offset})=>(
          <div key={yr}>
            <div style={{fontSize:10,fontWeight:800,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.08em",margin:"10px 0 6px",paddingLeft:2}}>{label}</div>
            <div style={{display:"flex",gap:4,marginBottom:6,flexWrap:"wrap"}}>
              {MONTHS.map((m,i)=>{
                const g=offset+i;
-               const h = yr===N ? hasI(N1,i) : hasI(N,i);  // 2026: base N1 · 2027: base N réel
+               const h = yr===N ? hasI(N1,i) : hasI(N,i);
                const isActive=g===moisPrev;
                const isPast = yr===N && i<CUR_M;
-               // 2027 : verrouillé si données 2026 pas encore importées
                const isLocked = yr===NF && !hasI(N,i);
                const isDisabled = isPast || isLocked;
                return (
