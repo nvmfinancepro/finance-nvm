@@ -105,7 +105,6 @@ const INIT_CLIENTS = [
  { id:1, name:"Nexus Technologies", sector:"E-Commerce", color:C.primary, manager:"Sophie Laurent", since:"2022", status:"healthy",
  kpis:{ ca:58400, marge:24200, charges:11200, salaires:9800, ebe:3200, result:2800, tresorerie:44500 },
  alertes:[],
- previsionnel:{adjustments:{}},
  emprunts:[
  { id:1, libelle:"Prêt BPI Innovation", capital:45000, taux:0.35, duree:60, dateDebut:"2024-03-01", assurance:35 },
  { id:2, libelle:"Crédit-bail entrepôt", capital:28000, taux:0.42, duree:48, dateDebut:"2025-01-01", assurance:22 },
@@ -125,7 +124,6 @@ const INIT_CLIENTS = [
  { id:2, name:"Meridian Capital", sector:"Prestation de services", color:C.orange, manager:"Marc Dubois", since:"2021", status:"warning",
  kpis:{ ca:32100, marge:11200, charges:8400, salaires:5200, ebe:-2400, result:-3800, tresorerie:4200 },
  alertes:[ { level:"orange", kpi:"EBE négatif", current:"–2 400 €", threshold:"> 0 €", msg:"EBE négatif ce mois", action:"Réduire les charges variables et revoir les tarifs." } ],
- previsionnel:{adjustments:{ca:5,charges:-3}},
  emprunts:[ { id:1, libelle:"Prêt Banque Populaire", capital:30000, taux:0.42, duree:48, dateDebut:"2023-06-01", assurance:28 } ],
  investissements:[ { id:1, libelle:"Logiciel CRM", dateAchat:"2024-01-10", dateMEP:"2024-02-01", montantHT:8400, tauxTVA:20, duree:36 } ],
  tresorerie:{ soldeInitial:8000, ajustements:[] }, is:{ totalPrecedent:0, taux:15 },
@@ -225,7 +223,7 @@ const SectionHead = ({ title, sub, action }) => (
  {action&&<div style={{display:"flex",gap:8,alignItems:"center"}}>{action}</div>}
  </div>
 );
-const Th = ({ children, right }) => <th style={{padding:"10px 12px",textAlign:right?"right":"left",fontSize:11,color:C.textMid,fontWeight:800,textTransform:"uppercase",letterSpacing:"0.07em",whiteSpace:"nowrap",background:C.bg}}>{children}</th>;
+const Th = ({ children, right }) => <th style={{padding:"9px 12px",textAlign:right?"right":"left",fontSize:11,color:C.textMid,fontWeight:800,textTransform:"uppercase",letterSpacing:"0.07em",whiteSpace:"nowrap",background:C.bg}}>{children}</th>;
 const Td = ({ children, right, bold, color, mono }) => <td style={{padding:"10px 12px",textAlign:right?"right":"left",fontSize:13,fontWeight:bold?800:500,color:color||C.text,fontFamily:mono?"'Courier New',monospace":"inherit"}}>{children}</td>;
 const Tr = ({ children, style={} }) => <tr className="row-hover" style={{borderBottom:`1px solid ${C.borderLight}`,...style}}>{children}</tr>;
 const FormRow = ({ label, children }) => (
@@ -583,7 +581,6 @@ function ClientSidebar({ view, setView, onLogout, clientName, alertCount }) {
  {id:"dettes", icon:"<", label:"Mes dettes fournisseurs"},
  ]},
  { label:"MES FINANCES", items:[
- {id:"prévisionnel", icon:"📊", label:"Prévisionnel 12 mois"},
  {id:"resultat", icon:"", label:"Mon résultat"},
  {id:"is", icon:"", label:"Mon impôt (IS)"},
  {id:"tresorerie", icon:"", label:"Ma trésorerie"},
@@ -595,6 +592,7 @@ function ClientSidebar({ view, setView, onLogout, clientName, alertCount }) {
  ]},
  { label:"ANALYSE", items:[
  {id:"comparaison", icon:"↔", label:"Comparaison périodes"},
+     {id:"previsionnel", icon:"→", label:"Prévisionnel 2026"},
  ]},
  ];
  return (
@@ -2143,28 +2141,11 @@ function getPrevKpis(client, moisIdx, moisYear) {
  return calcMonthKpis(client, pm, py);
 }
 
-function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, onUpdateClient }) {
- // Prévisionnel
- const [forecastData, setForecastData] = useState({});
- const [editForecast, setEditForecast] = useState(false);
- const [adjustments, setAdjustments] = useState(client.previsionnel?.adjustments || {});
- const [viewMode, setViewMode] = useState('monthly'); // 'monthly' ou 'annual'
- const [selectedMonth, setSelectedMonth] = useState(0); // 0-11 pour Jan-Déc
- const [moisPrev, setMoisPrev] = useState(0); // 0-23 : mois global (0-11 pour N, 12-23 pour N+1)
- const [adjPrev, setAdjPrev] = useState(client.previsionnel?.adjustments || {}); // Ajustements par mois
-
- // Sauvegarde les ajustements dans le client
- const saveAdjustments = (newAdj) => {
- setAdjustments(newAdj);
- if (onUpdateClient) {
- onUpdateClient(client.id, {
- previsionnel: {
- adjustments: newAdj
- }
- });
- }
- };
-
+function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear }) {
+ const [moisPrev, setMoisPrev] = useState(CUR_M);
+ const [adjPrev, setAdjPrev] = useState(() => client.previsionnel?.adjustments || {});
+ const [periodeA, setPeriodeA] = useState("");
+ const [periodeB, setPeriodeB] = useState("");
  const kpis = calcMonthKpis(client, moisIdx, moisYear);
  const prevKpis = getPrevKpis(client, moisIdx, moisYear);
  const imports = client.imports||[];
@@ -2231,7 +2212,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, onUpdateClie
  </div>
  );
 
- // DASHBOARD
+ // DASHBOARD 
  if (view==="dashboard") return (
  <ClientDashboard client={client} isAdminPreview={false} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear}/>
  );
@@ -2293,47 +2274,71 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, onUpdateClie
  {detailAchats.length>0?(
  <Card style={{marginBottom:14}}>
  <SectionHead title="Détail par produit — coût vs marge" sub="Pour chaque produit : ce que vous payez vs ce que vous gagnez"/>
- <div style={{overflowX:"auto"}}>
- <div style={{display:"flex",flexDirection:"column",gap:0}}>
- {/* HEADER */}
- <div style={{display:"flex",gap:0,padding:"10px 12px",background:C.bg,borderBottom:`1px solid ${C.borderLight}`,fontWeight:800,fontSize:11,color:C.textMid,textTransform:"uppercase",letterSpacing:"0.07em"}}>
- <div style={{flex:2,textAlign:"left"}}>Produit</div>
- <div style={{flex:1,textAlign:"right"}}>Qté vendue</div>
- <div style={{flex:1.2,textAlign:"right"}}>CA HT</div>
- <div style={{flex:1.2,textAlign:"right"}}>Coût d'achat</div>
- <div style={{flex:1.2,textAlign:"right"}}>Marge</div>
- <div style={{flex:1,textAlign:"right"}}>Taux de marge</div>
- </div>
- {/* ROWS */}
- {detailAchats.sort((a,b)=>b.ca-a.ca).map((r,i)=>{
- const tx=r.ca>0?Math.round(r.marge/r.ca*100):0;
- return (
- <div key={i} style={{display:"flex",gap:0,padding:"10px 12px",borderBottom:`1px solid ${C.borderLight}`,fontSize:13,alignItems:"center"}}>
- <div style={{flex:2,fontWeight:800,color:C.text}}>{r.produit}</div>
- <div style={{flex:1,textAlign:"right",color:C.textMid}}>{r.qte}</div>
- <div style={{flex:1.2,textAlign:"right",fontFamily:"'Courier New',monospace"}}>{fmt(r.ca)}</div>
- <div style={{flex:1.2,textAlign:"right",fontFamily:"'Courier New',monospace",color:C.red}}>{fmt(r.cout)}</div>
- <div style={{flex:1.2,textAlign:"right",fontFamily:"'Courier New',monospace",color:C.green}}>{fmt(r.marge)}</div>
- <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"flex-end",gap:6}}>
- <div style={{width:40,height:6,borderRadius:3,background:C.borderLight,flexShrink:0}}>
- <div style={{height:"100%",width:`${Math.min(100,tx)}%`,background:tx>=40?C.green:tx>=25?C.orange:C.red,borderRadius:3}}/>
- </div>
- <span style={{fontSize:12,fontWeight:800,color:tx>=40?C.green:tx>=25?C.orange:C.red}}>{tx}%</span>
- </div>
- </div>
- );
- })}
- {/* TOTAL */}
- <div style={{display:"flex",gap:0,padding:"10px 12px",background:C.bg,borderTop:`1px solid ${C.borderLight}`,fontSize:13,fontWeight:800,alignItems:"center"}}>
- <div style={{flex:2,color:C.text}}>TOTAL</div>
- <div style={{flex:1,textAlign:"right",color:C.text}}>{detailAchats.reduce((s,r)=>s+r.qte,0)}</div>
- <div style={{flex:1.2,textAlign:"right",fontFamily:"'Courier New',monospace",color:C.text}}>{fmt(totalCa)}</div>
- <div style={{flex:1.2,textAlign:"right",fontFamily:"'Courier New',monospace",color:C.red}}>{fmt(totalCout)}</div>
- <div style={{flex:1.2,textAlign:"right",fontFamily:"'Courier New',monospace",color:C.green}}>{fmt(totalCa-totalCout)}</div>
- <div style={{flex:1,textAlign:"right",color:C.primary}}>{pct(totalCa>0?(totalCa-totalCout)/totalCa*100:0)}</div>
- </div>
- </div>
- </div>
+ {(()=>{
+   const cols=[
+     {label:"Produit",       flex:"2 0 0",   align:"left"},
+     {label:"Qté vendue",    flex:"1 0 0",   align:"right"},
+     {label:"CA HT",         flex:"1.2 0 0", align:"right"},
+     {label:"Coût d'achat",  flex:"1.2 0 0", align:"right"},
+     {label:"Marge",         flex:"1.2 0 0", align:"right"},
+     {label:"Taux de marge", flex:"1 0 0",   align:"right"},
+   ];
+   const cellStyle=(align,extra={})=>({
+     flex:cols[0].flex, // sera remplacé en ligne
+     padding:"11px 14px",
+     textAlign:align,
+     fontSize:13,
+     ...extra,
+   });
+   const Row=({vals,bg,bold})=>(
+     <div style={{display:"flex",alignItems:"center",background:bg||"white",borderBottom:"1px solid #e8f5f4"}}>
+       {vals.map((v,i)=>(
+         <div key={i} style={{flex:cols[i].flex,padding:"11px 14px",textAlign:cols[i].align,fontSize:13,fontWeight:bold?800:v.bold?700:400,...(v.style||{})}}>
+           {v.val}
+         </div>
+       ))}
+     </div>
+   );
+   const allRows=[...detailAchats].sort((a,b)=>b.ca-a.ca);
+   const totalQte=allRows.reduce((s,r)=>s+r.qte,0);
+   const txTotal=totalCa>0?Math.round((totalCa-totalCout)/totalCa*100):0;
+   return (
+     <div style={{borderRadius:"0 0 12px 12px",overflow:"hidden"}}>
+       {/* Header */}
+       <div style={{display:"flex",background:"#ecfdf5",borderBottom:"2px solid #a7d4d0"}}>
+         {cols.map((c,i)=>(
+           <div key={i} style={{flex:c.flex,padding:"10px 14px",textAlign:c.align,fontSize:11,fontWeight:800,color:"#6aaca8",textTransform:"uppercase",letterSpacing:"0.08em"}}>
+             {c.label}
+           </div>
+         ))}
+       </div>
+       {/* Lignes */}
+       {allRows.map((r,i)=>{
+         const tx=r.ca>0?Math.round(r.marge/r.ca*100):0;
+         const col=tx>=40?C.green:tx>=25?C.orange:C.red;
+         return (
+           <div key={i} style={{display:"flex",alignItems:"center",background:i%2===0?"white":"#f9fffe",borderBottom:"1px solid #e8f5f4"}}>
+             <div style={{flex:cols[0].flex,padding:"12px 14px",fontSize:13,fontWeight:700,color:"#002e2c"}}>{r.produit}</div>
+             <div style={{flex:cols[1].flex,padding:"12px 14px",textAlign:"right",fontSize:13,color:"#6aaca8"}}>{r.qte}</div>
+             <div style={{flex:cols[2].flex,padding:"12px 14px",textAlign:"right",fontFamily:"monospace",fontSize:13}}>{fmt(r.ca)}</div>
+             <div style={{flex:cols[3].flex,padding:"12px 14px",textAlign:"right",fontFamily:"monospace",fontSize:13,color:C.red}}>{fmt(r.cout)}</div>
+             <div style={{flex:cols[4].flex,padding:"12px 14px",textAlign:"right",fontFamily:"monospace",fontSize:13,color:C.green}}>{fmt(r.marge)}</div>
+             <div style={{flex:cols[5].flex,padding:"12px 14px",textAlign:"right",fontSize:13,fontWeight:800,color:col}}>{tx}%</div>
+           </div>
+         );
+       })}
+       {/* Total */}
+       <div style={{display:"flex",alignItems:"center",background:"#ecfdf5",borderTop:"2px solid #a7d4d0"}}>
+         <div style={{flex:cols[0].flex,padding:"12px 14px",fontSize:13,fontWeight:900,color:"#002e2c"}}>TOTAL</div>
+         <div style={{flex:cols[1].flex,padding:"12px 14px",textAlign:"right",fontSize:13,fontWeight:900}}>{totalQte}</div>
+         <div style={{flex:cols[2].flex,padding:"12px 14px",textAlign:"right",fontFamily:"monospace",fontSize:13,fontWeight:900}}>{fmt(totalCa)}</div>
+         <div style={{flex:cols[3].flex,padding:"12px 14px",textAlign:"right",fontFamily:"monospace",fontSize:13,fontWeight:900,color:C.red}}>{fmt(totalCout)}</div>
+         <div style={{flex:cols[4].flex,padding:"12px 14px",textAlign:"right",fontFamily:"monospace",fontSize:13,fontWeight:900,color:C.green}}>{fmt(totalCa-totalCout)}</div>
+         <div style={{flex:cols[5].flex,padding:"12px 14px",textAlign:"right",fontSize:13,fontWeight:900,color:txTotal>=40?C.green:txTotal>=25?C.orange:C.red}}>{txTotal}%</div>
+       </div>
+     </div>
+   );
+ })()}
  </Card>
  ):(
  <div style={{background:"#fffbeb",border:`1px solid ${C.orange}33`,borderRadius:10,padding:"24px",marginBottom:14}}>
@@ -2369,534 +2374,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, onUpdateClie
  );
  }
 
- if (view === "previsionnel") {
-   const N  = CUR_Y;
-   const N1 = N-1;
-   const N2 = N-2;
-   const N3 = N-3;
-   const NF = N+1;
-
-   const moisGlobal = moisPrev;
-   const moisAnnee  = moisGlobal < 12 ? N : NF;
-   const mi = moisPrev;
-   const adj = adjPrev;
-   const adjM = adj[mi] || {};
-   const setAdjM = (id, val) => {
-     const cur = adj[mi] || {};
-     const newMonthAdj = {...cur, [id]: val};
-     const na = {...adj, [mi]: newMonthAdj};
-     setAdjPrev(na);
-     if(!client.previsionnel) client.previsionnel={};
-     client.previsionnel.adjustments = na;
-   };
-   const getAdjM = (id) => adjM[id] !== undefined ? parseFloat(adjM[id]) : 0;
-   const hasAdjM = (id) => adjM[id] !== undefined && parseFloat(adjM[id]) !== 0;
-
-   const getI = (yr, mi, field) => {
-     const key=`${yr}-${String(mi+1).padStart(2,"0")}`;
-     const rv=(type)=>(client.imports||[]).filter(i=>i.type===type&&i.mois===key).flatMap(i=>i.rows);
-     const vR=rv("ventes_produits"), cR=rv("charges"), sR=rv("salaires");
-     if(field==="ca")     return vR.reduce((s,r)=>s+parseFloat(r.ca_ht||0),0);
-     if(field==="marge")  return vR.reduce((s,r)=>s+parseFloat(r.marge_ht||0),0);
-     if(field==="chF")    return cR.filter(r=>r.type==="fixe").reduce((s,r)=>s+parseFloat(r.montant_ht||0),0);
-     if(field==="chV")    return cR.filter(r=>r.type==="variable").reduce((s,r)=>s+parseFloat(r.montant_ht||0),0);
-     if(field==="chA")    return cR.filter(r=>!r.type||r.type==="autre").reduce((s,r)=>s+parseFloat(r.montant_ht||0),0);
-     if(field==="sal")    return sR.reduce((s,r)=>s+parseFloat(r.salaire_brut||0)+parseFloat(r.cotisations_patronales||0),0);
-     return 0;
-   };
-   const hasI=(yr,mi)=>(client.imports||[]).some(i=>i.mois===`${yr}-${String(mi+1).padStart(2,"0")}`&&["ventes_produits","charges","salaires"].includes(i.type));
-
-   const tx=(a,b)=>(a>0&&b>0)?Math.round(((b-a)/a*100)*10)/10:null;
-   const txProj=(v3,v2,v1,id)=>{
-     const t1=tx(v2,v1), t2=tx(v3,v2);
-     const base = t1!==null&&t2!==null ? Math.round((t2/3+t1*2/3)*10)/10 : (t1??t2??0);
-     return hasAdjM(id) ? base+getAdjM(id) : base;
-   };
-
-   const base1 = moisAnnee===N ? N1 : N;
-   const base2 = moisAnnee===N ? N2 : N1;
-   const base3 = moisAnnee===N ? N3 : N2;
-
-   const v3ca=getI(base3,mi,"ca"),  v2ca=getI(base2,mi,"ca"),  v1ca=getI(base1,mi,"ca");
-   const v3mg=getI(base3,mi,"marge"),v2mg=getI(base2,mi,"marge"),v1mg=getI(base1,mi,"marge");
-   const v3chF=getI(base3,mi,"chF"),v2chF=getI(base2,mi,"chF"),v1chF=getI(base1,mi,"chF");
-   const v3chV=getI(base3,mi,"chV"),v2chV=getI(base2,mi,"chV"),v1chV=getI(base1,mi,"chV");
-   const v3chA=getI(base3,mi,"chA"),v2chA=getI(base2,mi,"chA"),v1chA=getI(base1,mi,"chA");
-   const v3sal=getI(base3,mi,"sal"),v2sal=getI(base2,mi,"sal"),v1sal=getI(base1,mi,"sal");
-   const v1ch=v1chF+v1chV+v1chA, v2ch=v2chF+v2chV+v2chA, v3ch=v3chF+v3chV+v3chA;
-
-   const rBase1 = moisAnnee===N ? N1 : N;
-   const rBase2 = moisAnnee===N ? N2 : N1;
-   const annSum=(field)=>Array.from({length:12},(_,m2)=>getI(rBase1,m2,field)).reduce((s,v)=>s+v,0);
-   const ann2Sum=(field)=>Array.from({length:12},(_,m2)=>getI(rBase2,m2,field)).reduce((s,v)=>s+v,0);
-   const annCA1=annSum("ca"), annCA2=ann2Sum("ca");
-   const tauxMargeN1 = annCA1>0 ? Math.round(annSum("marge")/annCA1*1000)/10 : 60;
-   const tauxMargeN2 = annCA2>0 ? Math.round(ann2Sum("marge")/annCA2*1000)/10 : tauxMargeN1;
-   const ratioChVN1 = annCA1>0 ? Math.round(annSum("chV")/annCA1*1000)/10 : 0;
-   const ratioChVN2 = annCA2>0 ? Math.round(ann2Sum("chV")/annCA2*1000)/10 : ratioChVN1;
-
-   const txCA   = txProj(v3ca,v2ca,v1ca,"ca");
-   const tauxMgBase = annCA2>0 ? Math.round((tauxMargeN2/3+tauxMargeN1*2/3)*10)/10 : tauxMargeN1;
-   const tauxMgFinal = getAdjM("taux_marge")!==0 ? tauxMgBase+getAdjM("taux_marge") : tauxMgBase;
-   const ratioChVBase = annCA2>0 ? Math.round((ratioChVN2/3+ratioChVN1*2/3)*10)/10 : ratioChVN1;
-   const ratioChVFinal = getAdjM("ratio_chv")!==0 ? ratioChVBase+getAdjM("ratio_chv") : ratioChVBase;
-   const txChF = txProj(v3chF,v2chF,v1chF,"chF");
-   const txChA = txProj(v3chA,v2chA,v1chA,"chA");
-   const txSal = txProj(v3sal,v2sal,v1sal,"sal");
-
-   const projCA  = v1ca>0  ? Math.round(v1ca*(1+txCA/100))   : 0;
-   const tauxMgMois = v1ca>0 ? v1mg/v1ca*100 : tauxMgFinal;
-   const tauxMgEff  = hasAdjM("taux_marge") ? tauxMgMois+getAdjM("taux_marge") : tauxMgMois;
-   const projMg  = projCA>0? Math.round(projCA*tauxMgEff/100) : 0;
-   const projChF = v1chF>0 ? Math.round(v1chF*(1+txChF/100)) : 0;
-   const ratioChVMois = v1ca>0 ? v1chV/v1ca*100 : ratioChVFinal;
-   const ratioChVEff  = hasAdjM("ratio_chv") ? ratioChVMois+getAdjM("ratio_chv") : ratioChVMois;
-   const projChV = projCA>0? Math.round(projCA*ratioChVEff/100): 0;
-   const projChA = v1chA>0 ? Math.round(v1chA*(1+txChA/100)) : 0;
-   const projCh  = projChF+projChV+projChA;
-   const projSal = v1sal>0 ? Math.round(v1sal*(1+txSal/100)) : 0;
-
-   const projAm = (client.investissements||[]).reduce((s,inv)=>{
-     const debut=inv.dateMEP?new Date(inv.dateMEP):new Date(N1,0,1);
-     const mDebut=debut.getFullYear()*12+debut.getMonth();
-     const mActuel=N*12+mi;
-     if(mActuel<mDebut||mActuel>=mDebut+(inv.duree||36)) return s;
-     return s+Math.round(inv.montantHT/(inv.duree||36));
-   },0);
-   const projRemb=(client.emprunts||[]).reduce((s,e)=>{
-     const debut=e.dateDebut?new Date(e.dateDebut):new Date(N1,0,1);
-     const mDebut=debut.getFullYear()*12+debut.getMonth();
-     const mActuel=N*12+mi;
-     if(mActuel<mDebut||mActuel>=mDebut+e.duree) return s;
-     return s+Math.round(e.capital*(e.taux/100)/(1-Math.pow(1+e.taux/100,-e.duree))+e.assurance);
-   },0);
-   const isD=client.is||{taux:15,totalPrecedent:0};
-   const projEbe=projMg-projCh-projSal;
-   const projRbrt=projEbe-projAm;
-   const projIS=Math.max(0,Math.round(projRbrt*isD.taux/100));
-   const projResult=projRbrt-projIS;
-   const isN1Tot=isD.totalPrecedent||Array.from({length:12},(_,m2)=>{
-     const mg=getI(N1,m2,"marge"),chF=getI(N1,m2,"chF"),chV=getI(N1,m2,"chV"),chA=getI(N1,m2,"chA"),sal=getI(N1,m2,"sal");
-     const r=mg-chF-chV-chA-sal-projAm; return Math.max(0,Math.round(r*isD.taux/100));
-   }).reduce((s,v)=>s+v,0);
-   const acompteMens=Math.round(isN1Tot/12);
-   const treso=client.tresorerie?.soldeInitial||client.kpis?.tresorerie||0;
-   const fluxProj=Math.round(projCA*0.95-(projCh+projSal)*0.95-projRemb-acompteMens);
-
-   const v1ebe=v1mg-v1ch-v1sal, v1rbrt=v1ebe-projAm, v1is=Math.max(0,Math.round(v1rbrt*isD.taux/100)), v1res=v1rbrt-v1is;
-   const v2ebe=v2mg-v2ch-v2sal, v2rbrt=v2ebe-projAm;
-   const v3ebe=v3mg-v3ch-v3sal, v3rbrt=v3ebe-projAm;
-   const calcNet=(mg,ch,sal)=>{const r=mg-ch-sal-projAm;return r-Math.max(0,Math.round(r*isD.taux/100));};
-
-   const txGlobal = (field) => {
-     let tot1=0, tot2=0;
-     for(let m2=0;m2<12;m2++){ tot1+=getI(rBase1,m2,field); tot2+=getI(rBase2,m2,field); }
-     return (tot1>0&&tot2>0) ? Math.round(((tot1-tot2)/tot2*100)*10)/10 : 0;
-   };
-   const txCA_ann  = txGlobal("ca");
-   const txChF_ann = txGlobal("chF");
-   const txChA_ann = txGlobal("chA");
-   const txSal_ann = txGlobal("sal");
-
-   const moisDebut = CUR_M;
-   const allMoisProj = Array.from({length:24-moisDebut},(_,i)=>moisDebut+i);
-
-   const annCA_proj = allMoisProj.reduce((s,g)=>{
-     const mL=g%12, mA=g<12?N:NF;
-     const baseAnn=g<12?N1:N;
-     const b=getI(baseAnn,mL,"ca");
-     const adjM2=adj[g]||{}, aM2=(id)=>adjM2[id]!==undefined?parseFloat(adjM2[id]):0;
-     const txAdj = aM2("ca")!==0 ? txCA_ann+aM2("ca") : txCA_ann;
-     return s+(b>0?Math.round(b*(1+txAdj/100)):0);
-   },0);
-
-   const annRes_proj = allMoisProj.reduce((s,g)=>{
-     const mL=g%12, baseAnnR=g<12?N1:N;
-     const ca=getI(baseAnnR,mL,"ca"); if(ca===0) return s;
-     const adjM2=adj[g]||{}, aM2=(id)=>adjM2[id]!==undefined?parseFloat(adjM2[id]):0;
-     const txCaAdj = aM2("ca")!==0 ? txCA_ann+aM2("ca") : txCA_ann;
-     const pCa=Math.round(ca*(1+txCaAdj/100));
-     const mg1=getI(baseAnnR,mL,"marge"), ca1=getI(baseAnnR,mL,"ca");
-     const txMgM = ca1>0 ? mg1/ca1*100 : tauxMgBase;
-     const txMgM2 = aM2("taux_marge")!==0 ? txMgM+aM2("taux_marge") : txMgM;
-     const pMg=Math.round(pCa*txMgM2/100);
-     const pChF=Math.round(getI(baseAnnR,mL,"chF")*(1+(aM2("chF")!==0?txChF_ann+aM2("chF"):txChF_ann)/100));
-     const chV1=getI(baseAnnR,mL,"chV");
-     const rChVM = ca1>0 ? chV1/ca1*100 : ratioChVBase;
-     const rChVM2 = aM2("ratio_chv")!==0 ? rChVM+aM2("ratio_chv") : rChVM;
-     const pChV=Math.round(pCa*rChVM2/100);
-     const pChA=Math.round(getI(baseAnnR,mL,"chA")*(1+(aM2("chA")!==0?txChA_ann+aM2("chA"):txChA_ann)/100));
-     const pSal=Math.round(getI(baseAnnR,mL,"sal")*(1+(aM2("sal")!==0?txSal_ann+aM2("sal"):txSal_ann)/100));
-     const r=pMg-pChF-pChV-pChA-pSal-projAm;
-     return s+(r-Math.max(0,Math.round(r*isD.taux/100)));
-   },0);
-
-   let seuilMois=null, seuilAnnee=null, cumR=0;
-   for(const g of allMoisProj){
-     const mL=g%12, mA=g<12?N:NF;
-     const ca=getI(N1,mL,"ca"); if(ca===0) continue;
-     const adjM2=adj[g]||{}, aM2=(id)=>adjM2[id]!==undefined?parseFloat(adjM2[id]):0;
-     const pCa=Math.round(ca*(1+(aM2("ca")!==0?txCA_ann+aM2("ca"):txCA_ann)/100));
-     const _ca1=ca,_mg1=getI(N1,mL,"marge"),_chV1=getI(N1,mL,"chV");
-     const _txMg=_ca1>0?_mg1/_ca1*100:tauxMgBase, _txMgF=aM2("taux_marge")!==0?_txMg+aM2("taux_marge"):_txMg;
-     const _rChV=_ca1>0?_chV1/_ca1*100:ratioChVBase, _rChVF=aM2("ratio_chv")!==0?_rChV+aM2("ratio_chv"):_rChV;
-     const r=Math.round(pCa*_txMgF/100)-Math.round(getI(N1,mL,"chF")*(1+(aM2("chF")!==0?txChF_ann+aM2("chF"):txChF_ann)/100))-Math.round(pCa*_rChVF/100)-Math.round(getI(N1,mL,"chA")*(1+(aM2("chA")!==0?txChA_ann+aM2("chA"):txChA_ann)/100))-Math.round(getI(N1,mL,"sal")*(1+(aM2("sal")!==0?txSal_ann+aM2("sal"):txSal_ann)/100))-projAm;
-     cumR+=r-Math.max(0,Math.round(r*isD.taux/100));
-     if(cumR>0&&seuilMois===null){seuilMois=mL; seuilAnnee=mA;}
-   }
-
-   const keyAff=`${moisAnnee}-${String(mi+1).padStart(2,"0")}`;
-   const hasRN=(client.imports||[]).some(i=>i.mois===keyAff&&["ventes_produits","charges","salaires"].includes(i.type));
-   const rNca=hasRN?getI(moisAnnee,mi,"ca"):null, rNmg=hasRN?getI(moisAnnee,mi,"marge"):null;
-   const rNchF=hasRN?getI(moisAnnee,mi,"chF"):null, rNchV=hasRN?getI(moisAnnee,mi,"chV"):null;
-   const rNchA=hasRN?getI(moisAnnee,mi,"chA"):null, rNsal=hasRN?getI(moisAnnee,mi,"sal"):null;
-
-   const fTx=tx=>tx===null?<span style={{fontSize:10,color:C.textLight}}>—</span>:<span style={{fontSize:11,fontWeight:700,color:tx>0?C.green:tx<0?C.red:C.textLight}}>{tx>0?"+":""}{tx.toFixed(1)}%</span>;
-   const fRatio=r=><span style={{fontSize:11,fontWeight:700,color:C.primary}}>{r.toFixed(1)}% CA</span>;
-
-   const AdjBtn=({id,unit="%",title})=>{
-     const val = getAdjM(id);
-     const isSet = hasAdjM(id);
-     return (
-       <div style={{display:"flex",alignItems:"center",gap:3}}>
-         <input type="number" step="0.1" value={val===0?"":val}
-           onChange={e=>{const p=parseFloat(e.target.value)||0; setAdjM(id,p);}}
-           placeholder="0" title={`${title||"Ajustement"} — spécifique au mois ${MONTHS[mi]}`}
-           style={{width:46,fontSize:11,padding:"2px 4px",textAlign:"right",fontFamily:"'Nunito',sans-serif",fontWeight:isSet?700:400,
-             border:`1px solid ${isSet?"#1D9E75":C.border}`,borderRadius:4,
-             background:isSet?"#E1F5EE":"white",color:isSet?"#085041":C.text}}/>
-         <span style={{fontSize:10,color:C.textLight}}>{unit}</span>
-       </div>
-     );
-   };
-
-   const Ec=({v1,pN,inv=false})=>{
-     if(!v1||!pN) return <><td style={cM}>—</td><td style={cM}>—</td></>;
-     const e=pN-v1, p=v1!==0?Math.round(e/Math.abs(v1)*100):0;
-     const bon=inv?e<=0:e>=0;
-     const col=Math.abs(p)>20?C.red:Math.abs(p)>10?C.orange:C.green;
-     return <>
-       <td style={{padding:"7px 9px",fontSize:11,fontWeight:700,textAlign:"right",color:bon?col:C.red}}>{e>=0?"+":""}{fmt(e)}</td>
-       <td style={{padding:"7px 9px",fontSize:11,fontWeight:700,textAlign:"right",color:bon?col:C.red}}>{p>=0?"+":""}{p}%</td>
-     </>;
-   };
-
-   const cH={padding:"7px 9px",fontSize:9,fontWeight:800,color:"white",textAlign:"right",whiteSpace:"nowrap",background:"#005653",letterSpacing:"0.04em"};
-   const cHL={...cH,textAlign:"left"};
-   const cHp={...cH,background:"#185FA5"};
-   const cHe={...cH,background:hasRN?"#0F6E56":"#555"};
-   const cM={padding:"7px 9px",fontSize:11,color:C.textLight,textAlign:"right",fontFamily:"'Courier New',monospace"};
-   const cR={padding:"7px 9px",fontSize:11,color:C.text,fontWeight:500,textAlign:"right",fontFamily:"'Courier New',monospace"};
-   const cP={padding:"7px 9px",fontSize:12,color:"#185FA5",fontWeight:800,textAlign:"right",fontFamily:"'Courier New',monospace"};
-   const cT={padding:"7px 9px",textAlign:"right"};
-   const cL={padding:"7px 9px",fontSize:12,fontWeight:700,color:C.text};
-   const cSub={padding:"6px 9px 6px 22px",fontSize:11,color:C.textMid};
-   const cAdj={padding:"4px 6px",textAlign:"center"};
-   const cAu={padding:"7px 9px",textAlign:"center"};
-   const cSep={background:C.bg,fontSize:10,fontWeight:800,color:C.textMid,textTransform:"uppercase",letterSpacing:"0.08em",padding:"5px 9px",borderTop:`1px solid ${C.border}`,borderBottom:`1px solid ${C.border}`,textAlign:"left"};
-   const cTot={background:C.bg};
-   const cBlu={background:"#edf5ff"};
-   const Sep=({t})=><tr><td colSpan={10} style={cSep}>{t}</td></tr>;
-   const Auto=()=><td style={cAu}><span style={{fontSize:10,color:"#1D9E75",fontWeight:700}}>auto</span></td>;
-   const Fixe=()=><td style={cAu}><span style={{fontSize:10,color:"#185FA5",fontWeight:700}}>contrat</span></td>;
-   const Calc=()=><td style={cAu}><span style={{fontSize:10,color:C.textLight}}>calculé</span></td>;
-
-   const Row=({label,sub,v3,v2,v1,txDisp,adjId,adjUnit="%",adjTitle,projVal,reel,inv=false,isTot=false,isBlu=false,noAdj=false})=>(
-     <tr style={isTot?{background:C.bg}:isBlu?{background:"#edf5ff"}:{}}>
-       <td style={isTot?{...cL,fontWeight:800}:label.startsWith("→")?cSub:cL}>{label.replace("→","").trim()}{label.startsWith("→")&&<span style={{marginRight:4,color:C.textLight}}>→</span>}
-         {sub&&<span style={{fontSize:9,display:"block",color:C.textLight,fontWeight:400}}>{sub}</span>}
-       </td>
-       <td style={cM}>{v3>0?fmt(v3):"—"}</td>
-       <td style={cM}>{v2>0?fmt(v2):"—"}</td>
-       <td style={cR}>{v1>0?fmt(v1):"—"}</td>
-       <td style={cT}>{txDisp}</td>
-       {noAdj?<Calc/>:<td style={cAdj}><AdjBtn id={adjId} unit={adjUnit} title={adjTitle}/></td>}
-       <td style={isTot?{...cP,fontSize:14}:cP}>{projVal>0||projVal<0?fmt(projVal):"—"}</td>
-       <Ec v1={v1} pN={projVal} inv={inv}/>
-     </tr>
-   );
-
-   return (
-     <div style={{padding:24}} className="fade-up">
-       <PageHeader title="Prévisionnel hybride" sub={`Projection ${N} · Marge et charges variables calculées depuis le CA prévu · Ajustement disponible pour chaque exception`} hidePicker/>
-
-       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:16}}>
-         <KpiCard label={`CA prévu ${N} (annuel)`} value={fmt(annCA_proj)} sub={`${txCA>0?"+":""}${txCA.toFixed(1)}% vs ${N1}`} color={C.primary}/>
-         <KpiCard label={`Résultat net prévu ${N}`} value={fmt(annRes_proj)} sub="12 mois cumulés" color={annRes_proj>=0?C.green:C.red}/>
-         <KpiCard label="Seuil de rentabilité" value={seuilMois!==null?`Mois ${seuilMois+1}`:"Non atteint"} sub={seuilMois!==null?MONTHS[seuilMois]+" "+seuilAnnee:""} color={seuilMois!==null?C.green:C.red}/>
-         <KpiCard label="IS acompte mensuel" value={fmt(acompteMens)} sub={`Base IS ${N1} · taux ${isD.taux}%`} color={C.orange}/>
-       </div>
-
-       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
-         <div style={{padding:"10px 14px",background:C.bg,border:`1px solid ${C.green}33`,borderRadius:8,fontSize:12,color:C.textMid,lineHeight:1.7}}>
-           <strong style={{color:C.primary}}>Logique automatique :</strong><br/>
-           Marge brute = CA prévu × <strong>{tauxMgFinal.toFixed(1)}%</strong> (taux historique {N1})<br/>
-           Charges variables = CA prévu × <strong>{ratioChVFinal.toFixed(1)}%</strong> (ratio historique {N1})<br/>
-           Emprunts, amortissements, IS → calculés depuis les contrats
-         </div>
-         <div style={{padding:"10px 14px",background:"#fffbeb",border:`1px solid ${C.orange}33`,borderRadius:8,fontSize:12,color:C.textMid,lineHeight:1.7}}>
-           <strong style={{color:C.orange}}>Colonne Ajust. :</strong> entrez un <strong>+/-</strong> pour les exceptions.<br/>
-           Ex : taux marge +2% si négociation fournisseur prévue<br/>
-           Ex : salaires +15% si recrutement planifié
-           {hasRN&&<><br/><span style={{color:C.green,fontWeight:700}}>Données réelles {N} détectées — écarts actifs</span></>}
-         </div>
-       </div>
-
-       {[{yr:N,label:`${N}`,offset:0},{yr:NF,label:`${NF}`,offset:12}].map(({yr,label,offset})=>(
-         <div key={yr}>
-           <div style={{fontSize:10,fontWeight:800,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.08em",margin:"10px 0 6px",paddingLeft:2}}>{label}</div>
-           <div style={{display:"flex",gap:4,marginBottom:6,flexWrap:"wrap"}}>
-             {MONTHS.map((m,i)=>{
-               const g=offset+i;
-               const h = yr===N ? hasI(N1,i) : hasI(N,i);
-               const isActive=g===moisPrev;
-               const isPast = yr===N && i<CUR_M;
-               const isLocked = yr===NF && !hasI(N,i);
-               const isDisabled = isPast || isLocked;
-               return (
-                 <button key={g}
-                   onClick={()=>{ if(!isDisabled) setMoisPrev(g); }}
-                   title={isLocked?`Données ${N} non importées pour ${m} — importez d'abord le réel ${N}`:""}
-                   style={{
-                     padding:"4px 10px",fontSize:11,cursor:isDisabled?"not-allowed":"pointer",
-                     fontFamily:"'Nunito',sans-serif",fontWeight:isActive?800:400,borderRadius:20,
-                     opacity:isDisabled?0.3:1,
-                     border:`1px solid ${isActive?C.primary:isLocked?"#ccc":h?C.green+"55":C.border}`,
-                     background:isActive?C.primary:"white",
-                     color:isActive?"white":isLocked?"#aaa":h?C.green:C.textLight}}>
-                   {m}{h&&!isDisabled?" ●":""}{isLocked?" 🔒":""}
-                 </button>
-               );
-             })}
-           </div>
-         </div>
-       ))}
-
-       <Card>
-         <SectionHead title={`${MONTHS[mi]} ${moisAnnee} — Prévisionnel détaillé`}
-           sub="Ajust. = correction exceptionnelle en +/- (ex: +2% taux marge, +15% salaires) · Écarts = prévu N vs réel N-1"/>
-         <div style={{overflowX:"auto"}}>
-           <table style={{width:"100%",borderCollapse:"collapse"}}>
-             <thead><tr>
-               <th style={{...cHL,width:"22%"}}>Ligne</th>
-               <th style={cH}>{N3}</th>
-               <th style={cH}>{N2}</th>
-               <th style={cH}>{N1} réel</th>
-               <th style={cH}>Tx {N2}→{N1} / Ratio</th>
-               <th style={{...cH,background:"#003d3a"}}>Ajust. +/-</th>
-               <th style={cHp}>{moisAnnee} prévu</th>
-               <th style={cHe}>Écart €</th>
-               <th style={cHe}>Écart %</th>
-             </tr></thead>
-             <tbody>
-
-               <Sep t="Encaissements"/>
-               <tr>
-                 <td style={cL}><strong>CA HT</strong>
-                   <span style={{fontSize:9,display:"block",color:C.textLight,fontWeight:400}}>base de tous les calculs auto</span>
-                 </td>
-                 <td style={cM}>{v3ca>0?fmt(v3ca):"—"}</td>
-                 <td style={cM}>{v2ca>0?fmt(v2ca):"—"}</td>
-                 <td style={cR}>{v1ca>0?fmt(v1ca):"—"}</td>
-                 <td style={cT}>{fTx(tx(v2ca,v1ca))}</td>
-                 <td style={cAdj}><AdjBtn id="ca" title={`Ajustement du taux de croissance CA (défaut: ${txCA>0?"+":""}${txCA.toFixed(1)}%) — entrez l'écart en +/-`}/></td>
-                 <td style={cP}>{projCA>0?fmt(projCA):"—"}</td>
-                 <Ec v1={v1ca} pN={projCA}/>
-               </tr>
-               <tr style={{background:"#f0fbf7"}}>
-                 <td style={cSub}>→ Marge brute
-                   <span style={{fontSize:9,display:"block",color:"#1D9E75",fontWeight:600}}>= CA prévu × {tauxMgFinal.toFixed(1)}% (taux marge historique)</span>
-                 </td>
-                 <td style={cM}>{v3mg>0?fmt(v3mg):"—"}</td>
-                 <td style={cM}>{v2mg>0?fmt(v2mg):"—"}</td>
-                 <td style={cR}>{v1mg>0?fmt(v1mg):"—"}</td>
-                 <td style={cT}>{fTx(tx(v2mg,v1mg))}</td>
-                 <td style={cAdj}><AdjBtn id="taux_marge" title="Ajustement du taux de marge en +/- points (ex: +2 si négociation fournisseur)"/></td>
-                 <td style={{...cP,color:"#1D9E75"}}>{projMg>0?fmt(projMg):"—"}</td>
-                 <Ec v1={v1mg} pN={projMg}/>
-               </tr>
-
-               <Sep t="Décaissements"/>
-               <tr>
-                 <td style={cL}>Charges fixes
-                   <span style={{fontSize:9,display:"block",color:C.textLight,fontWeight:400}}>loyer, assurances, abonnements — tendance historique</span>
-                 </td>
-                 <td style={cM}>{v3chF>0?fmt(v3chF):"—"}</td>
-                 <td style={cM}>{v2chF>0?fmt(v2chF):"—"}</td>
-                 <td style={cR}>{v1chF>0?fmt(v1chF):"—"}</td>
-                 <td style={cT}>{fTx(tx(v2chF,v1chF))}</td>
-                 <td style={cAdj}><AdjBtn id="chF" title="Ajustement en +/- % (ex: +3 si renouvellement bail)"/></td>
-                 <td style={cP}>{projChF>0?fmt(projChF):"—"}</td>
-                 <Ec v1={v1chF} pN={projChF} inv/>
-               </tr>
-               <tr style={{background:"#f0fbf7"}}>
-                 <td style={cL}>Charges variables
-                   <span style={{fontSize:9,display:"block",color:"#1D9E75",fontWeight:600}}>= CA prévu × {ratioChVFinal.toFixed(1)}% (ratio historique)</span>
-                 </td>
-                 <td style={cM}>{v3chV>0?fmt(v3chV):"—"}</td>
-                 <td style={cM}>{v2chV>0?fmt(v2chV):"—"}</td>
-                 <td style={cR}>{v1chV>0?fmt(v1chV):"—"}</td>
-                 <td style={cT}>{fTx(tx(v2chV,v1chV))}</td>
-                 <td style={cAdj}><AdjBtn id="ratio_chv" title="Ajustement du ratio en +/- points (ex: +2 si hausse matières premières)"/></td>
-                 <td style={{...cP,color:"#1D9E75"}}>{projChV>0?fmt(projChV):"—"}</td>
-                 <Ec v1={v1chV} pN={projChV} inv/>
-               </tr>
-               <tr>
-                 <td style={cL}>Autres charges
-                   <span style={{fontSize:9,display:"block",color:C.textLight,fontWeight:400}}>honoraires, formations, divers — tendance historique</span>
-                 </td>
-                 <td style={cM}>{v3chA>0?fmt(v3chA):"—"}</td>
-                 <td style={cM}>{v2chA>0?fmt(v2chA):"—"}</td>
-                 <td style={cR}>{v1chA>0?fmt(v1chA):"—"}</td>
-                 <td style={cT}>{fTx(tx(v2chA,v1chA))}</td>
-                 <td style={cAdj}><AdjBtn id="chA" title="Ajustement en +/- % (ex: +10 si formation prévue)"/></td>
-                 <td style={cP}>{projChA>0?fmt(projChA):"—"}</td>
-                 <Ec v1={v1chA} pN={projChA} inv/>
-               </tr>
-               <tr style={cTot}>
-                 <td style={{...cL,fontWeight:800}}>Total charges</td>
-                 <td style={{...cM,fontWeight:800}}>{v3ch>0?fmt(v3ch):"—"}</td>
-                 <td style={{...cM,fontWeight:800}}>{v2ch>0?fmt(v2ch):"—"}</td>
-                 <td style={{...cR,fontWeight:800}}>{v1ch>0?fmt(v1ch):"—"}</td>
-                 <td style={cT}>{fTx(tx(v2ch,v1ch))}</td>
-                 <Calc/>
-                 <td style={{...cP,fontWeight:900}}>{projCh>0?fmt(projCh):"—"}</td>
-                 <Ec v1={v1ch} pN={projCh} inv/>
-               </tr>
-               <tr>
-                 <td style={cL}>Masse salariale
-                   <span style={{fontSize:9,display:"block",color:C.textLight,fontWeight:400}}>tendance historique</span>
-                 </td>
-                 <td style={cM}>{v3sal>0?fmt(v3sal):"—"}</td>
-                 <td style={cM}>{v2sal>0?fmt(v2sal):"—"}</td>
-                 <td style={cR}>{v1sal>0?fmt(v1sal):"—"}</td>
-                 <td style={cT}>{fTx(tx(v2sal,v1sal))}</td>
-                 <td style={cAdj}><AdjBtn id="sal" title="Ajustement en +/- % (ex: +15 si recrutement prévu)"/></td>
-                 <td style={cP}>{projSal>0?fmt(projSal):"—"}</td>
-                 <Ec v1={v1sal} pN={projSal} inv/>
-               </tr>
-               <tr style={cBlu}>
-                 <td style={{...cL,color:"#185FA5"}}>Amortissements
-                   <span style={{fontSize:9,display:"block",color:"#185FA5",fontWeight:400}}>calculé depuis vos investissements saisis</span>
-                 </td>
-                 <td style={cM}>{fmt(projAm)}</td><td style={cM}>{fmt(projAm)}</td>
-                 <td style={cR}>{fmt(projAm)}</td>
-                 <td style={cT}><span style={{fontSize:10,color:"#185FA5"}}>fixe</span></td>
-                 <Fixe/>
-                 <td style={{...cP,color:"#185FA5"}}>{fmt(projAm)}</td>
-                 <td style={cM}>—</td><td style={cM}>—</td>
-               </tr>
-               <tr style={cBlu}>
-                 <td style={{...cL,color:"#185FA5"}}>Remboursements emprunts
-                   <span style={{fontSize:9,display:"block",color:"#185FA5",fontWeight:400}}>mensualité exacte selon vos contrats</span>
-                 </td>
-                 <td style={cM}>{fmt(projRemb)}</td><td style={cM}>{fmt(projRemb)}</td>
-                 <td style={cR}>{fmt(projRemb)}</td>
-                 <td style={cT}><span style={{fontSize:10,color:"#185FA5"}}>contrat</span></td>
-                 <Fixe/>
-                 <td style={{...cP,color:"#185FA5"}}>{fmt(projRemb)}</td>
-                 <td style={cM}>—</td><td style={cM}>—</td>
-               </tr>
-
-               <Sep t="Résultats intermédiaires"/>
-               <tr style={cTot}>
-                 <td style={{...cL,fontWeight:800}}>EBE</td>
-                 <td style={{...cM,fontWeight:800}}>{v3ebe!==0?fmt(v3ebe):"—"}</td>
-                 <td style={{...cM,fontWeight:800}}>{v2ebe!==0?fmt(v2ebe):"—"}</td>
-                 <td style={{...cR,fontWeight:800}}>{v1ebe!==0?fmt(v1ebe):"—"}</td>
-                 <td style={cT}>{fTx(tx(v2ebe,v1ebe))}</td>
-                 <Calc/>
-                 <td style={{...cP,fontSize:14}}>{projEbe!==0?fmt(projEbe):"—"}</td>
-                 <Ec v1={v1ebe} pN={projEbe}/>
-               </tr>
-               <tr>
-                 <td style={cL}>Résultat avant IS</td>
-                 <td style={cM}>{v3rbrt!==0?fmt(v3rbrt):"—"}</td>
-                 <td style={cM}>{v2rbrt!==0?fmt(v2rbrt):"—"}</td>
-                 <td style={cR}>{v1rbrt!==0?fmt(v1rbrt):"—"}</td>
-                 <td style={cT}>{fTx(tx(v2rbrt,v1rbrt))}</td>
-                 <Calc/>
-                 <td style={cP}>{projRbrt!==0?fmt(projRbrt):"—"}</td>
-                 <Ec v1={v1rbrt} pN={projRbrt}/>
-               </tr>
-
-               <Sep t="Impôt sur les sociétés — calculé automatiquement"/>
-               <tr style={cBlu}>
-                 <td style={{...cL,color:"#185FA5"}}>IS acomptes
-                   <span style={{fontSize:9,display:"block",color:"#185FA5",fontWeight:400}}>base IS {N1} ({fmt(isN1Tot)}) ÷ 12</span>
-                 </td>
-                 <td style={cM}>—</td><td style={cM}>—</td>
-                 <td style={cR}>{fmt(Math.max(0,Math.round(v1rbrt*isD.taux/100)))}</td>
-                 <td style={cT}><span style={{fontSize:10,color:"#185FA5"}}>base N-1</span></td>
-                 <Fixe/>
-                 <td style={{...cP,color:"#185FA5"}}>{fmt(acompteMens)}</td>
-                 <td style={cM}>—</td><td style={cM}>—</td>
-               </tr>
-               <tr style={cBlu}>
-                 <td style={{...cL,color:"#185FA5"}}>Provision IS ({isD.taux}%)
-                   <span style={{fontSize:9,display:"block",color:"#185FA5",fontWeight:400}}>calculé depuis résultat prévu {N}</span>
-                 </td>
-                 <td style={cM}>{fmt(Math.max(0,Math.round(v3rbrt*isD.taux/100)))}</td>
-                 <td style={cM}>{fmt(Math.max(0,Math.round(v2rbrt*isD.taux/100)))}</td>
-                 <td style={cR}>{fmt(Math.max(0,Math.round(v1rbrt*isD.taux/100)))}</td>
-                 <td style={cT}>{fTx(tx(Math.max(0,v2rbrt),v1rbrt))}</td>
-                 <Fixe/>
-                 <td style={{...cP,color:"#185FA5"}}>{fmt(projIS)}</td>
-                 <td style={cM}>—</td><td style={cM}>—</td>
-               </tr>
-
-               <Sep t="Résultat net"/>
-               <tr style={cTot}>
-                 <td style={{...cL,fontWeight:900,fontSize:14}}>Résultat net</td>
-                 <td style={{...cM,fontWeight:800}}>{calcNet(v3mg,v3ch,v3sal)!==0?fmt(calcNet(v3mg,v3ch,v3sal)):"—"}</td>
-                 <td style={{...cM,fontWeight:800}}>{calcNet(v2mg,v2ch,v2sal)!==0?fmt(calcNet(v2mg,v2ch,v2sal)):"—"}</td>
-                 <td style={{...cR,fontWeight:800}}>{v1res!==0?fmt(v1res):"—"}</td>
-                 <td style={cT}>{fTx(tx(calcNet(v2mg,v2ch,v2sal),v1res))}</td>
-                 <Calc/>
-                 <td style={{...cP,fontSize:15,color:projResult>=0?C.green:C.red}}>{projResult!==0?fmt(projResult):"—"}</td>
-                 <Ec v1={v1res} pN={projResult}/>
-               </tr>
-
-               <Sep t="Trésorerie prévisionnelle"/>
-               <tr style={{background:"#f8fffe"}}>
-                 <td colSpan={9} style={{padding:"8px 12px",fontSize:11,color:"#185FA5",borderBottom:`1px solid ${C.borderLight}`}}>
-                   Solde de départ repris depuis le dossier client : <strong>{fmt(treso)}</strong>
-                 </td>
-               </tr>
-               <tr>
-                 <td style={cL}>Flux mensuel net estimé
-                   <span style={{fontSize:9,display:"block",color:C.textLight,fontWeight:400}}>CA encaissé (95%) − charges (95%) − emprunts − IS acompte</span>
-                 </td>
-                 <td style={cM}>—</td><td style={cM}>—</td>
-                 <td style={cR}>{fmt(Math.round(v1ca*0.95-(v1ch+v1sal)*0.95-projRemb-acompteMens))}</td>
-                 <td style={cT}>—</td><Calc/>
-                 <td style={{...cP,color:fluxProj>=0?C.green:C.red}}>{fmt(fluxProj)}</td>
-                 <Ec v1={Math.round(v1ca*0.95-(v1ch+v1sal)*0.95-projRemb-acompteMens)} pN={fluxProj}/>
-               </tr>
-               <tr style={cTot}>
-                 <td style={{...cL,fontWeight:800}}>Trésorerie cumulée fin de mois</td>
-                 <td style={cM}>—</td><td style={cM}>—</td>
-                 <td style={{...cR,fontWeight:800}}>{fmt(treso+Math.round(v1ca*0.95-(v1ch+v1sal)*0.95-projRemb-acompteMens))}</td>
-                 <td style={cT}>—</td><Calc/>
-                 <td style={{...cP,fontSize:14,color:(treso+fluxProj)>=0?C.green:C.red}}>{fmt(treso+fluxProj)}</td>
-                 <td style={cM}>—</td><td style={cM}>—</td>
-               </tr>
-
-             </tbody>
-           </table>
-         </div>
-
-         <div style={{display:"flex",gap:14,padding:"10px 14px",fontSize:11,color:C.textMid,borderTop:`1px solid ${C.border}`,flexWrap:"wrap",background:C.bg}}>
-           <span><span style={{display:"inline-block",width:8,height:8,background:"#1D9E75",borderRadius:2,marginRight:4}}/>Calculé automatiquement depuis CA prévu (fond vert)</span>
-           <span><span style={{display:"inline-block",width:8,height:8,background:"#185FA5",borderRadius:2,marginRight:4}}/>Calculé depuis les contrats (emprunts / investissements)</span>
-           <span>Ajust. = entrez un +/- pour corriger une exception · Zéro = pas d'ajustement</span>
-         </div>
-       </Card>
-     </div>
-   );
- }
-
- // CHARGES
+ // CHARGES 
  if (view==="charges") {
  const chargeRows = imports.filter(i=>i.type==="charges"&&i.mois===moisKey).flatMap(i=>i.rows);
  const fixe = chargeRows.filter(r=>r.type==="fixe").reduce((s,r)=>s+parseFloat(r.montant_ht||0),0);
@@ -4398,8 +3876,6 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, onUpdateClie
     const availMois = getAvailableMonths(client);
 
     // Périodes sélectionnées
-    const [periodeA, setPeriodeA] = useState(availMois[availMois.length-1]||"");
-    const [periodeB, setPeriodeB] = useState(availMois[availMois.length-2]||"");
 
     const parseKey = (key) => {
       if(!key) return {mi:0,yr:CUR_Y};
@@ -4734,6 +4210,585 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, onUpdateClie
             </div>
           </div>
         )}
+      </div>
+    );
+  }
+
+// BLOC PRÉVISIONNEL — coller dans ClientSpace juste avant return null;
+// Hooks requis en haut de ClientSpace:
+// const [moisPrev, setMoisPrev] = useState(CUR_M);
+// const [adjPrev, setAdjPrev] = useState(() => client.previsionnel?.adjustments || {});
+
+  if (view === "previsionnel") {
+    const N  = CUR_Y;     // 2026 — année en cours
+    const N1 = N-1;       // 2025 — base historique principale
+    const N2 = N-2;       // 2024
+    const N3 = N-3;       // 2023
+    const NF = N+1;       // 2027 — année future complète à projeter
+
+    // moisPrev peut maintenant couvrir mai 2026 → déc 2027
+    // On encode : 0-11 = mois de N (jan→déc 2026), 12-23 = mois de NF (jan→déc 2027)
+    // moisPrev est un index global 0-23
+    const moisGlobal = moisPrev; // 0-23
+    const moisAnnee  = moisGlobal < 12 ? N : NF;   // 2026 ou 2027
+    const moisLocal  = moisGlobal % 12;             // 0-11
+    // adj est indexé par mois : { 0: {ca:2, sal:15}, 3: {taux_marge:1.5}, ... }
+    const adj = adjPrev;
+    const mi=moisPrev;  // déclaré ICI avant adjM qui en dépend
+    const adjM = adj[mi] || {};  // ajustements du mois sélectionné
+    const setAdjM = (id, val) => {
+      const cur = adj[mi] || {};
+      const newMonthAdj = {...cur, [id]: val};
+      const na = {...adj, [mi]: newMonthAdj};
+      setAdjPrev(na);
+      if(!client.previsionnel) client.previsionnel={};
+      client.previsionnel.adjustments = na;
+    };
+    const getAdjM = (id) => adjM[id] !== undefined ? parseFloat(adjM[id]) : 0;
+    const hasAdjM = (id) => adjM[id] !== undefined && parseFloat(adjM[id]) !== 0;
+
+    // ── Lecture imports réels uniquement (pas de fallback kpis)
+    // getI(yr, mi, field) : lit les données importées pour l'année yr, mois mi
+    const getI = (yr, mi, field) => {
+      const key=`${yr}-${String(mi+1).padStart(2,"0")}`;
+      const rv=(type)=>(client.imports||[]).filter(i=>i.type===type&&i.mois===key).flatMap(i=>i.rows);
+      const vR=rv("ventes_produits"), cR=rv("charges"), sR=rv("salaires");
+      if(field==="ca")     return vR.reduce((s,r)=>s+parseFloat(r.ca_ht||0),0);
+      if(field==="marge")  return vR.reduce((s,r)=>s+parseFloat(r.marge_ht||0),0);
+      if(field==="chF")    return cR.filter(r=>r.type==="fixe")    .reduce((s,r)=>s+parseFloat(r.montant_ht||0),0);
+      if(field==="chV")    return cR.filter(r=>r.type==="variable").reduce((s,r)=>s+parseFloat(r.montant_ht||0),0);
+      if(field==="chA")    return cR.filter(r=>!r.type||r.type==="autre").reduce((s,r)=>s+parseFloat(r.montant_ht||0),0);
+      if(field==="sal")    return sR.reduce((s,r)=>s+parseFloat(r.salaire_brut||0)+parseFloat(r.cotisations_patronales||0),0);
+      return 0;
+    };
+    const hasI=(yr,mi)=>(client.imports||[]).some(i=>i.mois===`${yr}-${String(mi+1).padStart(2,"0")}`&&["ventes_produits","charges","salaires"].includes(i.type));
+    // Pour 2027 : un mois est dispo seulement si le mois correspondant de 2026 est importé
+    const hasI27=(mi)=>hasI(N,mi); // 2027 basé sur réel 2026
+
+    // ── Taux de croissance
+    const tx=(a,b)=>(a>0&&b>0)?Math.round(((b-a)/a*100)*10)/10:null;
+    // Taux de projection : tendance historique + ajustement mensuel
+    const txProj=(v3,v2,v1,id)=>{
+      const t1=tx(v2,v1), t2=tx(v3,v2);
+      const base = t1!==null&&t2!==null ? Math.round((t2/3+t1*2/3)*10)/10 : (t1??t2??0);
+      return hasAdjM(id) ? base+getAdjM(id) : base;
+    };
+
+
+
+    // ── Historique par mois — base selon l'année affichée
+    // 2026 : base N1(2025) / N2(2024) / N3(2023)
+    // 2027 : base N(2026 réel) / N1(2025) / N2(2024)
+    const base1 = moisAnnee===N ? N1 : N;   // année de référence principale
+    const base2 = moisAnnee===N ? N2 : N1;  // année précédente
+    const base3 = moisAnnee===N ? N3 : N2;  // il y a 2 ans
+
+    const v3ca=getI(base3,mi,"ca"),  v2ca=getI(base2,mi,"ca"),  v1ca=getI(base1,mi,"ca");
+    const v3mg=getI(base3,mi,"marge"),v2mg=getI(base2,mi,"marge"),v1mg=getI(base1,mi,"marge");
+    const v3chF=getI(base3,mi,"chF"),v2chF=getI(base2,mi,"chF"),v1chF=getI(base1,mi,"chF");
+    const v3chV=getI(base3,mi,"chV"),v2chV=getI(base2,mi,"chV"),v1chV=getI(base1,mi,"chV");
+    const v3chA=getI(base3,mi,"chA"),v2chA=getI(base2,mi,"chA"),v1chA=getI(base1,mi,"chA");
+    const v3sal=getI(base3,mi,"sal"),v2sal=getI(base2,mi,"sal"),v1sal=getI(base1,mi,"sal");
+    const v1ch=v1chF+v1chV+v1chA, v2ch=v2chF+v2chV+v2chA, v3ch=v3chF+v3chV+v3chA;
+
+    // ── Ratios annuels N1 (plus robuste que mensuel)
+    // Ratios annuels — base selon l'année projetée
+    const rBase1 = moisAnnee===N ? N1 : N;   // base principale pour ratios
+    const rBase2 = moisAnnee===N ? N2 : N1;
+    const annSum=(field)=>Array.from({length:12},(_,m2)=>getI(rBase1,m2,field)).reduce((s,v)=>s+v,0);
+    const ann2Sum=(field)=>Array.from({length:12},(_,m2)=>getI(rBase2,m2,field)).reduce((s,v)=>s+v,0);
+    const annCA1=annSum("ca"), annCA2=ann2Sum("ca");
+    // Taux de marge annuel N1 (base principale)
+    const tauxMargeN1 = annCA1>0 ? Math.round(annSum("marge")/annCA1*1000)/10 : 60;
+    const tauxMargeN2 = annCA2>0 ? Math.round(ann2Sum("marge")/annCA2*1000)/10 : tauxMargeN1;
+    // Ratio chV/CA annuel N1
+    const ratioChVN1 = annCA1>0 ? Math.round(annSum("chV")/annCA1*1000)/10 : 0;
+    const ratioChVN2 = annCA2>0 ? Math.round(ann2Sum("chV")/annCA2*1000)/10 : ratioChVN1;
+
+    // ── Valeurs ajustées (avec éventuel +/- du dirigeant)
+    const txCA   = txProj(v3ca,v2ca,v1ca,"ca");
+    // Taux de marge : moyenne pondérée N1/N2 + ajustement éventuel
+    const tauxMgBase = annCA2>0 ? Math.round((tauxMargeN2/3+tauxMargeN1*2/3)*10)/10 : tauxMargeN1;
+    const tauxMgFinal = getAdjM("taux_marge")!==0 ? tauxMgBase+getAdjM("taux_marge") : tauxMgBase;
+    // Ratio chV : idem
+    const ratioChVBase = annCA2>0 ? Math.round((ratioChVN2/3+ratioChVN1*2/3)*10)/10 : ratioChVN1;
+    const ratioChVFinal = getAdjM("ratio_chv")!==0 ? ratioChVBase+getAdjM("ratio_chv") : ratioChVBase;
+    // Charges fixes : taux croissance + ajustement
+    const txChF = txProj(v3chF,v2chF,v1chF,"chF");
+    // Autres charges : taux croissance + ajustement
+    const txChA = txProj(v3chA,v2chA,v1chA,"chA");
+    // Salaires : taux croissance + ajustement
+    const txSal = txProj(v3sal,v2sal,v1sal,"sal");
+
+    // ── Projections
+    const projCA  = v1ca>0  ? Math.round(v1ca*(1+txCA/100))   : 0;
+    // Marge : taux du mois N1 si dispo, sinon taux annuel
+    const tauxMgMois = v1ca>0 ? v1mg/v1ca*100 : tauxMgFinal;
+    const tauxMgEff  = hasAdjM("taux_marge") ? tauxMgMois+getAdjM("taux_marge") : tauxMgMois;
+    const projMg  = projCA>0? Math.round(projCA*tauxMgEff/100) : 0;  // CA prévu × taux marge mois
+    const projChF = v1chF>0 ? Math.round(v1chF*(1+txChF/100)) : 0;
+    // Charges variables : ratio du mois N1 si dispo (plus précis), sinon ratio annuel
+    // Si projCA augmente → projChV augmente proportionnellement (c'est la dépendance au CA)
+    const ratioChVMois = v1ca>0 ? v1chV/v1ca*100 : ratioChVFinal;
+    const ratioChVEff  = hasAdjM("ratio_chv") ? ratioChVMois+getAdjM("ratio_chv") : ratioChVMois;
+    const projChV = projCA>0? Math.round(projCA*ratioChVEff/100): 0;  // CA prévu × ratio mois
+    const projChA = v1chA>0 ? Math.round(v1chA*(1+txChA/100)) : 0;
+    const projCh  = projChF+projChV+projChA;
+    const projSal = v1sal>0 ? Math.round(v1sal*(1+txSal/100)) : 0;
+
+    // ── Calculés depuis contrats (pas d'ajustement)
+    const projAm = (client.investissements||[]).reduce((s,inv)=>{
+      const debut=inv.dateMEP?new Date(inv.dateMEP):new Date(N1,0,1);
+      const mDebut=debut.getFullYear()*12+debut.getMonth();
+      const mActuel=N*12+mi;
+      if(mActuel<mDebut||mActuel>=mDebut+(inv.duree||36)) return s;
+      return s+Math.round(inv.montantHT/(inv.duree||36));
+    },0);
+    const projRemb=(client.emprunts||[]).reduce((s,e)=>{
+      const debut=e.dateDebut?new Date(e.dateDebut):new Date(N1,0,1);
+      const mDebut=debut.getFullYear()*12+debut.getMonth();
+      const mActuel=N*12+mi;
+      if(mActuel<mDebut||mActuel>=mDebut+e.duree) return s;
+      return s+Math.round(e.capital*(e.taux/100)/(1-Math.pow(1+e.taux/100,-e.duree))+e.assurance);
+    },0);
+    const isD=client.is||{taux:15,totalPrecedent:0};
+    const projEbe=projMg-projCh-projSal;
+    const projRbrt=projEbe-projAm;
+    const projIS=Math.max(0,Math.round(projRbrt*isD.taux/100));
+    const projResult=projRbrt-projIS;
+    // IS acomptes : base N-1
+    const isN1Tot=isD.totalPrecedent||Array.from({length:12},(_,m2)=>{
+      const mg=getI(N1,m2,"marge"),chF=getI(N1,m2,"chF"),chV=getI(N1,m2,"chV"),chA=getI(N1,m2,"chA"),sal=getI(N1,m2,"sal");
+      const r=mg-chF-chV-chA-sal-projAm; return Math.max(0,Math.round(r*isD.taux/100));
+    }).reduce((s,v)=>s+v,0);
+    const acompteMens=Math.round(isN1Tot/12);
+    const treso=client.tresorerie?.soldeInitial||client.kpis?.tresorerie||0;
+    const fluxProj=Math.round(projCA*0.95-(projCh+projSal)*0.95-projRemb-acompteMens);
+
+    // ── Historiques résultats
+    const v1ebe=v1mg-v1ch-v1sal, v1rbrt=v1ebe-projAm, v1is=Math.max(0,Math.round(v1rbrt*isD.taux/100)), v1res=v1rbrt-v1is;
+    const v2ebe=v2mg-v2ch-v2sal, v2rbrt=v2ebe-projAm;
+    const v3ebe=v3mg-v3ch-v3sal, v3rbrt=v3ebe-projAm;
+    const calcNet=(mg,ch,sal)=>{const r=mg-ch-sal-projAm;return r-Math.max(0,Math.round(r*isD.taux/100));};
+
+    // ── KPIs annuels
+    // ── KPIs annuels — couvre les mois restants de N + toute l'année NF (N+1)
+    // Mois à projeter : de CUR_M (avril=3) à novembre de NF → index 0-23
+    // Taux global annuel N2→N1 (sur tous les mois ayant des données)
+    const txGlobal = (field) => {
+      let tot1=0, tot2=0;
+      for(let m2=0;m2<12;m2++){ tot1+=getI(rBase1,m2,field); tot2+=getI(rBase2,m2,field); }
+      return (tot1>0&&tot2>0) ? Math.round(((tot1-tot2)/tot2*100)*10)/10 : 0;
+    };
+    const txCA_ann  = txGlobal("ca");
+    const txChF_ann = txGlobal("chF");
+    const txChA_ann = txGlobal("chA");
+    const txSal_ann = txGlobal("sal");
+
+    // Mois à projeter : de CUR_M (mois courant) jusqu'à déc NF (index 0-23)
+    const moisDebut = CUR_M; // on part du mois courant
+    const allMoisProj = Array.from({length:24-moisDebut},(_,i)=>moisDebut+i); // ex: [3,4,...,23]
+
+    const annCA_proj = allMoisProj.reduce((s,g)=>{
+      const mL=g%12, mA=g<12?N:NF;
+      const baseAnn=g<12?N1:N;  // 2026 basé N1, 2027 basé N réel
+      const b=getI(baseAnn,mL,"ca");
+      const adjM2=adj[g]||{}, aM2=(id)=>adjM2[id]!==undefined?parseFloat(adjM2[id]):0;
+      const txAdj = aM2("ca")!==0 ? txCA_ann+aM2("ca") : txCA_ann;
+      return s+(b>0?Math.round(b*(1+txAdj/100)):0);
+    },0);
+
+    const annRes_proj = allMoisProj.reduce((s,g)=>{
+      const mL=g%12, baseAnnR=g<12?N1:N;
+      const ca=getI(baseAnnR,mL,"ca"); if(ca===0) return s;
+      const adjM2=adj[g]||{}, aM2=(id)=>adjM2[id]!==undefined?parseFloat(adjM2[id]):0;
+      const txCaAdj = aM2("ca")!==0 ? txCA_ann+aM2("ca") : txCA_ann;
+      const pCa=Math.round(ca*(1+txCaAdj/100));
+      const mg1=getI(baseAnnR,mL,"marge"), ca1=getI(baseAnnR,mL,"ca");
+      const txMgM = ca1>0 ? mg1/ca1*100 : tauxMgBase;
+      const txMgM2 = aM2("taux_marge")!==0 ? txMgM+aM2("taux_marge") : txMgM;
+      const pMg=Math.round(pCa*txMgM2/100);
+      const pChF=Math.round(getI(baseAnnR,mL,"chF")*(1+(aM2("chF")!==0?txChF_ann+aM2("chF"):txChF_ann)/100));
+      const chV1=getI(baseAnnR,mL,"chV");
+      const rChVM = ca1>0 ? chV1/ca1*100 : ratioChVBase;
+      const rChVM2 = aM2("ratio_chv")!==0 ? rChVM+aM2("ratio_chv") : rChVM;
+      const pChV=Math.round(pCa*rChVM2/100);
+      const pChA=Math.round(getI(baseAnnR,mL,"chA")*(1+(aM2("chA")!==0?txChA_ann+aM2("chA"):txChA_ann)/100));
+      const pSal=Math.round(getI(baseAnnR,mL,"sal")*(1+(aM2("sal")!==0?txSal_ann+aM2("sal"):txSal_ann)/100));
+      const r=pMg-pChF-pChV-pChA-pSal-projAm;
+      return s+(r-Math.max(0,Math.round(r*isD.taux/100)));
+    },0);
+
+    let seuilMois=null, seuilAnnee=null, cumR=0;
+    for(const g of allMoisProj){
+      const mL=g%12, mA=g<12?N:NF;
+      const ca=getI(N1,mL,"ca"); if(ca===0) continue;
+      const adjM2=adj[g]||{}, aM2=(id)=>adjM2[id]!==undefined?parseFloat(adjM2[id]):0;
+      const pCa=Math.round(ca*(1+(aM2("ca")!==0?txCA_ann+aM2("ca"):txCA_ann)/100));
+      const _ca1=ca,_mg1=getI(N1,mL,"marge"),_chV1=getI(N1,mL,"chV");
+      const _txMg=_ca1>0?_mg1/_ca1*100:tauxMgBase, _txMgF=aM2("taux_marge")!==0?_txMg+aM2("taux_marge"):_txMg;
+      const _rChV=_ca1>0?_chV1/_ca1*100:ratioChVBase, _rChVF=aM2("ratio_chv")!==0?_rChV+aM2("ratio_chv"):_rChV;
+      const r=Math.round(pCa*_txMgF/100)-Math.round(getI(N1,mL,"chF")*(1+(aM2("chF")!==0?txChF_ann+aM2("chF"):txChF_ann)/100))-Math.round(pCa*_rChVF/100)-Math.round(getI(N1,mL,"chA")*(1+(aM2("chA")!==0?txChA_ann+aM2("chA"):txChA_ann)/100))-Math.round(getI(N1,mL,"sal")*(1+(aM2("sal")!==0?txSal_ann+aM2("sal"):txSal_ann)/100))-projAm;
+      cumR+=r-Math.max(0,Math.round(r*isD.taux/100));
+      if(cumR>0&&seuilMois===null){seuilMois=mL; seuilAnnee=mA;}
+    }
+
+    // ── Données réelles pour le mois affiché (N ou NF selon moisAnnee)
+    const keyAff=`${moisAnnee}-${String(mi+1).padStart(2,"0")}`;
+    const hasRN=(client.imports||[]).some(i=>i.mois===keyAff&&["ventes_produits","charges","salaires"].includes(i.type));
+    const rNca=hasRN?getI(moisAnnee,mi,"ca"):null, rNmg=hasRN?getI(moisAnnee,mi,"marge"):null;
+    const rNchF=hasRN?getI(moisAnnee,mi,"chF"):null, rNchV=hasRN?getI(moisAnnee,mi,"chV"):null;
+    const rNchA=hasRN?getI(moisAnnee,mi,"chA"):null, rNsal=hasRN?getI(moisAnnee,mi,"sal"):null;
+
+    // ── Helpers render
+    const fTx=tx=>tx===null?<span style={{fontSize:10,color:C.textLight}}>—</span>:<span style={{fontSize:11,fontWeight:700,color:tx>0?C.green:tx<0?C.red:C.textLight}}>{tx>0?"+":""}{tx.toFixed(1)}%</span>;
+    const fRatio=r=><span style={{fontSize:11,fontWeight:700,color:C.primary}}>{r.toFixed(1)}% CA</span>;
+
+    // Bouton ajustement "+/-" par mois
+    const AdjBtn=({id,unit="%",title})=>{
+      const val = getAdjM(id);
+      const isSet = hasAdjM(id);
+      return (
+        <div style={{display:"flex",alignItems:"center",gap:3}}>
+          <input type="number" step="0.1" value={val===0?"":val}
+            onChange={e=>{const p=parseFloat(e.target.value)||0; setAdjM(id,p);}}
+            placeholder="0" title={`${title||"Ajustement"} — spécifique au mois ${MONTHS[mi]}`}
+            style={{width:46,fontSize:11,padding:"2px 4px",textAlign:"right",fontFamily:"'Nunito',sans-serif",fontWeight:isSet?700:400,
+              border:`1px solid ${isSet?"#1D9E75":C.border}`,borderRadius:4,
+              background:isSet?"#E1F5EE":"white",color:isSet?"#085041":C.text}}/>
+          <span style={{fontSize:10,color:C.textLight}}>{unit}</span>
+        </div>
+      );
+    };
+
+    // Écarts : prévu N vs réel N1 (tendance attendue)
+    const Ec=({v1,pN,inv=false})=>{
+      if(!v1||!pN) return <><td style={cM}>—</td><td style={cM}>—</td></>;
+      const e=pN-v1, p=v1!==0?Math.round(e/Math.abs(v1)*100):0;
+      const bon=inv?e<=0:e>=0;
+      const col=Math.abs(p)>20?C.red:Math.abs(p)>10?C.orange:C.green;
+      return <>
+        <td style={{padding:"7px 9px",fontSize:11,fontWeight:700,textAlign:"right",color:bon?col:C.red}}>{e>=0?"+":""}{fmt(e)}</td>
+        <td style={{padding:"7px 9px",fontSize:11,fontWeight:700,textAlign:"right",color:bon?col:C.red}}>{p>=0?"+":""}{p}%</td>
+      </>;
+    };
+
+    const cH={padding:"7px 9px",fontSize:9,fontWeight:800,color:"white",textAlign:"right",whiteSpace:"nowrap",background:"#005653",letterSpacing:"0.04em"};
+    const cHL={...cH,textAlign:"left"};
+    const cHp={...cH,background:"#185FA5"};
+    const cHe={...cH,background:hasRN?"#0F6E56":"#555"};
+    const cM={padding:"7px 9px",fontSize:11,color:C.textLight,textAlign:"right",fontFamily:"'Courier New',monospace"};
+    const cR={padding:"7px 9px",fontSize:11,color:C.text,fontWeight:500,textAlign:"right",fontFamily:"'Courier New',monospace"};
+    const cP={padding:"7px 9px",fontSize:12,color:"#185FA5",fontWeight:800,textAlign:"right",fontFamily:"'Courier New',monospace"};
+    const cT={padding:"7px 9px",textAlign:"right"};
+    const cL={padding:"7px 9px",fontSize:12,fontWeight:700,color:C.text};
+    const cSub={padding:"6px 9px 6px 22px",fontSize:11,color:C.textMid};
+    const cAdj={padding:"4px 6px",textAlign:"center"};
+    const cAu={padding:"7px 9px",textAlign:"center"};
+    const cSep={background:C.bg,fontSize:10,fontWeight:800,color:C.textMid,textTransform:"uppercase",letterSpacing:"0.08em",padding:"5px 9px",borderTop:`1px solid ${C.border}`,borderBottom:`1px solid ${C.border}`,textAlign:"left"};
+    const cTot={background:C.bg};
+    const cBlu={background:"#edf5ff"};
+    const Sep=({t})=><tr><td colSpan={10} style={cSep}>{t}</td></tr>;
+    const Auto=()=><td style={cAu}><span style={{fontSize:10,color:"#1D9E75",fontWeight:700}}>auto</span></td>;
+    const Fixe=()=><td style={cAu}><span style={{fontSize:10,color:"#185FA5",fontWeight:700}}>contrat</span></td>;
+    const Calc=()=><td style={cAu}><span style={{fontSize:10,color:C.textLight}}>calculé</span></td>;
+
+    // Ligne historique + proj + ajust + écart
+    const Row=({label,sub,v3,v2,v1,txDisp,adjId,adjUnit="%",adjTitle,projVal,reel,inv=false,isTot=false,isBlu=false,noAdj=false})=>(
+      <tr style={isTot?{background:C.bg}:isBlu?{background:"#edf5ff"}:{}}>
+        <td style={isTot?{...cL,fontWeight:800}:label.startsWith("→")?cSub:cL}>{label.replace("→","").trim()}{label.startsWith("→")&&<span style={{marginRight:4,color:C.textLight}}>→</span>}
+          {sub&&<span style={{fontSize:9,display:"block",color:C.textLight,fontWeight:400}}>{sub}</span>}
+        </td>
+        <td style={cM}>{v3>0?fmt(v3):"—"}</td>
+        <td style={cM}>{v2>0?fmt(v2):"—"}</td>
+        <td style={cR}>{v1>0?fmt(v1):"—"}</td>
+        <td style={cT}>{txDisp}</td>
+        {noAdj?<Calc/>:<td style={cAdj}><AdjBtn id={adjId} unit={adjUnit} title={adjTitle}/></td>}
+        <td style={isTot?{...cP,fontSize:14}:cP}>{projVal>0||projVal<0?fmt(projVal):"—"}</td>
+        <Ec v1={v1} pN={projVal} inv={inv}/>
+      </tr>
+    );
+
+    return (
+      <div style={{padding:24}} className="fade-up">
+        <PageHeader title="Prévisionnel hybride" sub={`Projection ${N} · Marge et charges variables calculées depuis le CA prévu · Ajustement disponible pour chaque exception`} hidePicker/>
+
+        {/* KPIs */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:16}}>
+          <KpiCard label={`CA prévu ${N} (annuel)`} value={fmt(annCA_proj)} sub={`${txCA>0?"+":""}${txCA.toFixed(1)}% vs ${N1}`} color={C.primary}/>
+          <KpiCard label={`Résultat net prévu ${N}`} value={fmt(annRes_proj)} sub="12 mois cumulés" color={annRes_proj>=0?C.green:C.red}/>
+          <KpiCard label="Seuil de rentabilité" value={seuilMois!==null?`Mois ${seuilMois+1}`:"Non atteint"} sub={seuilMois!==null?MONTHS[seuilMois]+" "+seuilAnnee:""} color={seuilMois!==null?C.green:C.red}/>
+          <KpiCard label="IS acompte mensuel" value={fmt(acompteMens)} sub={`Base IS ${N1} · taux ${isD.taux}%`} color={C.orange}/>
+        </div>
+
+        {/* Encart logique */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+          <div style={{padding:"10px 14px",background:C.bg,border:`1px solid ${C.green}33`,borderRadius:8,fontSize:12,color:C.textMid,lineHeight:1.7}}>
+            <strong style={{color:C.primary}}>Logique automatique :</strong><br/>
+            Marge brute = CA prévu × <strong>{tauxMgFinal.toFixed(1)}%</strong> (taux historique {N1})<br/>
+            Charges variables = CA prévu × <strong>{ratioChVFinal.toFixed(1)}%</strong> (ratio historique {N1})<br/>
+            Emprunts, amortissements, IS → calculés depuis les contrats
+          </div>
+          <div style={{padding:"10px 14px",background:"#fffbeb",border:`1px solid ${C.orange}33`,borderRadius:8,fontSize:12,color:C.textMid,lineHeight:1.7}}>
+            <strong style={{color:C.orange}}>Colonne Ajust. :</strong> entrez un <strong>+/-</strong> pour les exceptions.<br/>
+            Ex : taux marge +2% si négociation fournisseur prévue<br/>
+            Ex : salaires +15% si recrutement planifié
+            {hasRN&&<><br/><span style={{color:C.green,fontWeight:700}}>Données réelles {N} détectées — écarts actifs</span></>}
+          </div>
+        </div>
+
+        {/* Onglets mois — N puis NF */}
+        {[{yr:N,label:`${N}`,offset:0},{yr:NF,label:`${NF}`,offset:12}].map(({yr,label,offset})=>(
+          <div key={yr}>
+            <div style={{fontSize:10,fontWeight:800,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.08em",margin:"10px 0 6px",paddingLeft:2}}>{label}</div>
+            <div style={{display:"flex",gap:4,marginBottom:6,flexWrap:"wrap"}}>
+              {MONTHS.map((m,i)=>{
+                const g=offset+i;
+                const h = yr===N ? hasI(N1,i) : hasI(N,i);  // 2026: base N1 · 2027: base N réel
+                const isActive=g===moisPrev;
+                const isPast = yr===N && i<CUR_M;
+                // 2027 : verrouillé si données 2026 pas encore importées
+                const isLocked = yr===NF && !hasI(N,i);
+                const isDisabled = isPast || isLocked;
+                return (
+                  <button key={g}
+                    onClick={()=>{ if(!isDisabled) setMoisPrev(g); }}
+                    title={isLocked?`Données ${N} non importées pour ${m} — importez d'abord le réel ${N}`:""}
+                    style={{
+                      padding:"4px 10px",fontSize:11,cursor:isDisabled?"not-allowed":"pointer",
+                      fontFamily:"'Nunito',sans-serif",fontWeight:isActive?800:400,borderRadius:20,
+                      opacity:isDisabled?0.3:1,
+                      border:`1px solid ${isActive?C.primary:isLocked?"#ccc":h?C.green+"55":C.border}`,
+                      background:isActive?C.primary:"white",
+                      color:isActive?"white":isLocked?"#aaa":h?C.green:C.textLight}}>
+                    {m}{h&&!isDisabled?" ●":""}{isLocked?" 🔒":""}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+
+        <Card>
+          <SectionHead title={`${MONTHS[mi]} ${moisAnnee} — Prévisionnel détaillé`}
+            sub="Ajust. = correction exceptionnelle en +/- (ex: +2% taux marge, +15% salaires) · Écarts = prévu N vs réel N-1"/>
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse"}}>
+              <thead><tr>
+                <th style={{...cHL,width:"22%"}}>Ligne</th>
+                <th style={cH}>{N3}</th>
+                <th style={cH}>{N2}</th>
+                <th style={cH}>{N1} réel</th>
+                <th style={cH}>Tx {N2}→{N1} / Ratio</th>
+                <th style={{...cH,background:"#003d3a"}}>Ajust. +/-</th>
+                <th style={cHp}>{moisAnnee} prévu</th>
+                <th style={cHe}>Écart €</th>
+                <th style={cHe}>Écart %</th>
+              </tr></thead>
+              <tbody>
+
+                <Sep t="Encaissements"/>
+                <tr>
+                  <td style={cL}><strong>CA HT</strong>
+                    <span style={{fontSize:9,display:"block",color:C.textLight,fontWeight:400}}>base de tous les calculs auto</span>
+                  </td>
+                  <td style={cM}>{v3ca>0?fmt(v3ca):"—"}</td>
+                  <td style={cM}>{v2ca>0?fmt(v2ca):"—"}</td>
+                  <td style={cR}>{v1ca>0?fmt(v1ca):"—"}</td>
+                  <td style={cT}>{fTx(tx(v2ca,v1ca))}</td>
+                  <td style={cAdj}><AdjBtn id="ca" title={`Ajustement du taux de croissance CA (défaut: ${txCA>0?"+":""}${txCA.toFixed(1)}%) — entrez l'écart en +/-`}/></td>
+                  <td style={cP}>{projCA>0?fmt(projCA):"—"}</td>
+                  <Ec v1={v1ca} pN={projCA}/>
+                </tr>
+                <tr style={{background:"#f0fbf7"}}>
+                  <td style={cSub}>→ Marge brute
+                    <span style={{fontSize:9,display:"block",color:"#1D9E75",fontWeight:600}}>= CA prévu × {tauxMgFinal.toFixed(1)}% (taux marge historique)</span>
+                  </td>
+                  <td style={cM}>{v3mg>0?fmt(v3mg):"—"}</td>
+                  <td style={cM}>{v2mg>0?fmt(v2mg):"—"}</td>
+                  <td style={cR}>{v1mg>0?fmt(v1mg):"—"}</td>
+                  <td style={cT}>{fTx(tx(v2mg,v1mg))}</td>
+                  <td style={cAdj}><AdjBtn id="taux_marge" title="Ajustement du taux de marge en +/- points (ex: +2 si négociation fournisseur)"/></td>
+                  <td style={{...cP,color:"#1D9E75"}}>{projMg>0?fmt(projMg):"—"}</td>
+                  <Ec v1={v1mg} pN={projMg}/>
+                </tr>
+
+                <Sep t="Décaissements"/>
+                <tr>
+                  <td style={cL}>Charges fixes
+                    <span style={{fontSize:9,display:"block",color:C.textLight,fontWeight:400}}>loyer, assurances, abonnements — tendance historique</span>
+                  </td>
+                  <td style={cM}>{v3chF>0?fmt(v3chF):"—"}</td>
+                  <td style={cM}>{v2chF>0?fmt(v2chF):"—"}</td>
+                  <td style={cR}>{v1chF>0?fmt(v1chF):"—"}</td>
+                  <td style={cT}>{fTx(tx(v2chF,v1chF))}</td>
+                  <td style={cAdj}><AdjBtn id="chF" title="Ajustement en +/- % (ex: +3 si renouvellement bail)"/></td>
+                  <td style={cP}>{projChF>0?fmt(projChF):"—"}</td>
+                  <Ec v1={v1chF} pN={projChF} inv/>
+                </tr>
+                <tr style={{background:"#f0fbf7"}}>
+                  <td style={cL}>Charges variables
+                    <span style={{fontSize:9,display:"block",color:"#1D9E75",fontWeight:600}}>= CA prévu × {ratioChVFinal.toFixed(1)}% (ratio historique)</span>
+                  </td>
+                  <td style={cM}>{v3chV>0?fmt(v3chV):"—"}</td>
+                  <td style={cM}>{v2chV>0?fmt(v2chV):"—"}</td>
+                  <td style={cR}>{v1chV>0?fmt(v1chV):"—"}</td>
+                  <td style={cT}>{fTx(tx(v2chV,v1chV))}</td>
+                  <td style={cAdj}><AdjBtn id="ratio_chv" title="Ajustement du ratio en +/- points (ex: +2 si hausse matières premières)"/></td>
+                  <td style={{...cP,color:"#1D9E75"}}>{projChV>0?fmt(projChV):"—"}</td>
+                  <Ec v1={v1chV} pN={projChV} inv/>
+                </tr>
+                <tr>
+                  <td style={cL}>Autres charges
+                    <span style={{fontSize:9,display:"block",color:C.textLight,fontWeight:400}}>honoraires, formations, divers — tendance historique</span>
+                  </td>
+                  <td style={cM}>{v3chA>0?fmt(v3chA):"—"}</td>
+                  <td style={cM}>{v2chA>0?fmt(v2chA):"—"}</td>
+                  <td style={cR}>{v1chA>0?fmt(v1chA):"—"}</td>
+                  <td style={cT}>{fTx(tx(v2chA,v1chA))}</td>
+                  <td style={cAdj}><AdjBtn id="chA" title="Ajustement en +/- % (ex: +10 si formation prévue)"/></td>
+                  <td style={cP}>{projChA>0?fmt(projChA):"—"}</td>
+                  <Ec v1={v1chA} pN={projChA} inv/>
+                </tr>
+                <tr style={cTot}>
+                  <td style={{...cL,fontWeight:800}}>Total charges</td>
+                  <td style={{...cM,fontWeight:800}}>{v3ch>0?fmt(v3ch):"—"}</td>
+                  <td style={{...cM,fontWeight:800}}>{v2ch>0?fmt(v2ch):"—"}</td>
+                  <td style={{...cR,fontWeight:800}}>{v1ch>0?fmt(v1ch):"—"}</td>
+                  <td style={cT}>{fTx(tx(v2ch,v1ch))}</td>
+                  <Calc/>
+                  <td style={{...cP,fontWeight:900}}>{projCh>0?fmt(projCh):"—"}</td>
+                  <Ec v1={v1ch} pN={projCh} inv/>
+                </tr>
+                <tr>
+                  <td style={cL}>Masse salariale
+                    <span style={{fontSize:9,display:"block",color:C.textLight,fontWeight:400}}>tendance historique</span>
+                  </td>
+                  <td style={cM}>{v3sal>0?fmt(v3sal):"—"}</td>
+                  <td style={cM}>{v2sal>0?fmt(v2sal):"—"}</td>
+                  <td style={cR}>{v1sal>0?fmt(v1sal):"—"}</td>
+                  <td style={cT}>{fTx(tx(v2sal,v1sal))}</td>
+                  <td style={cAdj}><AdjBtn id="sal" title="Ajustement en +/- % (ex: +15 si recrutement prévu)"/></td>
+                  <td style={cP}>{projSal>0?fmt(projSal):"—"}</td>
+                  <Ec v1={v1sal} pN={projSal} inv/>
+                </tr>
+                <tr style={cBlu}>
+                  <td style={{...cL,color:"#185FA5"}}>Amortissements
+                    <span style={{fontSize:9,display:"block",color:"#185FA5",fontWeight:400}}>calculé depuis vos investissements saisis</span>
+                  </td>
+                  <td style={cM}>{fmt(projAm)}</td><td style={cM}>{fmt(projAm)}</td>
+                  <td style={cR}>{fmt(projAm)}</td>
+                  <td style={cT}><span style={{fontSize:10,color:"#185FA5"}}>fixe</span></td>
+                  <Fixe/>
+                  <td style={{...cP,color:"#185FA5"}}>{fmt(projAm)}</td>
+                  <td style={cM}>—</td><td style={cM}>—</td>
+                </tr>
+                <tr style={cBlu}>
+                  <td style={{...cL,color:"#185FA5"}}>Remboursements emprunts
+                    <span style={{fontSize:9,display:"block",color:"#185FA5",fontWeight:400}}>mensualité exacte selon vos contrats</span>
+                  </td>
+                  <td style={cM}>{fmt(projRemb)}</td><td style={cM}>{fmt(projRemb)}</td>
+                  <td style={cR}>{fmt(projRemb)}</td>
+                  <td style={cT}><span style={{fontSize:10,color:"#185FA5"}}>contrat</span></td>
+                  <Fixe/>
+                  <td style={{...cP,color:"#185FA5"}}>{fmt(projRemb)}</td>
+                  <td style={cM}>—</td><td style={cM}>—</td>
+                </tr>
+
+                <Sep t="Résultats intermédiaires"/>
+                <tr style={cTot}>
+                  <td style={{...cL,fontWeight:800}}>EBE</td>
+                  <td style={{...cM,fontWeight:800}}>{v3ebe!==0?fmt(v3ebe):"—"}</td>
+                  <td style={{...cM,fontWeight:800}}>{v2ebe!==0?fmt(v2ebe):"—"}</td>
+                  <td style={{...cR,fontWeight:800}}>{v1ebe!==0?fmt(v1ebe):"—"}</td>
+                  <td style={cT}>{fTx(tx(v2ebe,v1ebe))}</td>
+                  <Calc/>
+                  <td style={{...cP,fontSize:14}}>{projEbe!==0?fmt(projEbe):"—"}</td>
+                  <Ec v1={v1ebe} pN={projEbe}/>
+                </tr>
+                <tr>
+                  <td style={cL}>Résultat avant IS</td>
+                  <td style={cM}>{v3rbrt!==0?fmt(v3rbrt):"—"}</td>
+                  <td style={cM}>{v2rbrt!==0?fmt(v2rbrt):"—"}</td>
+                  <td style={cR}>{v1rbrt!==0?fmt(v1rbrt):"—"}</td>
+                  <td style={cT}>{fTx(tx(v2rbrt,v1rbrt))}</td>
+                  <Calc/>
+                  <td style={cP}>{projRbrt!==0?fmt(projRbrt):"—"}</td>
+                  <Ec v1={v1rbrt} pN={projRbrt}/>
+                </tr>
+
+                <Sep t="Impôt sur les sociétés — calculé automatiquement"/>
+                <tr style={cBlu}>
+                  <td style={{...cL,color:"#185FA5"}}>IS acomptes
+                    <span style={{fontSize:9,display:"block",color:"#185FA5",fontWeight:400}}>base IS {N1} ({fmt(isN1Tot)}) ÷ 12</span>
+                  </td>
+                  <td style={cM}>—</td><td style={cM}>—</td>
+                  <td style={cR}>{fmt(Math.max(0,Math.round(v1rbrt*isD.taux/100)))}</td>
+                  <td style={cT}><span style={{fontSize:10,color:"#185FA5"}}>base N-1</span></td>
+                  <Fixe/>
+                  <td style={{...cP,color:"#185FA5"}}>{fmt(acompteMens)}</td>
+                  <td style={cM}>—</td><td style={cM}>—</td>
+                </tr>
+                <tr style={cBlu}>
+                  <td style={{...cL,color:"#185FA5"}}>Provision IS ({isD.taux}%)
+                    <span style={{fontSize:9,display:"block",color:"#185FA5",fontWeight:400}}>calculé depuis résultat prévu {N}</span>
+                  </td>
+                  <td style={cM}>{fmt(Math.max(0,Math.round(v3rbrt*isD.taux/100)))}</td>
+                  <td style={cM}>{fmt(Math.max(0,Math.round(v2rbrt*isD.taux/100)))}</td>
+                  <td style={cR}>{fmt(Math.max(0,Math.round(v1rbrt*isD.taux/100)))}</td>
+                  <td style={cT}>{fTx(tx(Math.max(0,v2rbrt),v1rbrt))}</td>
+                  <Fixe/>
+                  <td style={{...cP,color:"#185FA5"}}>{fmt(projIS)}</td>
+                  <td style={cM}>—</td><td style={cM}>—</td>
+                </tr>
+
+                <Sep t="Résultat net"/>
+                <tr style={cTot}>
+                  <td style={{...cL,fontWeight:900,fontSize:14}}>Résultat net</td>
+                  <td style={{...cM,fontWeight:800}}>{calcNet(v3mg,v3ch,v3sal)!==0?fmt(calcNet(v3mg,v3ch,v3sal)):"—"}</td>
+                  <td style={{...cM,fontWeight:800}}>{calcNet(v2mg,v2ch,v2sal)!==0?fmt(calcNet(v2mg,v2ch,v2sal)):"—"}</td>
+                  <td style={{...cR,fontWeight:800}}>{v1res!==0?fmt(v1res):"—"}</td>
+                  <td style={cT}>{fTx(tx(calcNet(v2mg,v2ch,v2sal),v1res))}</td>
+                  <Calc/>
+                  <td style={{...cP,fontSize:15,color:projResult>=0?C.green:C.red}}>{projResult!==0?fmt(projResult):"—"}</td>
+                  <Ec v1={v1res} pN={projResult}/>
+                </tr>
+
+                <Sep t="Trésorerie prévisionnelle"/>
+                <tr style={{background:"#f8fffe"}}>
+                  <td colSpan={9} style={{padding:"8px 12px",fontSize:11,color:"#185FA5",borderBottom:`1px solid ${C.borderLight}`}}>
+                    Solde de départ repris depuis le dossier client : <strong>{fmt(treso)}</strong>
+                  </td>
+                </tr>
+                <tr>
+                  <td style={cL}>Flux mensuel net estimé
+                    <span style={{fontSize:9,display:"block",color:C.textLight,fontWeight:400}}>CA encaissé (95%) − charges (95%) − emprunts − IS acompte</span>
+                  </td>
+                  <td style={cM}>—</td><td style={cM}>—</td>
+                  <td style={cR}>{fmt(Math.round(v1ca*0.95-(v1ch+v1sal)*0.95-projRemb-acompteMens))}</td>
+                  <td style={cT}>—</td><Calc/>
+                  <td style={{...cP,color:fluxProj>=0?C.green:C.red}}>{fmt(fluxProj)}</td>
+                  <Ec v1={Math.round(v1ca*0.95-(v1ch+v1sal)*0.95-projRemb-acompteMens)} pN={fluxProj}/>
+                </tr>
+                <tr style={cTot}>
+                  <td style={{...cL,fontWeight:800}}>Trésorerie cumulée fin de mois</td>
+                  <td style={cM}>—</td><td style={cM}>—</td>
+                  <td style={{...cR,fontWeight:800}}>{fmt(treso+Math.round(v1ca*0.95-(v1ch+v1sal)*0.95-projRemb-acompteMens))}</td>
+                  <td style={cT}>—</td><Calc/>
+                  <td style={{...cP,fontSize:14,color:(treso+fluxProj)>=0?C.green:C.red}}>{fmt(treso+fluxProj)}</td>
+                  <td style={cM}>—</td><td style={cM}>—</td>
+                </tr>
+
+              </tbody>
+            </table>
+          </div>
+
+          <div style={{display:"flex",gap:14,padding:"10px 14px",fontSize:11,color:C.textMid,borderTop:`1px solid ${C.border}`,flexWrap:"wrap",background:C.bg}}>
+            <span><span style={{display:"inline-block",width:8,height:8,background:"#1D9E75",borderRadius:2,marginRight:4}}/>Calculé automatiquement depuis CA prévu (fond vert)</span>
+            <span><span style={{display:"inline-block",width:8,height:8,background:"#185FA5",borderRadius:2,marginRight:4}}/>Calculé depuis les contrats (emprunts / investissements)</span>
+            <span>Ajust. = entrez un +/- pour corriger une exception · Zéro = pas d'ajustement</span>
+          </div>
+        </Card>
       </div>
     );
   }
@@ -5177,7 +5232,7 @@ export default function App() {
   const handleAddClient=(newC)=>{
     const id=Math.max(...clients.map(c=>c.id))+1;
     const tempPass = generateTempPassword();
-    const newClient = {id,name:newC.name,sector:newC.sector,color:C.primaryLight,manager:newC.manager||"A definir",since:String(new Date().getFullYear()),status:"healthy",kpis:{ca:0,marge:0,charges:0,salaires:0,ebe:0,result:0,tresorerie:0},alertes:[],emprunts:[],investissements:[],tresorerie:{soldeInitial:0,ajustements:[]},is:{totalPrecedent:0,taux:15},previsionnel:{mode:"auto",hypotheses:{}},imports:[]};
+    const newClient = {id,name:newC.name,sector:newC.sector,color:C.primaryLight,manager:newC.manager||"A definir",since:String(new Date().getFullYear()),status:"healthy",kpis:{ca:0,marge:0,charges:0,salaires:0,ebe:0,result:0,tresorerie:0},alertes:[],emprunts:[],investissements:[],tresorerie:{soldeInitial:0,ajustements:[]},is:{totalPrecedent:0,taux:15},imports:[]};
     setClients(prev=>{
       const next=[...prev,newClient];
       saveExtraClients(next);
@@ -5239,7 +5294,7 @@ export default function App() {
             }
           />
           <div style={{flex:1,overflowY:"auto"}}>
-            <ClientSpace client={live} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear} onUpdateClient={updateClient}/>
+            <ClientSpace client={live} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear}/>
           </div>
         </div>
       </div>
@@ -5259,7 +5314,7 @@ export default function App() {
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <TopBar title={CLIENT_TITLES[view]||"Dashboard"} user={user}/>
           <div style={{flex:1,overflowY:"auto"}}>
-            {client&&<ClientSpace client={client} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear} onUpdateClient={updateClient}/>}
+            {client&&<ClientSpace client={client} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear}/>}
           </div>
         </div>
       </div>

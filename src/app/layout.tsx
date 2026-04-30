@@ -1,22 +1,16 @@
 import type { Metadata } from "next";
-import { Nunito } from "next/font/google";
-import "@/styles/globals.css";
-
-const nunito = Nunito({
-  subsets: ["latin"],
-  variable: "--font-nunito",
-  weight: ["400", "600", "700", "800", "900"],
-});
 
 export const metadata: Metadata = {
-  title: "NVM Finance — Tableau de bord",
-  description: "Logiciel de conseil financier NVM Finance",
+  title: "NVM Finance",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className={nunito.variable}>
-      <body className="font-sans antialiased bg-nvm-bg min-h-screen">
+    <html lang="fr">
+      <head>
+        <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+      </head>
+      <body style={{ margin: 0, fontFamily: "Nunito, sans-serif" }}>
         {children}
       </body>
     </html>

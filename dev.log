@@ -1,0 +1,3 @@
+dyld[19381]: Symbol not found: (__ZNSt3__122__libcpp_verbose_abortEPKcz)
+  Referenced from: '/usr/local/bin/node'
+  Expected in: '/usr/lib/libc++.1.dylib'
