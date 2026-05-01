@@ -1,10 +1,6 @@
 "use client";
-import { useState, useRef, useCallback, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+
+import { useState, useRef, useCallback } from "react";
 
 const C = {
  primary:"#005653", primaryDark:"#003d3a", primaryLight:"#00706c",
