@@ -419,6 +419,11 @@ function LoginPage({ onLogin }) {
           </button>
         </div>
 
+        <div style={{marginTop:22,padding:14,background:C.bg,borderRadius:10,fontSize:12,color:C.textMid,lineHeight:1.8}}>
+          
+          <div><strong>Admin :</strong> admin@nvmfinance.fr / admin123</div>
+
+        </div>
       </div>
     </div>
   );
