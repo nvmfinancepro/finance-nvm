@@ -1,10 +1,7 @@
 "use client";
-import { useState, useRef, useCallback, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+
+import { useState, useRef, useCallback } from "react";
+
 const C = {
  primary:"#005653", primaryDark:"#003d3a", primaryLight:"#00706c",
  bg:"#ecfdf5", bgLight:"#f0faf8", white:"#ffffff",
@@ -594,8 +591,8 @@ function ClientSidebar({ view, setView, onLogout, clientName, alertCount }) {
  {id:"catalogue", icon:"≡", label:"Mon catalogue produits"},
  ]},
  { label:"ANALYSE", items:[
- {id:"comparaison", icon:"↔", label:"Comparaison périodes"},
-     {id:"previsionnel", icon:"→", label:"Prévisionnel 2026"},
+ {id:"comparaison",   icon:"↔", label:"Comparaison périodes"},
+ {id:"previsionnel",  icon:"→", label:"Prévisionnel 2026"},
  ]},
  ];
  return (
@@ -2145,10 +2142,12 @@ function getPrevKpis(client, moisIdx, moisYear) {
 }
 
 function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear }) {
- const [moisPrev, setMoisPrev] = useState(CUR_M);
- const [adjPrev, setAdjPrev] = useState(() => client.previsionnel?.adjustments || {});
- const [periodeA, setPeriodeA] = useState("");
- const [periodeB, setPeriodeB] = useState("");
+ // Tous les hooks doivent être déclarés inconditionnellement (règle React)
+ const [moisPrev,  setMoisPrev]  = useState(CUR_M);
+ const [adjPrev,   setAdjPrev]   = useState(() => client.previsionnel?.adjustments || {});
+ const [periodeA,  setPeriodeA]  = useState("");
+ const [periodeB,  setPeriodeB]  = useState("");
+
  const kpis = calcMonthKpis(client, moisIdx, moisYear);
  const prevKpis = getPrevKpis(client, moisIdx, moisYear);
  const imports = client.imports||[];
@@ -2162,7 +2161,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear }) {
  const provIS = Math.max(0,Math.round((kpis.ebe)*isD.taux/100));
 
  // Header commun avec sélecteur de mois
- const PageHeader = ({ title, sub }) => (
+ const PageHeader = ({ title, sub, hidePicker=false }) => (
  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12,marginBottom:20}}>
  <div>
  <div style={{fontSize:18,fontWeight:900,color:C.text}}>{title}</div>
@@ -2172,7 +2171,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear }) {
  : <div style={{fontSize:11,color:C.orange,fontWeight:700,marginTop:3}}>Estimations — aucun import pour ce mois</div>
  }
  </div>
- <MoisPicker moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear}/>
+ {!hidePicker&&<MoisPicker moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear}/>}
  </div>
  );
 
@@ -2323,10 +2322,15 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear }) {
            <div key={i} style={{display:"flex",alignItems:"center",background:i%2===0?"white":"#f9fffe",borderBottom:"1px solid #e8f5f4"}}>
              <div style={{flex:cols[0].flex,padding:"12px 14px",fontSize:13,fontWeight:700,color:"#002e2c"}}>{r.produit}</div>
              <div style={{flex:cols[1].flex,padding:"12px 14px",textAlign:"right",fontSize:13,color:"#6aaca8"}}>{r.qte}</div>
-             <div style={{flex:cols[2].flex,padding:"12px 14px",textAlign:"right",fontFamily:"monospace",fontSize:13}}>{fmt(r.ca)}</div>
-             <div style={{flex:cols[3].flex,padding:"12px 14px",textAlign:"right",fontFamily:"monospace",fontSize:13,color:C.red}}>{fmt(r.cout)}</div>
-             <div style={{flex:cols[4].flex,padding:"12px 14px",textAlign:"right",fontFamily:"monospace",fontSize:13,color:C.green}}>{fmt(r.marge)}</div>
-             <div style={{flex:cols[5].flex,padding:"12px 14px",textAlign:"right",fontSize:13,fontWeight:800,color:col}}>{tx}%</div>
+             <div style={{flex:cols[2].flex,padding:"12px 14px",textAlign:"right",fontFamily:"'Courier New',monospace",fontSize:13}}>{fmt(r.ca)}</div>
+             <div style={{flex:cols[3].flex,padding:"12px 14px",textAlign:"right",fontFamily:"'Courier New',monospace",fontSize:13,color:C.red}}>{fmt(r.cout)}</div>
+             <div style={{flex:cols[4].flex,padding:"12px 14px",textAlign:"right",fontFamily:"'Courier New',monospace",fontSize:13,color:C.green}}>{fmt(r.marge)}</div>
+             <div style={{flex:cols[5].flex,padding:"12px 14px",textAlign:"right",fontSize:13,fontWeight:800,color:col,fontFamily:"'Nunito',sans-serif",display:"flex",alignItems:"center",justifyContent:"flex-end",gap:6}}>
+               <div style={{width:32,height:5,borderRadius:3,background:C.borderLight,flexShrink:0}}>
+                 <div style={{height:"100%",width:`${Math.min(100,tx)}%`,background:col,borderRadius:3}}/>
+               </div>
+               {tx}%
+             </div>
            </div>
          );
        })}
@@ -2334,10 +2338,15 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear }) {
        <div style={{display:"flex",alignItems:"center",background:"#ecfdf5",borderTop:"2px solid #a7d4d0"}}>
          <div style={{flex:cols[0].flex,padding:"12px 14px",fontSize:13,fontWeight:900,color:"#002e2c"}}>TOTAL</div>
          <div style={{flex:cols[1].flex,padding:"12px 14px",textAlign:"right",fontSize:13,fontWeight:900}}>{totalQte}</div>
-         <div style={{flex:cols[2].flex,padding:"12px 14px",textAlign:"right",fontFamily:"monospace",fontSize:13,fontWeight:900}}>{fmt(totalCa)}</div>
-         <div style={{flex:cols[3].flex,padding:"12px 14px",textAlign:"right",fontFamily:"monospace",fontSize:13,fontWeight:900,color:C.red}}>{fmt(totalCout)}</div>
-         <div style={{flex:cols[4].flex,padding:"12px 14px",textAlign:"right",fontFamily:"monospace",fontSize:13,fontWeight:900,color:C.green}}>{fmt(totalCa-totalCout)}</div>
-         <div style={{flex:cols[5].flex,padding:"12px 14px",textAlign:"right",fontSize:13,fontWeight:900,color:txTotal>=40?C.green:txTotal>=25?C.orange:C.red}}>{txTotal}%</div>
+         <div style={{flex:cols[2].flex,padding:"12px 14px",textAlign:"right",fontFamily:"'Courier New',monospace",fontSize:13,fontWeight:900}}>{fmt(totalCa)}</div>
+         <div style={{flex:cols[3].flex,padding:"12px 14px",textAlign:"right",fontFamily:"'Courier New',monospace",fontSize:13,fontWeight:900,color:C.red}}>{fmt(totalCout)}</div>
+         <div style={{flex:cols[4].flex,padding:"12px 14px",textAlign:"right",fontFamily:"'Courier New',monospace",fontSize:13,fontWeight:900,color:C.green}}>{fmt(totalCa-totalCout)}</div>
+         <div style={{flex:cols[5].flex,padding:"12px 14px",textAlign:"right",fontSize:13,fontWeight:900,color:txTotal>=40?C.green:txTotal>=25?C.orange:C.red,fontFamily:"'Nunito',sans-serif",display:"flex",alignItems:"center",justifyContent:"flex-end",gap:6}}>
+           <div style={{width:32,height:5,borderRadius:3,background:C.borderLight,flexShrink:0}}>
+             <div style={{height:"100%",width:`${Math.min(100,txTotal)}%`,background:txTotal>=40?C.green:txTotal>=25?C.orange:C.red,borderRadius:3}}/>
+           </div>
+           {txTotal}%
+         </div>
        </div>
      </div>
    );
@@ -3879,6 +3888,9 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear }) {
     const availMois = getAvailableMonths(client);
 
     // Périodes sélectionnées
+    // periodeA/B déclarés en haut de ClientSpace — initialisation ici si vide
+    if (!periodeA && availMois.length>0) setPeriodeA(availMois[availMois.length-1]);
+    if (!periodeB && availMois.length>1) setPeriodeB(availMois[availMois.length-2]);
 
     const parseKey = (key) => {
       if(!key) return {mi:0,yr:CUR_Y};
@@ -4217,11 +4229,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear }) {
     );
   }
 
-// BLOC PRÉVISIONNEL — coller dans ClientSpace juste avant return null;
-// Hooks requis en haut de ClientSpace:
-// const [moisPrev, setMoisPrev] = useState(CUR_M);
-// const [adjPrev, setAdjPrev] = useState(() => client.previsionnel?.adjustments || {});
-
+  // ── PRÉVISIONNEL HYBRIDE ──────────────────────────────
   if (view === "previsionnel") {
     const N  = CUR_Y;     // 2026 — année en cours
     const N1 = N-1;       // 2025 — base historique principale
@@ -5175,18 +5183,18 @@ export default function App() {
   // ── Clients : démos fixes + clients créés persistés dans storage ──
   const [clients,setClients]=useState(()=>INIT_CLIENTS.map(c=>c.id===1?{...c,imports:NEXUS_IMPORTS}:c));
 
-  // Charger les clients depuis Supabase au démarrage
   useEffect(()=>{
     (async()=>{
       try {
-        const {data:cd}=await supabase.from("clients").select("*").order("id");
+        const {data:cd,error:ce}=await supabase.from("clients").select("*").order("id");
+        if(ce) throw ce;
         const {data:id2}=await supabase.from("imports_csv").select("*");
         const {data:ud}=await supabase.from("client_users").select("*");
         if(!cd||cd.length===0) return;
         const demoIds=INIT_CLIENTS.map(c=>c.id);
-        const extras=(cd||[]).filter(c=>!demoIds.includes(c.id)).map(c=>({
+        const extras=cd.filter(c=>!demoIds.includes(c.id)).map(c=>({
           id:c.id,name:c.name,sector:c.sector,color:c.color,manager:c.manager,
-          since:c.since,status:c.status,email:c.email,
+          since:c.since,status:c.status,email:c.email||"",
           kpis:c.kpis||{ca:0,marge:0,charges:0,salaires:0,ebe:0,result:0,tresorerie:0},
           emprunts:c.emprunts||[],investissements:c.investissements||[],
           tresorerie:c.tresorerie||{soldeInitial:0,ajustements:[]},
@@ -5199,7 +5207,7 @@ export default function App() {
         }));
         (ud||[]).forEach(u=>{
           if(!USERS_AUTH.find(a=>a.email===u.email)){
-            USERS_AUTH.push({id:`c${u.client_id}`,email:u.email,password:u.password,
+            USERS_AUTH.push({id:"c"+u.client_id,email:u.email,password:u.password,
               role:"CLIENT",clientId:u.client_id,
               name:extras.find(c=>c.id===u.client_id)?.name||"",firstLogin:u.first_login});
           }
@@ -5209,10 +5217,11 @@ export default function App() {
       } catch(e){console.error("Supabase load error:",e);}
     })();
   },[]);
-    const saveClientToSupabase=async(client)=>{
+
+  const saveClientToSupabase=async(client)=>{
     try {
       await supabase.from("clients").upsert({
-        id:client.id,name:client.name,sector:client.sector,color:client.color,
+        id:client.id,name:client.name,sector:client.sector||"",color:client.color,
         manager:client.manager,since:client.since,status:client.status,email:client.email||"",
         kpis:client.kpis,emprunts:client.emprunts||[],investissements:client.investissements||[],
         tresorerie:client.tresorerie||{soldeInitial:0,ajustements:[]},
@@ -5221,9 +5230,8 @@ export default function App() {
       },{onConflict:"id"});
     } catch(e){console.error("Supabase save error:",e);}
   };
-
-  const [moisCourant,setMoisCourant]=useState(`${CUR_Y}-${String(CUR_M+1).padStart(2,"0")}`);
   const [previewClient,setPreviewClient]=useState(null);
+  const [moisCourant,setMoisCourant]=useState(`${CUR_Y}-${String(CUR_M+1).padStart(2,"0")}`);
   const moisYear=parseInt(moisCourant.split("-")[0]);
   const moisIdx=parseInt(moisCourant.split("-")[1])-1;
   const setMoisIdx=(fn)=>{
@@ -5254,33 +5262,30 @@ export default function App() {
     const tempPass = generateTempPassword();
     const newClient = {name:newC.name,sector:newC.sector||"",color:C.primaryLight,manager:newC.manager||"A definir",since:String(new Date().getFullYear()),status:"healthy",kpis:{ca:0,marge:0,charges:0,salaires:0,ebe:0,result:0,tresorerie:0},emprunts:[],investissements:[],tresorerie:{soldeInitial:0,ajustements:[]},is:{totalPrecedent:0,taux:15},imports:[],previsionnel:{adjustments:{}}};
     try {
-      // Sauvegarder dans Supabase
-      const {data,error} = await supabase.from("clients").insert({
+      const {data,error}=await supabase.from("clients").insert({
         name:newClient.name,sector:newClient.sector,color:newClient.color,
         manager:newClient.manager,since:newClient.since,status:newClient.status,
         email:newC.email||"",kpis:newClient.kpis,emprunts:[],investissements:[],
         tresorerie:newClient.tresorerie,is_data:newClient.is,previsionnel:newClient.previsionnel,
       }).select().single();
-      if (error) throw error;
-      const id = data.id;
-      const clientAvecId = {...newClient, id};
-      setClients(prev=>[...prev, clientAvecId]);
-      // Sauvegarder le compte utilisateur
-      if (newC.email) {
+      if(error) throw error;
+      const clientAvecId={...newClient,id:data.id};
+      setClients(prev=>[...prev,clientAvecId]);
+      if(newC.email){
         await supabase.from("client_users").insert({
-          client_id:id, email:newC.email, password:tempPass, first_login:true
+          client_id:data.id,email:newC.email,password:tempPass,first_login:true
         });
-        USERS_AUTH.push({id:`c${id}`,email:newC.email,password:tempPass,role:"CLIENT",clientId:id,name:newC.name,firstLogin:true});
+        USERS_AUTH.push({id:"c"+data.id,email:newC.email,password:tempPass,role:"CLIENT",clientId:data.id,name:newC.name,firstLogin:true});
       }
       setNewClientCredentials({name:newC.name,email:newC.email||"(email non renseigné)",tempPass});
-    } catch(e) {
+    } catch(e){
       console.error("Erreur création client:",e);
-      alert("Erreur lors de la création du client: "+e.message);
+      alert("Erreur: "+e.message);
     }
   };
 
   const ADMIN_TITLES={clients:`Portefeuille clients (${clients.length})`,acces:"Accès & mots de passe clients",saisie:"Saisie & Import CSV",financier:"Donnees financieres",alertes:"Centre d'alertes",rapports:"Rapports IA"};
-  const CLIENT_TITLES={dashboard:"Tableau de bord",alertes:"Mes alertes",ventes:"Mes ventes",achats:"Mes couts d'achat",charges:"Mes charges",salaires:"Ma masse salariale",creances:"Mes créances clients",dettes:"Mes dettes fournisseurs",resultat:"Mon resultat financier",tresorerie:"Ma tresorerie",emprunts:"Mes emprunts",investissements:"Mes investissements",is:"Mon impot (IS)",catalogue:"Mon catalogue produits", comparaison:"Comparaison de périodes"};
+  const CLIENT_TITLES={dashboard:"Tableau de bord",alertes:"Mes alertes",ventes:"Mes ventes",achats:"Mes couts d'achat",charges:"Mes charges",salaires:"Ma masse salariale",creances:"Mes créances clients",dettes:"Mes dettes fournisseurs",resultat:"Mon resultat financier",tresorerie:"Ma tresorerie",emprunts:"Mes emprunts",investissements:"Mes investissements",is:"Mon impot (IS)",catalogue:"Mon catalogue produits", comparaison:"Comparaison de périodes", previsionnel:"Prévisionnel hybride 2026"};
 
   // Modal credentials nouveau client (admin)
   const CredentialsModal = newClientCredentials ? (
@@ -5365,7 +5370,7 @@ export default function App() {
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
         <TopBar title={ADMIN_TITLES[view]||"Admin"} user={user}/>
         <div style={{flex:1,overflowY:"auto"}}>
-          {view==="clients"&&<AdminClients clients={clients} onViewAsClient={setPreviewClient} onAddClient={handleAddClient} onUpdateClient={updateClient} onDeleteClient={async(id)=>{setClients(prev=>prev.filter(c=>c.id!==id));const idx=USERS_AUTH.findIndex(u=>u.clientId===id);if(idx!==-1)USERS_AUTH.splice(idx,1);try{await supabase.from("clients").delete().eq("id",id);await supabase.from("client_users").delete().eq("client_id",id);}catch(e){console.error("Erreur suppression:",e);}}}/>}
+          {view==="clients"&&<AdminClients clients={clients} onViewAsClient={setPreviewClient} onAddClient={handleAddClient} onUpdateClient={updateClient} onDeleteClient={(id)=>{setClients(prev=>prev.filter(c=>c.id!==id));const idx=USERS_AUTH.findIndex(u=>u.clientId===id);if(idx!==-1)USERS_AUTH.splice(idx,1);supabase.from("clients").delete().eq("id",id).then(()=>{});supabase.from("client_users").delete().eq("client_id",id).then(()=>{});}}/>}
           {view==="acces"&&<AdminAcces clients={clients}/>}
           {view==="saisie"&&<AdminSaisie clients={clients} onUpdateClient={updateClient}/>}
           {view==="financier"&&<AdminFinancier clients={clients} onUpdateClient={updateClient}/>}
