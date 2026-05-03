@@ -636,7 +636,7 @@ function AdminClients({ clients, onViewAsClient, onAddClient, onUpdateClient, on
  const [editC,setEditC]=useState({});
  const [confirmDelete,setConfirmDelete]=useState(null); // id du client à supprimer
 
- const startEdit=(c)=>{ setEditId(c.id); setEditC({name:c.name,sector:c.sector,manager:c.manager,status:c.status,email:c.email||""}); };
+ const startEdit=(c)=>{ setEditId(c.id); setEditC({name:c.name,sector:c.sector,manager:c.manager,status:c.status}); };
  const saveEdit=()=>{
     const client = clients.find(c=>c.id===editId);
     // Calcul automatique du statut financier
