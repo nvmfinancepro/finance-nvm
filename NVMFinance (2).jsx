@@ -1,6 +1,10 @@
 "use client";
-
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { createClient } from "@supabase/supabase-js";
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
 
 const C = {
  primary:"#005653", primaryDark:"#003d3a", primaryLight:"#00706c",
@@ -45,30 +49,44 @@ const pct = (n) => (n==null||isNaN(n))?"—":`${Number(n).toFixed(1)} %`;
 // CSV TEMPLATES PAR SECTEUR
 const CSV_TEMPLATES = {
  ventes_produits:{
- "E-Commerce":"reference;nom_produit;quantite_vendue;ca_ht;cout_achat_ht;marge_ht;canal_vente\nPRD-001;T-shirt coton bio;120;3600;1440;2160;Boutique en ligne\nPRD-002;Pantalon slim;85;5100;2040;3060;Marketplace",
- "Restauration":"date;libelle;nb_couverts;ticket_moyen_ht;ca_ht;cout_matiere_ht;marge_brute\n2025-10-01;Midi semaine;48;18.50;888;266;622\n2025-10-01;Soir vendredi;72;32.00;2304;691;1613",
- "Fabrication & Vente":"reference;designation;qte_produite;qte_vendue;pvht;cout_production_ht;marge_ht\nFAB-001;Meuble bois chêne;25;22;400;150;5500\nFAB-002;Table laquée;40;35;150;50;3500",
- "BTP":"reference_chantier;libelle;client;avancement_pct;ca_ht_periode;main_oeuvre;materiaux\nCHAN-001;Rénovation bureaux;SCI Lumière;60;18000;7200;5400",
- "Santé":"date;praticien;nb_actes;type_acte;ca_ht;remboursement_secu;reste_charge\n2025-10-01;Dr Martin;32;Consultation;4800;3200;1600",
- "Hôtellerie":"date;type_chambre;nb_nuits;prix_moyen_nuit_ht;taux_occupation;ca_ht;cout_chambre\n2025-10-01;Standard;28;95;90;2660;560",
- "Immobilier":"reference;adresse;type_bail;loyer_ht;charges_recuperees;vacance_jours;revenu_net\nIMM-001;12 rue des Arts;Commercial;2800;350;0;3150",
- "Distribution":"reference;designation;qte_vendue;prix_achat_ht;prix_vente_ht;ca_ht;marge_ht\nDIS-001;Boissons palettes;28;15;22;616;196",
- "Conseil":"reference_mission;libelle;client;taux_journalier;jours;ca_ht;charges_directes\nCONS-001;Stratégie;Groupe Alpha;1200;5;6000;0",
- default:"reference;libelle;quantite;prix_unitaire_ht;ca_ht;cout_unitaire;marge_ht\nVTE-001;Produit A;50;200;10000;80;6000",
+ "E-Commerce":"reference;nom_produit;quantite_vendue;ca_ht;cout_achat_ht;marge_ht;canal_vente\nPRD-001;T-shirt coton bio;120;3600;1440;2160;Boutique en ligne\nPRD-002;Pantalon slim;85;5100;2040;3060;Marketplace\nPRD-003;Sneakers édition limitée;40;4800;2400;2400;Boutique en ligne",
+ "Restauration":"date;libelle;nb_couverts;ticket_moyen_ht;ca_ht;cout_matiere_ht;marge_brute\n2025-10-01;Midi semaine;48;18.50;888;266;622\n2025-10-01;Soir vendredi;72;32.00;2304;691;1613\n2025-10-02;Brunch dimanche;35;28.00;980;294;686",
+ "Fabrication & Vente":"reference;designation;qte_produite;qte_vendue;pvht;cout_production_ht;marge_ht\nFAB-001;Meuble bois chêne;25;22;400;150;5500\nFAB-002;Table laquée;40;35;150;50;3500\nFAB-003;Chaise design;60;55;180;70;6050",
+ "BTP":"reference_chantier;libelle;client;avancement_pct;ca_ht_periode;main_oeuvre_ht;materiaux_ht\nCHAN-001;Rénovation bureaux;SCI Lumière;60;18000;7200;5400\nCHAN-002;Extension pavillon;M. Dupont;30;8500;3400;2550\nCHAN-003;Ravalement façade;Synd. Copro;100;12000;4800;3600",
+ "Santé":"date;praticien;nb_actes;type_acte;ca_ht;remboursement_secu;depassement_honoraires\n2025-10-01;Dr Martin;32;Consultation;4800;3200;1600\n2025-10-01;Dr Martin;8;Acte technique;3200;1600;1600\n2025-10-02;Dr Dupont;28;Consultation;4200;2800;1400",
+ "Hôtellerie":"date;type_chambre;nb_nuits;prix_moyen_nuit_ht;taux_occupation_pct;ca_ht;cout_chambre_ht\n2025-10-01;Standard;28;95;90;2660;560\n2025-10-01;Suite;8;180;65;1440;320\n2025-10-01;Petit-déjeuner;32;12;0;384;96",
+ "Immobilier":"reference;adresse;type_bail;loyer_mensuel_ht;charges_recuperees;vacance_jours;revenu_net_mensuel\nIMM-001;12 rue des Arts;Commercial;2800;350;0;3150\nIMM-002;8 av. Foch;Habitation;1200;80;0;1280\nIMM-003;Zone ind. Nord;Entrepôt;1800;150;5;1950",
+ "Distribution":"reference;designation;qte_vendue;prix_achat_ht;prix_vente_ht;ca_ht;marge_ht\nDIS-001;Boissons palettes;28;15;22;616;196\nDIS-002;Épicerie fine;150;8;13;1950;750\nDIS-003;Produits frais;80;5;9;720;320",
+ "Conseil":"reference_mission;libelle;client;taux_journalier_ht;nb_jours;ca_ht;charges_directes_ht\nCONS-001;Stratégie commerciale;Groupe Alpha;1200;5;6000;0\nCONS-002;Audit organisationnel;PME Bertrand;900;8;7200;500\nCONS-003;Accompagnement RH;SAS Horizon;800;3;2400;0",
+ "Prestation de services":"reference;libelle;client;quantite;prix_unitaire_ht;ca_ht;marge_ht\nPREST-001;Accompagnement mensuel;Client A;1;1500;1500;1500\nPREST-002;Mission ponctuelle;Client B;1;3200;3200;3200\nPREST-003;Formation;Client C;2;900;1800;1600",
+ default:"reference;libelle;quantite;prix_unitaire_ht;ca_ht;cout_unitaire_ht;marge_ht\nVTE-001;Produit / Prestation A;50;200;10000;80;6000\nVTE-002;Produit / Prestation B;30;150;4500;60;2700",
  },
  autres_ventes:{
  default:"libelle;nature;encaissement;ca_ht;taux_tva;cout;marge\nPrestation accessoire;prestation;1200;1200;20;200;1000\nSubvention;subvention;5000;5000;0;0;5000",
  },
  charges:{
- "E-Commerce":"date;fournisseur;libelle;montant_ht;taux_tva;tva_recuperable;type\n2025-10-01;Shopify;Abonnement;79;20;oui;variable\n2025-10-01;Meta Ads;Publicité;890;20;oui;variable\n2025-10-01;Bail SCI;Loyer;1800;0;non;fixe",
- "Restauration":"date;fournisseur;libelle;montant_ht;taux_tva;tva_recuperable;type\n2025-10-01;Metro;Achats alimentaires;3200;5.5;oui;variable\n2025-10-01;EDF Pro;Électricité;420;20;oui;fixe\n2025-10-01;SCI Resto;Loyer;2500;0;non;fixe",
- "BTP":"date;fournisseur;libelle;montant_ht;taux_tva;tva_recuperable;type\n2025-10-01;Point P;Matériaux;4200;20;oui;variable\n2025-10-01;Assurance PRO;RC décennale;320;9;non;fixe",
- default:"date;fournisseur;libelle;montant_ht;taux_tva;tva_recuperable;type\n2025-10-01;Fournisseur A;Charge fixe;1000;20;oui;fixe\n2025-10-01;Fournisseur B;Charge variable;500;20;oui;variable",
+ "E-Commerce":"date;fournisseur;libelle;montant_ht;taux_tva;tva_recuperable;type\n2025-10-01;Shopify;Abonnement plateforme;79;20;oui;fixe\n2025-10-01;Meta Ads;Publicité Facebook/Instagram;890;20;oui;variable\n2025-10-01;Google Ads;Publicité Google;450;20;oui;variable\n2025-10-01;Bail SCI;Loyer entrepôt;1800;0;non;fixe\n2025-10-01;Chronopost;Frais de livraison;620;20;oui;variable",
+ "Restauration":"date;fournisseur;libelle;montant_ht;taux_tva;tva_recuperable;type\n2025-10-01;Metro;Achats alimentaires;3200;5.5;oui;variable\n2025-10-01;EDF Pro;Électricité;420;20;oui;fixe\n2025-10-01;SCI Resto;Loyer;2500;0;non;fixe\n2025-10-01;Eau de Paris;Eau;85;20;oui;fixe\n2025-10-01;Nettoyage Pro;Entretien;280;20;oui;fixe",
+ "BTP":"date;fournisseur;libelle;montant_ht;taux_tva;tva_recuperable;type\n2025-10-01;Point P;Matériaux chantier;4200;20;oui;variable\n2025-10-01;Assurance PRO;RC décennale;320;9;non;fixe\n2025-10-01;Kiloutou;Location matériel;650;20;oui;variable\n2025-10-01;Total;Carburant véhicules;380;20;oui;variable",
+ "Santé":"date;fournisseur;libelle;montant_ht;taux_tva;tva_recuperable;type\n2025-10-01;SCI Cabinet;Loyer cabinet;2200;0;non;fixe\n2025-10-01;Médiphar;Consommables médicaux;480;20;oui;variable\n2025-10-01;MACSF;Assurance RC pro;180;9;non;fixe\n2025-10-01;Logiciel Doctolib;Abonnement;129;20;oui;fixe",
+ "Hôtellerie":"date;fournisseur;libelle;montant_ht;taux_tva;tva_recuperable;type\n2025-10-01;EDF Pro;Électricité;1200;20;oui;fixe\n2025-10-01;Linge Hôtel;Blanchisserie;380;20;oui;variable\n2025-10-01;Booking.com;Commission réservations;420;20;oui;variable\n2025-10-01;SCI Hôtel;Loyer;4500;0;non;fixe",
+ "Immobilier":"date;fournisseur;libelle;montant_ht;taux_tva;tva_recuperable;type\n2025-10-01;Assurance PNO;Assurance propriétaire;85;9;non;fixe\n2025-10-01;Syndic;Charges copropriété;220;20;non;fixe\n2025-10-01;Artisan;Travaux entretien;650;20;oui;autre",
+ "Conseil":"date;fournisseur;libelle;montant_ht;taux_tva;tva_recuperable;type\n2025-10-01;WeWork;Location bureaux;1800;20;oui;fixe\n2025-10-01;SNCF;Frais déplacement;420;10;oui;variable\n2025-10-01;Adobe;Logiciels créatifs;54;20;oui;fixe\n2025-10-01;Sous-traitant;Prestation externe;2400;20;oui;variable",
+ "Prestation de services":"date;fournisseur;libelle;montant_ht;taux_tva;tva_recuperable;type\n2025-10-01;Bail SCI;Loyer bureaux;2200;0;non;fixe\n2025-10-01;SaaS Tools;Abonnements logiciels;380;20;oui;fixe\n2025-10-01;SNCF;Frais déplacement;580;10;oui;variable\n2025-10-01;Sous-traitant;Prestation externe;1800;20;oui;variable",
+ "Distribution":"date;fournisseur;libelle;montant_ht;taux_tva;tva_recuperable;type\n2025-10-01;Fournisseur principal;Achats marchandises;8500;20;oui;variable\n2025-10-01;Transports DHL;Frais de port;620;20;oui;variable\n2025-10-01;Bail entrepôt;Loyer;2800;0;non;fixe",
+ default:"date;fournisseur;libelle;montant_ht;taux_tva;tva_recuperable;type\n2025-10-01;Fournisseur A;Charge fixe (loyer, assurance...);1000;20;oui;fixe\n2025-10-01;Fournisseur B;Charge variable (matières, sous-traitance...);500;20;oui;variable\n2025-10-01;Fournisseur C;Autre charge;200;20;oui;autre",
  },
- salaires:{
- "Restauration":"nom_prenom;statut;poste;salaire_brut;avantages_nature;pourboires;cotisations_salariales;cotisations_patronales;salaire_net\nPierre Chef;CDI;Chef de cuisine;2800;150;0;588;1288;2362\nSophie Hall;CDI;Responsable salle;2200;100;180;462;1012;2018",
- "BTP":"nom_prenom;statut;qualification;salaire_brut;heures_sup;prime_chantier;cotisations_salariales;cotisations_patronales;salaire_net\nAlain Maçon;CDI;Chef chantier;3400;340;200;714;1564;3026",
- default:"nom_prenom;statut;poste;salaire_brut;cotisations_salariales;cotisations_patronales;salaire_net\nMarie Dupont;CDI;Responsable;3800;798;1748;3002\nLucas Bernard;CDI;Commercial;3200;672;1472;2528",
+  salaires:{
+ "E-Commerce":"nom_prenom;statut;poste;salaire_brut;cotisations_salariales;cotisations_patronales;salaire_net\nMarie Dupont;CDI;Responsable e-commerce;3800;798;1748;3002\nLucas Bernard;CDI;Chargé marketing digital;3200;672;1472;2528\nEmma Petit;CDI;Logistique;2600;546;1196;2054",
+ "Restauration":"nom_prenom;statut;poste;salaire_brut;avantages_nature;pourboires;cotisations_salariales;cotisations_patronales;salaire_net\nPierre Chef;CDI;Chef de cuisine;2800;150;0;588;1288;2362\nSophie Hall;CDI;Responsable salle;2200;100;180;462;1012;2018\nAli Karimi;CDI;Commis;1900;150;80;399;874;1731",
+ "BTP":"nom_prenom;statut;qualification;salaire_brut;heures_sup;prime_chantier;cotisations_salariales;cotisations_patronales;salaire_net\nAlain Maçon;CDI;Chef chantier;3400;340;200;714;1564;3026\nKevin Plombier;CDI;Ouvrier qualifié;2600;200;150;546;1196;2404\nMarc Électricien;CDI;Ouvrier qualifié;2700;180;150;567;1242;2463",
+ "Santé":"nom_prenom;statut;poste;salaire_brut;cotisations_salariales;cotisations_patronales;salaire_net\nDr Martin;Libéral;Médecin généraliste;0;0;0;0\nSecrétaire méd.;CDI;Secrétaire;2100;441;966;1659\nInfirmière;CDI;Infirmière;2800;588;1288;2212",
+ "Hôtellerie":"nom_prenom;statut;poste;salaire_brut;avantages_nature;cotisations_salariales;cotisations_patronales;salaire_net\nSophie Réception;CDI;Réceptionniste;2200;100;462;1012;1838\nKarim Ménage;CDI;Gouvernant;2100;0;441;966;1659\nChef Cuisine;CDI;Chef cuisinier;3200;150;672;1472;2678",
+ "Conseil":"nom_prenom;statut;poste;salaire_brut;cotisations_salariales;cotisations_patronales;salaire_net\nClaire Directrice;CDI;Directrice conseil;4800;1008;2208;3792\nThomas Senior;CDI;Consultant senior;3800;798;1748;3002\nAmélie Junior;CDI;Consultante junior;3200;672;1472;2528",
+ "Prestation de services":"nom_prenom;statut;poste;salaire_brut;cotisations_salariales;cotisations_patronales;salaire_net\nDirecteur;CDI;Directeur;4500;945;2070;3555\nChargé mission;CDI;Chargé de mission;3400;714;1564;2686\nAssistant;CDI;Assistant;2600;546;1196;2054",
+ "Distribution":"nom_prenom;statut;poste;salaire_brut;cotisations_salariales;cotisations_patronales;salaire_net\nResponsable dépôt;CDI;Responsable logistique;3200;672;1472;2528\nMagasinier;CDI;Magasinier;2400;504;1104;1896\nCommercial;CDI;Commercial terrain;3000;630;1380;2370",
+ "Immobilier":"nom_prenom;statut;poste;salaire_brut;cotisations_salariales;cotisations_patronales;salaire_net\nGestionnaire;CDI;Gestionnaire de biens;3200;672;1472;2528\nComptable;CDI;Comptable;3400;714;1564;2686",
+ default:"nom_prenom;statut;poste;salaire_brut;cotisations_salariales;cotisations_patronales;salaire_net\nEmployé 1;CDI;Responsable;3800;798;1748;3002\nEmployé 2;CDI;Collaborateur;3200;672;1472;2528\nEmployé 3;CDI;Assistant;2600;546;1196;2054",
  },
  catalogue:{
  "E-Commerce":"reference;nom_produit;pvht;taux_tva;paht;fournisseur;stock_min\nPRD-001;T-shirt bio;29.90;20;12.00;Fournisseur FR;20",
@@ -88,9 +106,6 @@ const getTemplate=(type,sector)=>{ const t=CSV_TEMPLATES[type]; if(!t) return ""
 // AUTH
 // Simulé en mémoire — en prod: base de données sécurisée
 const USERS_AUTH_INIT = [
- { id:"admin", email:"admin@nvmfinance.fr", password:"admin123", role:"ADMIN", name:"Administrateur NVM", firstLogin:false },
- { id:"c1", email:"contact@nexustech.fr", password:"client123", role:"CLIENT", clientId:1, name:"Nexus Technologies", firstLogin:false },
- { id:"c2", email:"daf@meridian.fr", password:"client123", role:"CLIENT", clientId:2, name:"Meridian Capital", firstLogin:false },
 ];
 // Mutable en mémoire pour la démo
 let USERS_AUTH = [...USERS_AUTH_INIT];
@@ -101,35 +116,7 @@ const generateTempPassword = () => {
 // Demandes de reset MP — simulées en mémoire
 let RESET_REQUESTS = [];
 
-const INIT_CLIENTS = [
- { id:1, name:"Nexus Technologies", sector:"E-Commerce", color:C.primary, manager:"Sophie Laurent", since:"2022", status:"healthy",
- kpis:{ ca:58400, marge:24200, charges:11200, salaires:9800, ebe:3200, result:2800, tresorerie:44500 },
- alertes:[],
- emprunts:[
- { id:1, libelle:"Prêt BPI Innovation", capital:45000, taux:0.35, duree:60, dateDebut:"2024-03-01", assurance:35 },
- { id:2, libelle:"Crédit-bail entrepôt", capital:28000, taux:0.42, duree:48, dateDebut:"2025-01-01", assurance:22 },
- ],
- investissements:[
- { id:1, libelle:"Serveurs & infra cloud", dateAchat:"2024-06-01", dateMEP:"2024-07-01", montantHT:18000, tauxTVA:20, duree:36 },
- { id:2, libelle:"Logiciel ERP e-commerce", dateAchat:"2025-01-15", dateMEP:"2025-02-01", montantHT:12000, tauxTVA:20, duree:48 },
- { id:3, libelle:"Rayonnages entrepôt", dateAchat:"2025-03-01", dateMEP:"2025-03-15", montantHT:8500, tauxTVA:20, duree:60 },
- ],
- tresorerie:{ soldeInitial:44500, ajustements:[
- {id:1,mois:"2025-11",libelle:"Black Friday — encaissement exceptionnel",montant:12000,type:"encaissement"},
- {id:2,mois:"2025-12",libelle:"Réapprovisionnement stock hivernal",montant:8500,type:"decaissement"},
- {id:3,mois:"2026-03",libelle:"Remboursement TVA Q4 2025",montant:4200,type:"encaissement"},
- ]},
- is:{ totalPrecedent:8500, taux:15 },
- imports:[] },
- { id:2, name:"Meridian Capital", sector:"Prestation de services", color:C.orange, manager:"Marc Dubois", since:"2021", status:"warning",
- kpis:{ ca:32100, marge:11200, charges:8400, salaires:5200, ebe:-2400, result:-3800, tresorerie:4200 },
- alertes:[ { level:"orange", kpi:"EBE négatif", current:"–2 400 €", threshold:"> 0 €", msg:"EBE négatif ce mois", action:"Réduire les charges variables et revoir les tarifs." } ],
- emprunts:[ { id:1, libelle:"Prêt Banque Populaire", capital:30000, taux:0.42, duree:48, dateDebut:"2023-06-01", assurance:28 } ],
- investissements:[ { id:1, libelle:"Logiciel CRM", dateAchat:"2024-01-10", dateMEP:"2024-02-01", montantHT:8400, tauxTVA:20, duree:36 } ],
- tresorerie:{ soldeInitial:8000, ajustements:[] }, is:{ totalPrecedent:0, taux:15 },
- imports:[] },
-];
-
+const INIT_CLIENTS = [];
 const NEXUS_IMPORTS = [
  // VENTES PRODUITS 
  ...[
@@ -345,14 +332,46 @@ function LoginPage({ onLogin }) {
   const [forgotEmail,setForgotEmail] = useState("");
   const [forgotSent,setForgotSent]   = useState(false);
 
-  const handle = () => {
+  const handle = async() => {
     setLoading(true); setErr("");
-    setTimeout(()=>{
+    try {
+      // Connexion via Supabase Auth (admin ET clients)
+      const {data, error} = await supabase.auth.signInWithPassword({email, password:pass});
+      if (!error && data.user) {
+        // Vérifier si c'est un admin
+        const {data: adminData} = await supabase.from("admin_users").select("*").eq("email", data.user.email).single();
+        if (adminData) {
+          onLogin({id:"admin", email:data.user.email, role:"ADMIN", name:"Administrateur NVM", firstLogin:false});
+          setLoading(false);
+          return;
+        }
+        // Sinon chercher dans client_users
+        const {data: clientUser} = await supabase.from("client_users").select("*").eq("email", data.user.email).single();
+        if (clientUser) {
+          // Si connexion via Supabase Auth → firstLogin = false (mot de passe déjà défini)
+          await supabase.from("client_users").update({first_login:false}).eq("email",data.user.email);
+          onLogin({
+            id:"c"+clientUser.client_id,
+            email:clientUser.email,
+            role:"CLIENT",
+            clientId:clientUser.client_id,
+            name:"",
+            firstLogin:false
+          });
+          setLoading(false);
+          return;
+        }
+      }
+      // Fallback : système USERS_AUTH (mots de passe temporaires)
       const u = USERS_AUTH.find(u=>u.email===email&&u.password===pass);
       if (u) onLogin(u);
       else setErr("Identifiants incorrects. Vérifiez votre e-mail et mot de passe.");
-      setLoading(false);
-    }, 500);
+    } catch(e) {
+      const u = USERS_AUTH.find(u=>u.email===email&&u.password===pass);
+      if (u) onLogin(u);
+      else setErr("Identifiants incorrects. Vérifiez votre e-mail et mot de passe.");
+    }
+    setLoading(false);
   };
 
   const handleForgot = () => {
@@ -433,12 +452,6 @@ function LoginPage({ onLogin }) {
           </button>
         </div>
 
-        <div style={{marginTop:22,padding:14,background:C.bg,borderRadius:10,fontSize:12,color:C.textMid,lineHeight:1.8}}>
-          <div style={{fontWeight:800,color:C.text,marginBottom:4}}>Comptes démo :</div>
-          <div><strong>Admin :</strong> admin@nvmfinance.fr / admin123</div>
-          <div><strong>Client 1 :</strong> contact@nexustech.fr / client123</div>
-          <div><strong>Client 2 :</strong> daf@meridian.fr / client123</div>
-        </div>
       </div>
     </div>
   );
@@ -638,7 +651,22 @@ function AdminClients({ clients, onViewAsClient, onAddClient, onUpdateClient, on
  const [confirmDelete,setConfirmDelete]=useState(null); // id du client à supprimer
 
  const startEdit=(c)=>{ setEditId(c.id); setEditC({name:c.name,sector:c.sector,manager:c.manager,status:c.status}); };
- const saveEdit=()=>{ onUpdateClient(editId,{name:editC.name,sector:editC.sector,manager:editC.manager,status:editC.status}); setEditId(null); };
+ const saveEdit=()=>{
+    const client = clients.find(c=>c.id===editId);
+    // Calcul automatique du statut financier
+    const kpis = client ? calcMonthKpis(client, moisIdx, moisYear) : null;
+    let autoStatus = "healthy";
+    if(kpis) {
+      const alertes = calcAlertes(client, moisIdx, moisYear);
+      const reds = alertes.filter(a=>a.level==="red").length;
+      const oranges = alertes.filter(a=>a.level==="orange").length;
+      if(reds > 0) autoStatus = "critical";
+      else if(oranges > 0) autoStatus = "warning";
+      else autoStatus = "healthy";
+    }
+    onUpdateClient(editId,{name:editC.name,sector:editC.sector,manager:editC.manager,email:editC.email,status:autoStatus});
+    setEditId(null);
+  };
 
  const clientToDelete = confirmDelete ? clients.find(c=>c.id===confirmDelete) : null;
 
@@ -686,9 +714,9 @@ function AdminClients({ clients, onViewAsClient, onAddClient, onUpdateClient, on
  <SectionHead title={`Modifier — ${editC.name}`}/>
  <div style={{padding:20,display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
  <FormRow label="Raison sociale"><input value={editC.name||""} onChange={e=>setEditC({...editC,name:e.target.value})} className="inp"/></FormRow>
+ <FormRow label="E-mail client"><input value={editC.email||""} onChange={e=>setEditC({...editC,email:e.target.value})} className="inp" type="email" placeholder="email@client.fr"/></FormRow>
  <FormRow label="Responsable NVM"><input value={editC.manager||""} onChange={e=>setEditC({...editC,manager:e.target.value})} className="inp"/></FormRow>
  <FormRow label="Secteur"><select value={editC.sector||""} onChange={e=>setEditC({...editC,sector:e.target.value})} className="inp">{SECTORS.map(s=><option key={s}>{s}</option>)}</select></FormRow>
- <FormRow label="Statut"><select value={editC.status||"healthy"} onChange={e=>setEditC({...editC,status:e.target.value})} className="inp"><option value="healthy"> Sain</option><option value="warning">Attention</option><option value="critical"> Critique</option></select></FormRow>
  </div>
  <div style={{padding:"0 20px 20px",display:"flex",gap:10}}>
  <Btn variant="ghost" onClick={()=>setEditId(null)}>Annuler</Btn>
@@ -1009,11 +1037,12 @@ function InvestissementsForm({ client, onUpdate }) {
 // TRÉSORERIE
 function TresorerieForm({ client, onUpdate }) {
  const [soldeInitial,setSoldeInitial]=useState(String(client.tresorerie?.soldeInitial||0));
+ const [datesolde,setDateSolde]=useState(client.tresorerie?.dateSolde||`${CUR_Y-1}-12`);
  const [ajustements,setAjustements]=useState(client.tresorerie?.ajustements||[]);
  const [showAjust,setShowAjust]=useState(false);
  const [ajForm,setAjForm]=useState({mois:"2025-10",libelle:"",montant:"",type:"encaissement"});
  const [saved,setSaved]=useState("");
- const save=(s,aj)=>{ onUpdate(client.id,{tresorerie:{soldeInitial:parseFloat(s)||0,ajustements:aj},kpis:{...client.kpis,tresorerie:parseFloat(s)||0}}); setSaved(" Trésorerie mise à jour"); setTimeout(()=>setSaved(""),3000); };
+ const save=(s,aj,ds)=>{ onUpdate(client.id,{tresorerie:{soldeInitial:parseFloat(s)||0,dateSolde:ds||datesolde,ajustements:aj},kpis:{...client.kpis,tresorerie:parseFloat(s)||0}}); setSaved(" Trésorerie mise à jour"); setTimeout(()=>setSaved(""),3000); };
  const addAjust=()=>{ if(!ajForm.libelle||!ajForm.montant) return; const newAj=[...ajustements,{id:Date.now(),...ajForm,montant:parseFloat(ajForm.montant)||0}]; setAjustements(newAj); setAjForm({mois:"2025-10",libelle:"",montant:"",type:"encaissement"}); setShowAjust(false); save(soldeInitial,newAj); };
  const rows=MONTHS.slice(0,CUR_M+1).map((m,i)=>{ const enc=Math.round(client.kpis.ca*(0.9+Math.random()*0.18));const dec=Math.round((client.kpis.charges+client.kpis.salaires)*(0.9+Math.random()*0.15));const ajM=ajustements.filter(a=>a.mois===`${CUR_Y}-${String(i+1).padStart(2,"0")}`);const ajE=ajM.filter(a=>a.type==="encaissement").reduce((s,a)=>s+a.montant,0);const ajD=ajM.filter(a=>a.type==="decaissement").reduce((s,a)=>s+a.montant,0);const solde=enc-dec+ajE-ajD;return {mois:m,encaissements:enc+ajE,decaissements:dec+ajD,solde,soldeCumul:parseFloat(soldeInitial)+solde}; });
  return (
@@ -1022,7 +1051,14 @@ function TresorerieForm({ client, onUpdate }) {
  <Card>
  <SectionHead title="Solde initial & paramètres" sub="Calculé automatiquement : solde initial + encaissements – charges – salaires – emprunts"/>
  <div style={{padding:20,display:"grid",gridTemplateColumns:"1fr 2fr",gap:20}}>
- <div><FormRow label="Solde initial (€)"><input type="number" value={soldeInitial} onChange={e=>setSoldeInitial(e.target.value)} className="inp" placeholder="Ex: 32000"/></FormRow><Btn variant="success" style={{marginTop:12}} onClick={()=>save(soldeInitial,ajustements)}> Enregistrer</Btn></div>
+ <div>
+ <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+   <FormRow label="Solde initial (€)"><input type="number" value={soldeInitial} onChange={e=>setSoldeInitial(e.target.value)} className="inp" placeholder="Ex: 32000"/></FormRow>
+   <FormRow label="Date du solde (mois)"><input type="month" value={datesolde} onChange={e=>setDateSolde(e.target.value)} className="inp"/></FormRow>
+ </div>
+ <div style={{fontSize:11,color:C.textLight,marginBottom:8}}>Indiquez le solde de trésorerie à une date de référence. Le calcul cumulé partira de cette date.</div>
+ <Btn variant="success" style={{marginTop:4}} onClick={()=>save(soldeInitial,ajustements,datesolde)}> Enregistrer</Btn>
+ </div>
  <div style={{background:C.bg,borderRadius:10,padding:16,fontSize:12,color:C.textMid,lineHeight:1.8}}><strong>Calcul auto :</strong> Solde initial + ventes encaissées – charges – salaires – remboursements emprunts – TVA nette<br/><strong>Ajustements :</strong> Flux exceptionnels, corrections ponctuelles</div>
  </div>
  </Card>
@@ -1182,7 +1218,22 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
   const investissements = client.investissements||[];
   const imports     = client.imports||[];
   const chargeEmprunt = emprunts.reduce((s,e)=>{ const m=e.capital*(e.taux/100)/(1-Math.pow(1+e.taux/100,-e.duree)); return s+Math.round(m+e.assurance); },0);
-  const treso       = client.tresorerie?.soldeInitial||client.kpis.tresorerie||0;
+  const soldeInitial = client.tresorerie?.soldeInitial||client.kpis.tresorerie||0;
+  // Calculer la trésorerie cumulée jusqu'au mois affiché
+  const treso = (() => {
+    let cumul = soldeInitial;
+    for(let i=0; i<12; i++) {
+      const offset = moisIdx - 11 + i;
+      const mi2 = ((offset%12)+12)%12;
+      const yr2 = moisYear + Math.floor(offset/12);
+      const k2 = calcMonthKpis(client, mi2, yr2);
+      if(k2.hasData) {
+        const flux = k2.ca*0.95 - (k2.charges+k2.salaires)*0.95 - chargeEmprunt;
+        cumul += flux;
+      }
+    }
+    return Math.round(cumul);
+  })();
   const vncTotal    = investissements.reduce((s,inv)=>{const am=Math.round(inv.montantHT/(inv.duree||36));const me=Math.min(inv.duree,moisIdx+1);return s+Math.max(0,inv.montantHT-am*me);},0);
 
   // ── Données 12 mois glissants
@@ -1609,6 +1660,11 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
         <Card>
           <SectionHead title="Coefficient de saisonnalité — CA" sub="Vert = mois fort · Orange = mois faible · Survol pour détail"/>
           <div style={{padding:"14px 20px 12px"}}>
+            {months12.filter(m=>m.hasData).length<4&&(
+              <div style={{padding:"8px 12px",background:"#fffbeb",border:`1px solid ${C.orange}44`,borderRadius:8,marginBottom:12,fontSize:12,color:C.textMid}}>
+                ⚠ Données insuffisantes — il faut au moins 4 mois pour un coefficient fiable. Importez davantage de données mensuelles.
+              </div>
+            )}
             <div style={{display:"flex",gap:14,marginBottom:10,fontSize:11}}>
               {[{l:"Mois fort (>1.2)",c:C.green},{l:"Normal",c:C.primary},{l:"Mois faible (<0.8)",c:C.orange}].map(it=>(
                 <div key={it.l} style={{display:"flex",alignItems:"center",gap:4}}>
@@ -1636,32 +1692,108 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
               <span style={{color:C.primary,fontWeight:700}}>CA : {fmt(kpis.ca)}</span>
               <span style={{color:kpis.result>=0?C.green:C.red,fontWeight:700}}>Résultat : {fmt(kpis.result)}</span>
             </div>
+            {/* Analyse des postes */}
+            {kpis.ca>0&&(()=>{
+              const posts = [
+                {label:"Marge brute", val:kpis.marge, pct:kpis.marge/kpis.ca*100, seuil:40, inv:false, tip:"En dessous de 40% : attention aux coûts d'achat"},
+                {label:"Charges externes", val:kpis.charges, pct:kpis.charges/kpis.ca*100, seuil:30, inv:true, tip:"Au-dessus de 30% du CA : charges trop élevées"},
+                {label:"Masse salariale", val:kpis.salaires, pct:kpis.salaires/kpis.ca*100, seuil:35, inv:true, tip:"Au-dessus de 35% du CA : masse salariale lourde"},
+                {label:"EBE", val:kpis.ebe, pct:kpis.ebe/kpis.ca*100, seuil:10, inv:false, tip:"En dessous de 10% : rentabilité opérationnelle faible"},
+              ];
+              return (
+                <div style={{marginTop:14,borderTop:`1px solid ${C.borderLight}`,paddingTop:10,display:"flex",flexDirection:"column",gap:6}}>
+                  {posts.map((p,i)=>{
+                    const ok = p.inv ? p.pct<=p.seuil : p.pct>=p.seuil;
+                    const warn = p.inv ? p.pct>p.seuil*1.2 : p.pct<p.seuil*0.7;
+                    const color = p.val<0 ? C.red : warn ? C.red : ok ? C.green : C.orange;
+                    const icon = p.val<0 ? "⚠" : warn ? "⚠" : ok ? "✓" : "~";
+                    return (
+                      <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:11}}>
+                        <div style={{display:"flex",alignItems:"center",gap:6}}>
+                          <span style={{color,fontWeight:800,fontSize:12}}>{icon}</span>
+                          <span style={{color:C.text,fontWeight:600}}>{p.label}</span>
+                          {(!ok||p.val<0)&&<span style={{color:C.textLight,fontSize:10}}>— {p.tip}</span>}
+                        </div>
+                        <span style={{color,fontWeight:700}}>{p.pct.toFixed(1)}% du CA</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         </Card>
 
         <Card>
-          <SectionHead title="Volumes vendus — 12 mois" sub="Nombre d'unités vendues par mois"/>
-          <div style={{padding:"14px 20px 12px"}}>
-            {months12.some(m=>m.qte>0)?(
+          {(()=>{
+            const sectorsService = ["Prestation de services","Conseil","Immobilier","Santé"];
+            const isService = sectorsService.includes(client.sector);
+            const hasVolumes = months12.some(m=>m.qte>0);
+            // Pour secteurs service : afficher répartition CA par prestation
+            if(isService || !hasVolumes) {
+              const moisKey2 = `${moisYear}-${String(moisIdx+1).padStart(2,"0")}`;
+              const ventesRows = (client.imports||[]).filter(i=>i.type==="ventes_produits"&&i.mois===moisKey2).flatMap(i=>i.rows);
+              const byProduit = ventesRows.reduce((acc,r)=>{
+                const k = r.produit||r.libelle||r.designation||"Autre";
+                acc[k]=(acc[k]||0)+parseFloat(r.ca_ht||r.pvht||0);
+                return acc;
+              },{});
+              const total = Object.values(byProduit).reduce((s,v)=>s+v,0);
+              const items = Object.entries(byProduit).sort((a,b)=>b[1]-a[1]).slice(0,6);
+              return (
+                <>
+                  <SectionHead title="Répartition CA par prestation" sub="Contribution de chaque service au CA du mois"/>
+                  <div style={{padding:"14px 20px 12px"}}>
+                    {items.length>0?(
+                      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                        {items.map(([k,v],i)=>{
+                          const p=total>0?Math.round(v/total*100):0;
+                          const cols=["#005653","#1D9E75","#185FA5","#d97706","#8b5cf6","#059669"];
+                          return (
+                            <div key={i}>
+                              <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:3}}>
+                                <span style={{fontWeight:600,color:C.text}}>{k}</span>
+                                <span style={{fontWeight:700,color:cols[i%6]}}>{fmt(v)} <span style={{color:C.textLight,fontWeight:400}}>· {p}%</span></span>
+                              </div>
+                              <div style={{height:6,borderRadius:3,background:C.borderLight}}>
+                                <div style={{height:"100%",width:`${p}%`,background:cols[i%6],borderRadius:3}}/>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        <div style={{marginTop:4,fontSize:11,color:C.textMid,borderTop:`1px solid ${C.borderLight}`,paddingTop:6}}>
+                          Total CA : <strong>{fmt(total)}</strong>
+                        </div>
+                      </div>
+                    ):(
+                      <div style={{padding:"32px 0",textAlign:"center",color:C.textLight,display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
+                        <div style={{fontSize:13,fontWeight:700,color:C.textMid}}>Aucune donnée pour ce mois</div>
+                        <div style={{fontSize:12,maxWidth:220,lineHeight:1.5}}>Sélectionnez un mois avec des imports ou demandez à votre conseiller NVM Finance d'importer vos données.</div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              );
+            }
+            // Secteurs produits : volumes vendus
+            return (
               <>
-                <Legend items={[{l:"Quantités (unités)",c:"#8b5cf6"}]}/>
-                <BarChart2
-                  data={months12.map(m=>({l:m.l,v1:m.qte,active:m.mi===moisIdx&&m.yr===moisYear}))}
-                  c1="#8b5cf6" h={110}
-                  label1="Quantités" labelUnit=" unités"
-                />
-                <div style={{marginTop:8,fontSize:11,color:C.textMid,display:"flex",justifyContent:"space-between"}}>
-                  <span>Total 12 mois : <strong>{months12.reduce((s,m)=>s+m.qte,0).toLocaleString("fr-FR")} unités</strong></span>
-                  <span>Ce mois : <strong style={{color:"#8b5cf6"}}>{months12[11].qte.toLocaleString("fr-FR")} unités</strong></span>
+                <SectionHead title="Volumes vendus — 12 mois" sub="Nombre d'unités vendues par mois"/>
+                <div style={{padding:"14px 20px 12px"}}>
+                  <Legend items={[{l:"Quantités (unités)",c:"#8b5cf6"}]}/>
+                  <BarChart2
+                    data={months12.map(m=>({l:m.l,v1:m.qte,active:m.mi===moisIdx&&m.yr===moisYear}))}
+                    c1="#8b5cf6" h={110}
+                    label1="Quantités" labelUnit=" unités"
+                  />
+                  <div style={{marginTop:8,fontSize:11,color:C.textMid,display:"flex",justifyContent:"space-between"}}>
+                    <span>Total 12 mois : <strong>{months12.reduce((s,m)=>s+m.qte,0).toLocaleString("fr-FR")} unités</strong></span>
+                    <span>Ce mois : <strong style={{color:"#8b5cf6"}}>{months12[11].qte.toLocaleString("fr-FR")} unités</strong></span>
+                  </div>
                 </div>
               </>
-            ):(
-              <div style={{padding:"40px 0",textAlign:"center",color:C.textLight}}>
-                <div style={{fontSize:13,fontWeight:700,marginBottom:6}}>Données de volumes non disponibles</div>
-                <div style={{fontSize:12}}>Importez vos ventes produits pour voir les volumes</div>
-              </div>
-            )}
-          </div>
+            );
+          })()}
         </Card>
       </div>
 
@@ -2398,17 +2530,20 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear }) {
  const chargeRows = imports.filter(i=>i.type==="charges"&&i.mois===moisKey).flatMap(i=>i.rows);
  const fixe = chargeRows.filter(r=>r.type==="fixe").reduce((s,r)=>s+parseFloat(r.montant_ht||0),0);
  const variable = chargeRows.filter(r=>r.type==="variable").reduce((s,r)=>s+parseFloat(r.montant_ht||0),0);
+ const autre = chargeRows.filter(r=>r.type==="autre"||(!r.type&&r.type!=="fixe"&&r.type!=="variable")).reduce((s,r)=>s+parseFloat(r.montant_ht||0),0);
  const tvaRecup = chargeRows.filter(r=>r.tva_recuperable==="oui").reduce((s,r)=>s+parseFloat(r.montant_ht||0)*parseFloat(r.taux_tva||0)/100,0);
+ const totalCharges = fixe+variable+autre || kpis.charges;
  return (
  <div style={{padding:24}} className="fade-up">
  <PageHeader title="Mes charges" sub="Toutes les dépenses de fonctionnement (hors salaires et achats produits)"/>
  <div style={{padding:"12px 16px",background:"#fffbeb",border:`1px solid ${C.orange}44`,borderRadius:10,marginBottom:20,fontSize:13,color:C.textMid}}>
- <strong>Note :</strong> Charges fixes : elles sont les mêmes chaque mois (loyer, abonnements…). <strong>Charges variables :</strong> elles varient avec votre activité (livraisons, publicité…).
+ <strong>3 types de charges :</strong> <strong>Fixes</strong> = identiques chaque mois (loyer, assurances, abonnements). <strong>Variables</strong> = liées à l'activité (sous-traitance, livraisons, publicité). <strong>Autres</strong> = exceptionnelles ou non récurrentes (travaux, formation, divers).
  </div>
- <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:20}}>
- <KpiCard label="Charges totales" value={fmt(kpis.charges)} sub={`${pct(kpis.ca>0?kpis.charges/kpis.ca*100:0)} du CA`} color={C.red}/>
- <KpiCard label="Charges fixes" value={fixe>0?fmt(fixe):`≈ ${fmt(Math.round(kpis.charges*0.6))}`} sub="Identiques chaque mois" color={C.orange}/>
+ <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:14,marginBottom:20}}>
+ <KpiCard label="Charges totales" value={fmt(totalCharges)} sub={`${pct(kpis.ca>0?totalCharges/kpis.ca*100:0)} du CA`} color={C.red}/>
+ <KpiCard label="Charges fixes" value={fixe>0?fmt(fixe):`≈ ${fmt(Math.round(kpis.charges*0.6))}`} sub="Loyer, assurances, abonnements" color={C.orange}/>
  <KpiCard label="Charges variables" value={variable>0?fmt(variable):`≈ ${fmt(Math.round(kpis.charges*0.4))}`} sub="Liées à l'activité" color={C.primary}/>
+ <KpiCard label="Autres charges" value={autre>0?fmt(autre):"—"} sub="Exceptionnelles, non récurrentes" color={C.textMid}/>
  <KpiCard label="TVA récupérable" value={tvaRecup>0?fmt(Math.round(tvaRecup)):"—"} sub="À déduire de votre TVA collectée" color={C.green}/>
  </div>
  <ImportTable modId="charges" emptyMsg={`Aucune charge importée pour ${MONTHS[moisIdx]} ${moisYear}`}/>
@@ -5187,8 +5322,34 @@ function RapportIA({ clients, moisIdx, moisYear }) {
 export default function App() {
   const [user,setUser]=useState(null);
   const [view,setView]=useState("clients");
+  const [resetMode,setResetMode]=useState(false);
+  const [resetPassword,setResetPassword]=useState("");
+  const [resetConfirm,setResetConfirm]=useState("");
+  const [resetMsg,setResetMsg]=useState("");
+
+  // Détecter si on arrive avec un token de reset/invite dans l'URL
+  useEffect(()=>{
+    const hash = window.location.hash;
+    const params = new URLSearchParams(hash.replace("#",""));
+    const type = params.get("type");
+    const accessToken = params.get("access_token");
+    if((type==="recovery" || type==="invite") && accessToken) {
+      // Établir la session avec le token
+      supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: params.get("refresh_token")||""
+      }).then(({error})=>{
+        if(!error) {
+          setResetMode(true);
+          window.history.replaceState(null,"","/");
+        }
+      });
+    }
+  },[]);
+
+  // resetMode sera géré dans le return principal
   // ── Clients : démos fixes + clients créés persistés dans storage ──
-  const [clients,setClients]=useState(()=>INIT_CLIENTS.map(c=>c.id===1?{...c,imports:NEXUS_IMPORTS}:c));
+  const [clients,setClients]=useState([]);
 
   useEffect(()=>{
     (async()=>{
@@ -5198,8 +5359,7 @@ export default function App() {
         const {data:id2}=await supabase.from("imports_csv").select("*");
         const {data:ud}=await supabase.from("client_users").select("*");
         if(!cd||cd.length===0) return;
-        const demoIds=INIT_CLIENTS.map(c=>c.id);
-        const extras=cd.filter(c=>!demoIds.includes(c.id)).map(c=>({
+        const extras=cd.map(c=>({
           id:c.id,name:c.name,sector:c.sector,color:c.color,manager:c.manager,
           since:c.since,status:c.status,email:c.email||"",
           kpis:c.kpis||{ca:0,marge:0,charges:0,salaires:0,ebe:0,result:0,tresorerie:0},
@@ -5219,8 +5379,7 @@ export default function App() {
               name:extras.find(c=>c.id===u.client_id)?.name||"",firstLogin:u.first_login});
           }
         });
-        const base=INIT_CLIENTS.map(c=>c.id===1?{...c,imports:NEXUS_IMPORTS}:c);
-        setClients([...base,...extras]);
+        setClients(extras);
       } catch(e){console.error("Supabase load error:",e);}
     })();
   },[]);
@@ -5255,7 +5414,36 @@ export default function App() {
   };
 
   const totalAlerts=clients.reduce((s,c)=>s+calcAlertes(c,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length,0);
-  const updateClient=useCallback((id,patch)=>{setClients(prev=>prev.map(c=>c.id===id?{...c,...patch}:c));setPreviewClient(prev=>prev?.id===id?{...prev,...patch}:prev);},[]);
+  const updateClient=useCallback(async(id,patch)=>{
+    setClients(prev=>prev.map(c=>c.id===id?{...c,...patch}:c));
+    setPreviewClient(prev=>prev?.id===id?{...prev,...patch}:prev);
+    // Sauvegarder dans Supabase
+    try {
+      const client = (await supabase.from("clients").select("*").eq("id",id).single()).data;
+      if(!client) return;
+      const updated = {...client,...patch};
+      // Sauvegarder les champs clients
+      await supabase.from("clients").upsert({
+        id,name:updated.name,sector:updated.sector||"",color:updated.color,
+        manager:updated.manager,since:updated.since,status:updated.status,email:updated.email||"",
+        kpis:updated.kpis||{},emprunts:updated.emprunts||[],
+        investissements:updated.investissements||[],
+        tresorerie:updated.tresorerie||{soldeInitial:0,ajustements:[]},
+        is_data:updated.is||{totalPrecedent:0,taux:15},
+        previsionnel:updated.previsionnel||{adjustments:{}},
+      },{onConflict:"id"});
+      // Si patch contient des imports, les sauvegarder séparément
+      if(patch.imports) {
+        const newImports = patch.imports.filter(i=>!i.id||i.id>999999999);
+        for(const imp of newImports) {
+          await supabase.from("imports_csv").upsert({
+            client_id:id,type:imp.type,label:imp.label,mois:imp.mois,
+            rows:imp.rows,count:imp.count,imported_at:imp.importedAt,
+          },{onConflict:"client_id,type,mois"});
+        }
+      }
+    } catch(e){console.error("Supabase updateClient error:",e);}
+  },[]);
   const handleLogin=(u)=>{
     // Relire depuis USERS_AUTH pour avoir firstLogin à jour
     const fresh = USERS_AUTH.find(x=>x.id===u.id)||u;
@@ -5266,9 +5454,9 @@ export default function App() {
   const [newClientCredentials, setNewClientCredentials] = useState(null);
 
   const handleAddClient=async(newC)=>{
-    const tempPass = generateTempPassword();
     const newClient = {name:newC.name,sector:newC.sector||"",color:C.primaryLight,manager:newC.manager||"A definir",since:String(new Date().getFullYear()),status:"healthy",kpis:{ca:0,marge:0,charges:0,salaires:0,ebe:0,result:0,tresorerie:0},emprunts:[],investissements:[],tresorerie:{soldeInitial:0,ajustements:[]},is:{totalPrecedent:0,taux:15},imports:[],previsionnel:{adjustments:{}}};
     try {
+      // 1. Créer le client dans Supabase
       const {data,error}=await supabase.from("clients").insert({
         name:newClient.name,sector:newClient.sector,color:newClient.color,
         manager:newClient.manager,since:newClient.since,status:newClient.status,
@@ -5278,13 +5466,31 @@ export default function App() {
       if(error) throw error;
       const clientAvecId={...newClient,id:data.id};
       setClients(prev=>[...prev,clientAvecId]);
+      // 2. Inviter le client par email via Supabase Auth
       if(newC.email){
-        await supabase.from("client_users").insert({
-          client_id:data.id,email:newC.email,password:tempPass,first_login:true
+        const res = await fetch("/api/invite",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({email:newC.email,clientId:data.id,name:newC.name}),
         });
-        USERS_AUTH.push({id:"c"+data.id,email:newC.email,password:tempPass,role:"CLIENT",clientId:data.id,name:newC.name,firstLogin:true});
+        const inv = await res.json();
+        if(inv.error){
+          console.error("Erreur invitation:",inv.error);
+          // Fallback : mot de passe temporaire
+          const tempPass = generateTempPassword();
+          await supabase.from("client_users").insert({client_id:data.id,email:newC.email,password:tempPass,first_login:true});
+          USERS_AUTH.push({id:"c"+data.id,email:newC.email,password:tempPass,role:"CLIENT",clientId:data.id,name:newC.name,firstLogin:true});
+          setNewClientCredentials({name:newC.name,email:newC.email,tempPass,invited:false});
+        } else {
+          // Invitation réussie → ajouter dans client_users
+          await supabase.from("client_users").upsert({
+            client_id:data.id, email:newC.email, password:"", first_login:false
+          },{onConflict:"email"});
+          setNewClientCredentials({name:newC.name,email:newC.email,tempPass:null,invited:true});
+        }
+      } else {
+        setNewClientCredentials({name:newC.name,email:"(email non renseigné)",tempPass:null,invited:false});
       }
-      setNewClientCredentials({name:newC.name,email:newC.email||"(email non renseigné)",tempPass});
     } catch(e){
       console.error("Erreur création client:",e);
       alert("Erreur: "+e.message);
@@ -5300,7 +5506,7 @@ export default function App() {
       <div className="fade-up" style={{background:"white",borderRadius:16,padding:"36px 32px",width:420,boxShadow:"0 24px 60px rgba(0,0,0,0.3)"}}>
         <div style={{fontSize:18,fontWeight:900,color:C.text,marginBottom:6}}>Dossier client créé</div>
         <div style={{fontSize:13,color:C.textMid,marginBottom:20,lineHeight:1.6}}>
-          Le compte a été créé. Transmettez ces identifiants à votre client — en production, un e-mail serait envoyé automatiquement.
+          Le compte a été créé. Un e-mail d'invitation a été envoyé automatiquement à votre client.
         </div>
         <div style={{background:C.bg,borderRadius:10,padding:16,marginBottom:20,display:"flex",flexDirection:"column",gap:10}}>
           <div style={{fontSize:12,color:C.textMid}}>Client : <strong style={{color:C.text}}>{newClientCredentials.name}</strong></div>
@@ -5348,6 +5554,56 @@ export default function App() {
     );
   }
 
+  if(resetMode) return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg, #005653 0%, #003d3a 100%)",fontFamily:"'Nunito',sans-serif"}}>
+      <div style={{background:"white",borderRadius:20,padding:"48px 40px",width:"100%",maxWidth:420,boxShadow:"0 24px 60px rgba(0,0,0,0.3)"}}>
+        <div style={{textAlign:"center",marginBottom:32}}>
+          <div style={{fontSize:28,fontWeight:900,color:"#005653"}}>NVM FINANCE</div>
+          <div style={{fontSize:13,color:"#6aaca8",marginTop:4,textTransform:"uppercase",letterSpacing:"0.1em"}}>Définir votre mot de passe</div>
+        </div>
+        <div style={{marginBottom:16}}>
+          <label style={{fontSize:11,fontWeight:800,color:"#6aaca8",display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.08em"}}>Nouveau mot de passe</label>
+          <input type="password" value={resetPassword} onChange={e=>setResetPassword(e.target.value)} placeholder="Minimum 8 caractères"
+            style={{width:"100%",padding:"12px 16px",borderRadius:10,border:"1.5px solid #a7d4d0",fontSize:14,fontFamily:"'Nunito',sans-serif",outline:"none",boxSizing:"border-box"}}/>
+        </div>
+        <div style={{marginBottom:24}}>
+          <label style={{fontSize:11,fontWeight:800,color:"#6aaca8",display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.08em"}}>Confirmer le mot de passe</label>
+          <input type="password" value={resetConfirm} onChange={e=>setResetConfirm(e.target.value)} placeholder="Répétez votre mot de passe"
+            style={{width:"100%",padding:"12px 16px",borderRadius:10,border:"1.5px solid #a7d4d0",fontSize:14,fontFamily:"'Nunito',sans-serif",outline:"none",boxSizing:"border-box"}}/>
+        </div>
+        {resetMsg&&<div style={{color:resetMsg.includes("✅")?"#059669":"#dc2626",fontSize:13,marginBottom:16,textAlign:"center"}}>{resetMsg}</div>}
+        <button onClick={async()=>{
+          if(resetPassword.length<8){setResetMsg("Minimum 8 caractères.");return;}
+          if(resetPassword!==resetConfirm){setResetMsg("Les mots de passe ne correspondent pas.");return;}
+          const {error}=await supabase.auth.updateUser({password:resetPassword});
+          if(error){setResetMsg("Erreur: "+error.message);return;}
+          setResetMsg("✅ Mot de passe défini ! Connexion en cours...");
+          // Mettre à jour first_login et connecter le client
+          const {data:sess} = await supabase.auth.getSession();
+          if(sess?.session?.user?.email) {
+            const userEmail = sess.session.user.email;
+            await supabase.from("client_users").update({first_login:false}).eq("email",userEmail);
+            // Vérifier si admin ou client
+            const {data:adminData} = await supabase.from("admin_users").select("*").eq("email",userEmail).single();
+            if(adminData) {
+              setTimeout(()=>{ setResetMode(false); setUser({id:"admin",email:userEmail,role:"ADMIN",name:"Administrateur NVM",firstLogin:false}); setView("clients"); },2000);
+            } else {
+              const {data:clientUser} = await supabase.from("client_users").select("*").eq("email",userEmail).single();
+              if(clientUser) {
+                setTimeout(()=>{ setResetMode(false); setUser({id:"c"+clientUser.client_id,email:userEmail,role:"CLIENT",clientId:clientUser.client_id,name:"",firstLogin:false}); setView("dashboard"); },2000);
+              } else {
+                setTimeout(()=>setResetMode(false),2000);
+              }
+            }
+          } else {
+            setTimeout(()=>setResetMode(false),2000);
+          }
+        }} style={{width:"100%",padding:"14px",background:"#005653",color:"white",border:"none",borderRadius:12,fontSize:15,fontWeight:800,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>
+          Définir mon mot de passe →
+        </button>
+      </div>
+    </div>
+  );
   if (!user) return <LoginPage onLogin={handleLogin}/>;
 
   if (user.role==="CLIENT") {
@@ -5377,7 +5633,27 @@ export default function App() {
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
         <TopBar title={ADMIN_TITLES[view]||"Admin"} user={user}/>
         <div style={{flex:1,overflowY:"auto"}}>
-          {view==="clients"&&<AdminClients clients={clients} onViewAsClient={setPreviewClient} onAddClient={handleAddClient} onUpdateClient={updateClient} onDeleteClient={(id)=>{setClients(prev=>prev.filter(c=>c.id!==id));const idx=USERS_AUTH.findIndex(u=>u.clientId===id);if(idx!==-1)USERS_AUTH.splice(idx,1);supabase.from("clients").delete().eq("id",id).then(()=>{});supabase.from("client_users").delete().eq("client_id",id).then(()=>{});}}/>}
+          {view==="clients"&&<AdminClients clients={clients} onViewAsClient={setPreviewClient} onAddClient={handleAddClient} onUpdateClient={updateClient} onDeleteClient={(id)=>{(async()=>{
+          // Récupérer l'email du client avant suppression
+          const clientToDelete = clients.find(c=>c.id===id);
+          const emailToDelete = clientToDelete?.email || USERS_AUTH.find(u=>u.clientId===id)?.email;
+          // Supprimer du state
+          setClients(prev=>prev.filter(c=>c.id!==id));
+          const idx=USERS_AUTH.findIndex(u=>u.clientId===id);
+          if(idx!==-1)USERS_AUTH.splice(idx,1);
+          // Supprimer de Supabase
+          await supabase.from("clients").delete().eq("id",id);
+          await supabase.from("client_users").delete().eq("client_id",id);
+          await supabase.from("imports_csv").delete().eq("client_id",id);
+          // Supprimer de Supabase Auth
+          if(emailToDelete) {
+            fetch("/api/delete-user",{
+              method:"POST",
+              headers:{"Content-Type":"application/json"},
+              body:JSON.stringify({email:emailToDelete})
+            }).catch(e=>console.error("Erreur suppression Auth:",e));
+          }
+        })();}}/>}
           {view==="acces"&&<AdminAcces clients={clients}/>}
           {view==="saisie"&&<AdminSaisie clients={clients} onUpdateClient={updateClient}/>}
           {view==="financier"&&<AdminFinancier clients={clients} onUpdateClient={updateClient}/>}
