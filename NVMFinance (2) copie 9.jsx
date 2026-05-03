@@ -334,15 +334,13 @@ function LoginPage({ onLogin }) {
         // Sinon chercher dans client_users
         const {data: clientUser} = await supabase.from("client_users").select("*").eq("email", data.user.email).single();
         if (clientUser) {
-          // Si connexion via Supabase Auth → firstLogin = false (mot de passe déjà défini)
-          await supabase.from("client_users").update({first_login:false}).eq("email",data.user.email);
           onLogin({
             id:"c"+clientUser.client_id,
             email:clientUser.email,
             role:"CLIENT",
             clientId:clientUser.client_id,
             name:"",
-            firstLogin:false
+            firstLogin:clientUser.first_login
           });
           setLoading(false);
           return;

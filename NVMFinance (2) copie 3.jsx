@@ -321,34 +321,15 @@ function LoginPage({ onLogin }) {
   const handle = async() => {
     setLoading(true); setErr("");
     try {
-      // Connexion via Supabase Auth (admin ET clients)
+      // Essayer d'abord Supabase Auth (pour l'admin)
       const {data, error} = await supabase.auth.signInWithPassword({email, password:pass});
       if (!error && data.user) {
-        // Vérifier si c'est un admin
-        const {data: adminData} = await supabase.from("admin_users").select("*").eq("email", data.user.email).single();
-        if (adminData) {
-          onLogin({id:"admin", email:data.user.email, role:"ADMIN", name:"Administrateur NVM", firstLogin:false});
-          setLoading(false);
-          return;
-        }
-        // Sinon chercher dans client_users
-        const {data: clientUser} = await supabase.from("client_users").select("*").eq("email", data.user.email).single();
-        if (clientUser) {
-          // Si connexion via Supabase Auth → firstLogin = false (mot de passe déjà défini)
-          await supabase.from("client_users").update({first_login:false}).eq("email",data.user.email);
-          onLogin({
-            id:"c"+clientUser.client_id,
-            email:clientUser.email,
-            role:"CLIENT",
-            clientId:clientUser.client_id,
-            name:"",
-            firstLogin:false
-          });
-          setLoading(false);
-          return;
-        }
+        // C'est l'admin Supabase
+        onLogin({id:"admin", email:data.user.email, role:"ADMIN", name:"Administrateur NVM", firstLogin:false});
+        setLoading(false);
+        return;
       }
-      // Fallback : système USERS_AUTH (mots de passe temporaires)
+      // Sinon essayer le système clients (USERS_AUTH)
       const u = USERS_AUTH.find(u=>u.email===email&&u.password===pass);
       if (u) onLogin(u);
       else setErr("Identifiants incorrects. Vérifiez votre e-mail et mot de passe.");
@@ -5186,32 +5167,6 @@ function RapportIA({ clients, moisIdx, moisYear }) {
 export default function App() {
   const [user,setUser]=useState(null);
   const [view,setView]=useState("clients");
-  const [resetMode,setResetMode]=useState(false);
-  const [resetPassword,setResetPassword]=useState("");
-  const [resetConfirm,setResetConfirm]=useState("");
-  const [resetMsg,setResetMsg]=useState("");
-
-  // Détecter si on arrive avec un token de reset/invite dans l'URL
-  useEffect(()=>{
-    const hash = window.location.hash;
-    const params = new URLSearchParams(hash.replace("#",""));
-    const type = params.get("type");
-    const accessToken = params.get("access_token");
-    if((type==="recovery" || type==="invite") && accessToken) {
-      // Établir la session avec le token
-      supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: params.get("refresh_token")||""
-      }).then(({error})=>{
-        if(!error) {
-          setResetMode(true);
-          window.history.replaceState(null,"","/");
-        }
-      });
-    }
-  },[]);
-
-  // resetMode sera géré dans le return principal
   // ── Clients : démos fixes + clients créés persistés dans storage ──
   const [clients,setClients]=useState([]);
 
@@ -5414,56 +5369,6 @@ export default function App() {
     );
   }
 
-  if(resetMode) return (
-    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg, #005653 0%, #003d3a 100%)",fontFamily:"'Nunito',sans-serif"}}>
-      <div style={{background:"white",borderRadius:20,padding:"48px 40px",width:"100%",maxWidth:420,boxShadow:"0 24px 60px rgba(0,0,0,0.3)"}}>
-        <div style={{textAlign:"center",marginBottom:32}}>
-          <div style={{fontSize:28,fontWeight:900,color:"#005653"}}>NVM FINANCE</div>
-          <div style={{fontSize:13,color:"#6aaca8",marginTop:4,textTransform:"uppercase",letterSpacing:"0.1em"}}>Définir votre mot de passe</div>
-        </div>
-        <div style={{marginBottom:16}}>
-          <label style={{fontSize:11,fontWeight:800,color:"#6aaca8",display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.08em"}}>Nouveau mot de passe</label>
-          <input type="password" value={resetPassword} onChange={e=>setResetPassword(e.target.value)} placeholder="Minimum 8 caractères"
-            style={{width:"100%",padding:"12px 16px",borderRadius:10,border:"1.5px solid #a7d4d0",fontSize:14,fontFamily:"'Nunito',sans-serif",outline:"none",boxSizing:"border-box"}}/>
-        </div>
-        <div style={{marginBottom:24}}>
-          <label style={{fontSize:11,fontWeight:800,color:"#6aaca8",display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.08em"}}>Confirmer le mot de passe</label>
-          <input type="password" value={resetConfirm} onChange={e=>setResetConfirm(e.target.value)} placeholder="Répétez votre mot de passe"
-            style={{width:"100%",padding:"12px 16px",borderRadius:10,border:"1.5px solid #a7d4d0",fontSize:14,fontFamily:"'Nunito',sans-serif",outline:"none",boxSizing:"border-box"}}/>
-        </div>
-        {resetMsg&&<div style={{color:resetMsg.includes("✅")?"#059669":"#dc2626",fontSize:13,marginBottom:16,textAlign:"center"}}>{resetMsg}</div>}
-        <button onClick={async()=>{
-          if(resetPassword.length<8){setResetMsg("Minimum 8 caractères.");return;}
-          if(resetPassword!==resetConfirm){setResetMsg("Les mots de passe ne correspondent pas.");return;}
-          const {error}=await supabase.auth.updateUser({password:resetPassword});
-          if(error){setResetMsg("Erreur: "+error.message);return;}
-          setResetMsg("✅ Mot de passe défini ! Connexion en cours...");
-          // Mettre à jour first_login et connecter le client
-          const {data:sess} = await supabase.auth.getSession();
-          if(sess?.session?.user?.email) {
-            const userEmail = sess.session.user.email;
-            await supabase.from("client_users").update({first_login:false}).eq("email",userEmail);
-            // Vérifier si admin ou client
-            const {data:adminData} = await supabase.from("admin_users").select("*").eq("email",userEmail).single();
-            if(adminData) {
-              setTimeout(()=>{ setResetMode(false); setUser({id:"admin",email:userEmail,role:"ADMIN",name:"Administrateur NVM",firstLogin:false}); setView("clients"); },2000);
-            } else {
-              const {data:clientUser} = await supabase.from("client_users").select("*").eq("email",userEmail).single();
-              if(clientUser) {
-                setTimeout(()=>{ setResetMode(false); setUser({id:"c"+clientUser.client_id,email:userEmail,role:"CLIENT",clientId:clientUser.client_id,name:"",firstLogin:false}); setView("dashboard"); },2000);
-              } else {
-                setTimeout(()=>setResetMode(false),2000);
-              }
-            }
-          } else {
-            setTimeout(()=>setResetMode(false),2000);
-          }
-        }} style={{width:"100%",padding:"14px",background:"#005653",color:"white",border:"none",borderRadius:12,fontSize:15,fontWeight:800,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>
-          Définir mon mot de passe →
-        </button>
-      </div>
-    </div>
-  );
   if (!user) return <LoginPage onLogin={handleLogin}/>;
 
   if (user.role==="CLIENT") {

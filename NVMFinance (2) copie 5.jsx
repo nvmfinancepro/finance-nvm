@@ -334,15 +334,13 @@ function LoginPage({ onLogin }) {
         // Sinon chercher dans client_users
         const {data: clientUser} = await supabase.from("client_users").select("*").eq("email", data.user.email).single();
         if (clientUser) {
-          // Si connexion via Supabase Auth → firstLogin = false (mot de passe déjà défini)
-          await supabase.from("client_users").update({first_login:false}).eq("email",data.user.email);
           onLogin({
             id:"c"+clientUser.client_id,
             email:clientUser.email,
             role:"CLIENT",
             clientId:clientUser.client_id,
             name:"",
-            firstLogin:false
+            firstLogin:clientUser.first_login
           });
           setLoading(false);
           return;
@@ -5194,16 +5192,9 @@ export default function App() {
   // Détecter si on arrive avec un token de reset/invite dans l'URL
   useEffect(()=>{
     const hash = window.location.hash;
-    const params = new URLSearchParams(hash.replace("#",""));
-    const type = params.get("type");
-    const accessToken = params.get("access_token");
-    if((type==="recovery" || type==="invite") && accessToken) {
-      // Établir la session avec le token
-      supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: params.get("refresh_token")||""
-      }).then(({error})=>{
-        if(!error) {
+    if(hash.includes("type=recovery") || hash.includes("type=invite")) {
+      supabase.auth.onAuthStateChange(async(event, session)=>{
+        if(event==="PASSWORD_RECOVERY" || event==="SIGNED_IN") {
           setResetMode(true);
           window.history.replaceState(null,"","/");
         }
@@ -5211,7 +5202,39 @@ export default function App() {
     }
   },[]);
 
-  // resetMode sera géré dans le return principal
+  // Formulaire de définition de mot de passe (reset/invite)
+  if(resetMode) return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg, #005653 0%, #003d3a 100%)",fontFamily:"'Nunito',sans-serif"}}>
+      <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet"/>
+      <div style={{background:"white",borderRadius:20,padding:"48px 40px",width:"100%",maxWidth:420,boxShadow:"0 24px 60px rgba(0,0,0,0.3)"}}>
+        <div style={{textAlign:"center",marginBottom:32}}>
+          <div style={{fontSize:28,fontWeight:900,color:"#005653"}}>NVM FINANCE</div>
+          <div style={{fontSize:13,color:"#6aaca8",marginTop:4,textTransform:"uppercase",letterSpacing:"0.1em"}}>Définir votre mot de passe</div>
+        </div>
+        <div style={{marginBottom:16}}>
+          <label style={{fontSize:11,fontWeight:800,color:"#6aaca8",display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.08em"}}>Nouveau mot de passe</label>
+          <input type="password" value={resetPassword} onChange={e=>setResetPassword(e.target.value)} placeholder="Minimum 8 caractères"
+            style={{width:"100%",padding:"12px 16px",borderRadius:10,border:"1.5px solid #a7d4d0",fontSize:14,fontFamily:"'Nunito',sans-serif",outline:"none",boxSizing:"border-box"}}/>
+        </div>
+        <div style={{marginBottom:24}}>
+          <label style={{fontSize:11,fontWeight:800,color:"#6aaca8",display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.08em"}}>Confirmer le mot de passe</label>
+          <input type="password" value={resetConfirm} onChange={e=>setResetConfirm(e.target.value)} placeholder="Répétez votre mot de passe"
+            style={{width:"100%",padding:"12px 16px",borderRadius:10,border:"1.5px solid #a7d4d0",fontSize:14,fontFamily:"'Nunito',sans-serif",outline:"none",boxSizing:"border-box"}}/>
+        </div>
+        {resetMsg&&<div style={{color:resetMsg.includes("✅")?"#059669":"#dc2626",fontSize:13,marginBottom:16,textAlign:"center"}}>{resetMsg}</div>}
+        <button onClick={async()=>{
+          if(resetPassword.length<8){setResetMsg("Minimum 8 caractères.");return;}
+          if(resetPassword!==resetConfirm){setResetMsg("Les mots de passe ne correspondent pas.");return;}
+          const {error}=await supabase.auth.updateUser({password:resetPassword});
+          if(error){setResetMsg("Erreur: "+error.message);return;}
+          setResetMsg("✅ Mot de passe défini ! Connexion en cours...");
+          setTimeout(()=>setResetMode(false),2000);
+        }} style={{width:"100%",padding:"14px",background:"#005653",color:"white",border:"none",borderRadius:12,fontSize:15,fontWeight:800,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>
+          Définir mon mot de passe →
+        </button>
+      </div>
+    </div>
+  );
   // ── Clients : démos fixes + clients créés persistés dans storage ──
   const [clients,setClients]=useState([]);
 
@@ -5414,56 +5437,6 @@ export default function App() {
     );
   }
 
-  if(resetMode) return (
-    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg, #005653 0%, #003d3a 100%)",fontFamily:"'Nunito',sans-serif"}}>
-      <div style={{background:"white",borderRadius:20,padding:"48px 40px",width:"100%",maxWidth:420,boxShadow:"0 24px 60px rgba(0,0,0,0.3)"}}>
-        <div style={{textAlign:"center",marginBottom:32}}>
-          <div style={{fontSize:28,fontWeight:900,color:"#005653"}}>NVM FINANCE</div>
-          <div style={{fontSize:13,color:"#6aaca8",marginTop:4,textTransform:"uppercase",letterSpacing:"0.1em"}}>Définir votre mot de passe</div>
-        </div>
-        <div style={{marginBottom:16}}>
-          <label style={{fontSize:11,fontWeight:800,color:"#6aaca8",display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.08em"}}>Nouveau mot de passe</label>
-          <input type="password" value={resetPassword} onChange={e=>setResetPassword(e.target.value)} placeholder="Minimum 8 caractères"
-            style={{width:"100%",padding:"12px 16px",borderRadius:10,border:"1.5px solid #a7d4d0",fontSize:14,fontFamily:"'Nunito',sans-serif",outline:"none",boxSizing:"border-box"}}/>
-        </div>
-        <div style={{marginBottom:24}}>
-          <label style={{fontSize:11,fontWeight:800,color:"#6aaca8",display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.08em"}}>Confirmer le mot de passe</label>
-          <input type="password" value={resetConfirm} onChange={e=>setResetConfirm(e.target.value)} placeholder="Répétez votre mot de passe"
-            style={{width:"100%",padding:"12px 16px",borderRadius:10,border:"1.5px solid #a7d4d0",fontSize:14,fontFamily:"'Nunito',sans-serif",outline:"none",boxSizing:"border-box"}}/>
-        </div>
-        {resetMsg&&<div style={{color:resetMsg.includes("✅")?"#059669":"#dc2626",fontSize:13,marginBottom:16,textAlign:"center"}}>{resetMsg}</div>}
-        <button onClick={async()=>{
-          if(resetPassword.length<8){setResetMsg("Minimum 8 caractères.");return;}
-          if(resetPassword!==resetConfirm){setResetMsg("Les mots de passe ne correspondent pas.");return;}
-          const {error}=await supabase.auth.updateUser({password:resetPassword});
-          if(error){setResetMsg("Erreur: "+error.message);return;}
-          setResetMsg("✅ Mot de passe défini ! Connexion en cours...");
-          // Mettre à jour first_login et connecter le client
-          const {data:sess} = await supabase.auth.getSession();
-          if(sess?.session?.user?.email) {
-            const userEmail = sess.session.user.email;
-            await supabase.from("client_users").update({first_login:false}).eq("email",userEmail);
-            // Vérifier si admin ou client
-            const {data:adminData} = await supabase.from("admin_users").select("*").eq("email",userEmail).single();
-            if(adminData) {
-              setTimeout(()=>{ setResetMode(false); setUser({id:"admin",email:userEmail,role:"ADMIN",name:"Administrateur NVM",firstLogin:false}); setView("clients"); },2000);
-            } else {
-              const {data:clientUser} = await supabase.from("client_users").select("*").eq("email",userEmail).single();
-              if(clientUser) {
-                setTimeout(()=>{ setResetMode(false); setUser({id:"c"+clientUser.client_id,email:userEmail,role:"CLIENT",clientId:clientUser.client_id,name:"",firstLogin:false}); setView("dashboard"); },2000);
-              } else {
-                setTimeout(()=>setResetMode(false),2000);
-              }
-            }
-          } else {
-            setTimeout(()=>setResetMode(false),2000);
-          }
-        }} style={{width:"100%",padding:"14px",background:"#005653",color:"white",border:"none",borderRadius:12,fontSize:15,fontWeight:800,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>
-          Définir mon mot de passe →
-        </button>
-      </div>
-    </div>
-  );
   if (!user) return <LoginPage onLogin={handleLogin}/>;
 
   if (user.role==="CLIENT") {

@@ -334,15 +334,13 @@ function LoginPage({ onLogin }) {
         // Sinon chercher dans client_users
         const {data: clientUser} = await supabase.from("client_users").select("*").eq("email", data.user.email).single();
         if (clientUser) {
-          // Si connexion via Supabase Auth → firstLogin = false (mot de passe déjà défini)
-          await supabase.from("client_users").update({first_login:false}).eq("email",data.user.email);
           onLogin({
             id:"c"+clientUser.client_id,
             email:clientUser.email,
             role:"CLIENT",
             clientId:clientUser.client_id,
             name:"",
-            firstLogin:false
+            firstLogin:clientUser.first_login
           });
           setLoading(false);
           return;
@@ -5438,26 +5436,7 @@ export default function App() {
           const {error}=await supabase.auth.updateUser({password:resetPassword});
           if(error){setResetMsg("Erreur: "+error.message);return;}
           setResetMsg("✅ Mot de passe défini ! Connexion en cours...");
-          // Mettre à jour first_login et connecter le client
-          const {data:sess} = await supabase.auth.getSession();
-          if(sess?.session?.user?.email) {
-            const userEmail = sess.session.user.email;
-            await supabase.from("client_users").update({first_login:false}).eq("email",userEmail);
-            // Vérifier si admin ou client
-            const {data:adminData} = await supabase.from("admin_users").select("*").eq("email",userEmail).single();
-            if(adminData) {
-              setTimeout(()=>{ setResetMode(false); setUser({id:"admin",email:userEmail,role:"ADMIN",name:"Administrateur NVM",firstLogin:false}); setView("clients"); },2000);
-            } else {
-              const {data:clientUser} = await supabase.from("client_users").select("*").eq("email",userEmail).single();
-              if(clientUser) {
-                setTimeout(()=>{ setResetMode(false); setUser({id:"c"+clientUser.client_id,email:userEmail,role:"CLIENT",clientId:clientUser.client_id,name:"",firstLogin:false}); setView("dashboard"); },2000);
-              } else {
-                setTimeout(()=>setResetMode(false),2000);
-              }
-            }
-          } else {
-            setTimeout(()=>setResetMode(false),2000);
-          }
+          setTimeout(()=>setResetMode(false),2000);
         }} style={{width:"100%",padding:"14px",background:"#005653",color:"white",border:"none",borderRadius:12,fontSize:15,fontWeight:800,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>
           Définir mon mot de passe →
         </button>
