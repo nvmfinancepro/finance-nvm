@@ -5497,27 +5497,7 @@ export default function App() {
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
         <TopBar title={ADMIN_TITLES[view]||"Admin"} user={user}/>
         <div style={{flex:1,overflowY:"auto"}}>
-          {view==="clients"&&<AdminClients clients={clients} onViewAsClient={setPreviewClient} onAddClient={handleAddClient} onUpdateClient={updateClient} onDeleteClient={(id)=>{(async()=>{
-          // Récupérer l'email du client avant suppression
-          const clientToDelete = clients.find(c=>c.id===id);
-          const emailToDelete = clientToDelete?.email || USERS_AUTH.find(u=>u.clientId===id)?.email;
-          // Supprimer du state
-          setClients(prev=>prev.filter(c=>c.id!==id));
-          const idx=USERS_AUTH.findIndex(u=>u.clientId===id);
-          if(idx!==-1)USERS_AUTH.splice(idx,1);
-          // Supprimer de Supabase
-          await supabase.from("clients").delete().eq("id",id);
-          await supabase.from("client_users").delete().eq("client_id",id);
-          await supabase.from("imports_csv").delete().eq("client_id",id);
-          // Supprimer de Supabase Auth
-          if(emailToDelete) {
-            fetch("/api/delete-user",{
-              method:"POST",
-              headers:{"Content-Type":"application/json"},
-              body:JSON.stringify({email:emailToDelete})
-            }).catch(e=>console.error("Erreur suppression Auth:",e));
-          }
-        })();}}/>}
+          {view==="clients"&&<AdminClients clients={clients} onViewAsClient={setPreviewClient} onAddClient={handleAddClient} onUpdateClient={updateClient} onDeleteClient={(id)=>{setClients(prev=>prev.filter(c=>c.id!==id));const idx=USERS_AUTH.findIndex(u=>u.clientId===id);if(idx!==-1)USERS_AUTH.splice(idx,1);supabase.from("clients").delete().eq("id",id).then(()=>{});supabase.from("client_users").delete().eq("client_id",id).then(()=>{});}}/>}
           {view==="acces"&&<AdminAcces clients={clients}/>}
           {view==="saisie"&&<AdminSaisie clients={clients} onUpdateClient={updateClient}/>}
           {view==="financier"&&<AdminFinancier clients={clients} onUpdateClient={updateClient}/>}
