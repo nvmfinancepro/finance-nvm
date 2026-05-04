@@ -249,7 +249,7 @@ function parseCSV(text) {
 function validateRows(rows, type) {
  const errors=[];
  const req={ventes_produits:["ca_ht"],charges:["fournisseur","montant_ht"],salaires:["nom_prenom","salaire_brut","salaire_net"],catalogue:["reference","pvht"]};
- const num={ventes_produits:["ca_ht"],charges:["montant_ht"],salaires:["salaire_brut","salaire_net"],catalogue:["pvht"]};
+ const num={ventes_produits:["ca_ht","marge_ht"],autres_ventes:["ca_ht","marge"],charges:["montant_ht"],salaires:["salaire_brut","salaire_net","cotisations_patronales","cotisations_salariales"],catalogue:["pvht"]};
  const r=req[type]||[],n=num[type]||[];
  rows.forEach((row,i)=>{
  r.forEach(f=>{if(!row[f]) errors.push({row:i+1,msg:`Champ manquant : "${f}"`});});
@@ -1123,10 +1123,13 @@ function calcMonthKpis(client, moisIdx, year) {
  const key = getMonthKey(moisIdx, year);
  const imports = client.imports||[];
 
- // CA et marge depuis imports ventes du mois
+ // CA et marge depuis imports ventes + autres_ventes du mois
  const ventesRows = imports.filter(i=>i.type==="ventes_produits"&&i.mois===key).flatMap(i=>i.rows);
- const ca = ventesRows.reduce((s,r)=>s+parseFloat(r.ca_ht||0),0);
- const marge= ventesRows.reduce((s,r)=>s+parseFloat(r.marge_ht||0),0);
+ const autresVentesRows = imports.filter(i=>i.type==="autres_ventes"&&i.mois===key).flatMap(i=>i.rows);
+ const ca = ventesRows.reduce((s,r)=>s+parseFloat(r.ca_ht||0),0)
+           + autresVentesRows.reduce((s,r)=>s+parseFloat(r.ca_ht||0),0);
+ const marge= ventesRows.reduce((s,r)=>s+parseFloat(r.marge_ht||0),0)
+            + autresVentesRows.reduce((s,r)=>s+parseFloat(r.marge||r.marge_ht||0),0);
 
  // Charges depuis imports du mois
  const chargesRows = imports.filter(i=>i.type==="charges"&&i.mois===key).flatMap(i=>i.rows);
