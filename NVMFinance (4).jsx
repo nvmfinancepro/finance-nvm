@@ -596,6 +596,7 @@ function ClientSidebar({ view, setView, onLogout, clientName, alertCount }) {
  { label:"MES FINANCES", items:[
  {id:"resultat", icon:"", label:"Mon résultat"},
  {id:"is", icon:"", label:"Mon impôt (IS)"},
+ {id:"tva", icon:"", label:"Ma TVA"},
  {id:"tresorerie", icon:"", label:"Ma trésorerie"},
  {id:"emprunts", icon:"", label:"Mes emprunts"},
  {id:"investissements",icon:"", label:"Mes investissements"},
@@ -1240,6 +1241,53 @@ function LineChart({ data, color=C.primary, height=80 }) {
 // 
 // CLIENT DASHBOARD — Pro avec graphiques
 // 
+
+// ── BarChart2 — tooltip SVG inline
+const BarChart2 = ({data, c1=C.primary, c2=C.green, h=90, label1="V1", label2="V2", labelUnit=""}) => {
+  const W=500, pad=6;
+  const [hov, setHov] = useState(null);
+  const max=Math.max(...data.map(d=>Math.max(d.v1,d.v2||0)),1);
+  const n=data.length;
+  const bw=Math.max(6,Math.floor((W-pad*(n*2+2))/(n*2)));
+  const TW=160, TH=d=>d.v2!=null?52:36;
+  return (
+    <svg viewBox={`0 0 ${W} ${h+22}`} width="100%" style={{display:"block"}} onMouseLeave={()=>setHov(null)}>
+      <line x1={0} y1={h-4} x2={W} y2={h-4} stroke={C.borderLight} strokeWidth={1}/>
+      {data.map((d,i)=>{
+        const h1=Math.round((d.v1/max)*(h-4));
+        const h2=Math.round(((d.v2||0)/max)*(h-4));
+        const x=pad+(i*(bw*2+pad*2));
+        return (
+          <g key={i} style={{cursor:"crosshair"}} onMouseEnter={()=>setHov(i)} onMouseLeave={()=>setHov(null)}>
+            <rect x={x} y={0} width={bw*2+1} height={h+4} fill="transparent"/>
+            <rect x={x} y={h-4-h1} width={bw} height={h1} rx={2} fill={c1} opacity={hov===i||d.active?1:0.55}/>
+            {d.v2!=null&&<rect x={x+bw+1} y={h-4-h2} width={bw} height={h2} rx={2} fill={c2} opacity={hov===i||d.active?1:0.55}/>}
+            {(hov===i||d.active)&&<rect x={x-1} y={0} width={bw*2+3} height={h+2} fill="none" stroke={c1} strokeWidth={1} rx={2} opacity={0.35}/>}
+            <text x={x+bw} y={h+14} textAnchor="middle" fontSize={8} fill={d.active?C.text:C.textLight} fontWeight={d.active?700:400} fontFamily="Nunito,sans-serif">{d.l}</text>
+          </g>
+        );
+      })}
+      {/* Tooltip SVG positionné localement */}
+      {hov!=null&&(()=>{
+        const d=data[hov];
+        const bwT=bw*2+pad*2;
+        const x=pad+(hov*(bw*2+pad*2));
+        const tx=Math.min(W-TW-4, Math.max(4, x+bwT/2-TW/2));
+        const h1=Math.round((d.v1/max)*(h-4));
+        const ty=Math.max(4, h-4-h1-TH(d)-6);
+        return (
+          <g pointerEvents="none">
+            <rect x={tx} y={ty} width={TW} height={TH(d)} rx={6} fill={C.primaryDark}/>
+            <text x={tx+8} y={ty+14} fontSize={10} fontWeight={800} fill="white" fontFamily="Nunito,sans-serif">{d.l}</text>
+            <text x={tx+8} y={ty+28} fontSize={9} fill="rgba(255,255,255,0.8)" fontFamily="Nunito,sans-serif">{label1}: {labelUnit?d.v1.toLocaleString("fr-FR")+labelUnit:fmt(d.v1)}</text>
+            {d.v2!=null&&<text x={tx+8} y={ty+41} fontSize={9} fill="rgba(255,255,255,0.8)" fontFamily="Nunito,sans-serif">{label2}: {labelUnit?d.v2.toLocaleString("fr-FR")+labelUnit:fmt(d.v2)}</text>}
+          </g>
+        );
+      })()}
+    </svg>
+  );
+};
+
 function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMoisIdx, moisYear }) {
   const kpis        = calcMonthKpis(client, moisIdx, moisYear);
   const emprunts    = client.emprunts||[];
@@ -1284,50 +1332,6 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
   const [tooltip, setTooltip] = useState(null);
   const Tooltip = () => null; // plus utilisé — tooltips dans le SVG directement
 
-  // ── BarChart2 — tooltip SVG inline
-  const BarChart2 = ({data, c1=C.primary, c2=C.green, h=90, label1="V1", label2="V2", labelUnit=""}) => {
-    const [hov, setHov] = useState(null);
-    const max=Math.max(...data.map(d=>Math.max(d.v1,d.v2||0)),1);
-    const n=data.length;
-    const bw=Math.max(6,Math.floor((W-pad*(n*2+2))/(n*2)));
-    const TW=160, TH=d=>d.v2!=null?52:36;
-    return (
-      <svg viewBox={`0 0 ${W} ${h+22}`} width="100%" style={{display:"block"}} onMouseLeave={()=>setHov(null)}>
-        <line x1={0} y1={h-4} x2={W} y2={h-4} stroke={C.borderLight} strokeWidth={1}/>
-        {data.map((d,i)=>{
-          const h1=Math.round((d.v1/max)*(h-4));
-          const h2=Math.round(((d.v2||0)/max)*(h-4));
-          const x=pad+(i*(bw*2+pad*2));
-          return (
-            <g key={i} style={{cursor:"crosshair"}} onMouseEnter={()=>setHov(i)} onMouseLeave={()=>setHov(null)}>
-              <rect x={x} y={0} width={bw*2+1} height={h+4} fill="transparent"/>
-              <rect x={x} y={h-4-h1} width={bw} height={h1} rx={2} fill={c1} opacity={hov===i||d.active?1:0.55}/>
-              {d.v2!=null&&<rect x={x+bw+1} y={h-4-h2} width={bw} height={h2} rx={2} fill={c2} opacity={hov===i||d.active?1:0.55}/>}
-              {(hov===i||d.active)&&<rect x={x-1} y={0} width={bw*2+3} height={h+2} fill="none" stroke={c1} strokeWidth={1} rx={2} opacity={0.35}/>}
-              <text x={x+bw} y={h+14} textAnchor="middle" fontSize={8} fill={d.active?C.text:C.textLight} fontWeight={d.active?700:400} fontFamily="Nunito,sans-serif">{d.l}</text>
-            </g>
-          );
-        })}
-        {/* Tooltip SVG positionné localement */}
-        {hov!=null&&(()=>{
-          const d=data[hov];
-          const bwT=bw*2+pad*2;
-          const x=pad+(hov*(bw*2+pad*2));
-          const tx=Math.min(W-TW-4, Math.max(4, x+bwT/2-TW/2));
-          const h1=Math.round((d.v1/max)*(h-4));
-          const ty=Math.max(4, h-4-h1-TH(d)-6);
-          return (
-            <g pointerEvents="none">
-              <rect x={tx} y={ty} width={TW} height={TH(d)} rx={6} fill={C.primaryDark}/>
-              <text x={tx+8} y={ty+14} fontSize={10} fontWeight={800} fill="white" fontFamily="Nunito,sans-serif">{d.l}</text>
-              <text x={tx+8} y={ty+28} fontSize={9} fill="rgba(255,255,255,0.8)" fontFamily="Nunito,sans-serif">{label1}: {labelUnit?d.v1.toLocaleString("fr-FR")+labelUnit:fmt(d.v1)}</text>
-              {d.v2!=null&&<text x={tx+8} y={ty+41} fontSize={9} fill="rgba(255,255,255,0.8)" fontFamily="Nunito,sans-serif">{label2}: {labelUnit?d.v2.toLocaleString("fr-FR")+labelUnit:fmt(d.v2)}</text>}
-            </g>
-          );
-        })()}
-      </svg>
-    );
-  };
 
   // ── LineAreaChart — tooltip SVG inline
   const LineAreaChart = ({data, color=C.primary, h=80, showZero=false, labelFn}) => {
@@ -3742,6 +3746,204 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear }) {
     );
   }
 
+  if (view==="tva") {
+    // ── Données du mois sélectionné (M) ──────────────────────────────────────
+    const ventesRows      = (client.imports||[]).filter(i=>i.type==="ventes_produits"&&i.mois===moisKey).flatMap(i=>i.rows);
+    const autresVentesRows= (client.imports||[]).filter(i=>i.type==="autres_ventes"&&i.mois===moisKey).flatMap(i=>i.rows);
+    const chargeRows      = (client.imports||[]).filter(i=>i.type==="charges"&&i.mois===moisKey).flatMap(i=>i.rows);
+
+    // TVA collectée M
+    const tvaCollecteeVentes = ventesRows.reduce((s,r)=>s+Math.round(parseFloat(r.ca_ht||0)*0.20),0);
+    const tvaCollecteeAutres = autresVentesRows.reduce((s,r)=>s+Math.round(parseFloat(r.ca_ht||0)*parseFloat(r.taux_tva||20)/100),0);
+    const tvaCollectee = tvaCollecteeVentes + tvaCollecteeAutres;
+
+    // TVA déductible M
+    const tvaDeductible = chargeRows.filter(r=>r.tva_recuperable==="oui").reduce((s,r)=>
+      s+Math.round(parseFloat(r.montant_ht||0)*parseFloat(r.taux_tva||20)/100),0);
+
+    const soldeTVA = tvaCollectee - tvaDeductible;
+    const aVerser  = soldeTVA > 0;
+
+    // ── Mois M+1 = mois de paiement effectif ─────────────────────────────────
+    const moisPaiementIdx  = (moisIdx + 1) % 12;
+    const moisPaiementYear = moisIdx === 11 ? moisYear + 1 : moisYear;
+    const moisPaiementNom  = MONTHS[moisPaiementIdx];
+    // Date limite légale : 24 du mois M+1 (ou 19 si télépaiement + CA > 230k€, simplifié ici)
+    const dateLimite = `24 ${moisPaiementNom} ${moisPaiementYear}`;
+
+    // ── TVA 12 mois : collectée et déductible sur M, versement en M+1 ────────
+    const tva12 = Array.from({length:12},(_,i)=>{
+      const offset = moisIdx - 11 + i;
+      const mi2    = ((offset%12)+12)%12;
+      const yr2    = moisYear + Math.floor(offset/12);
+      const key2   = `${yr2}-${String(mi2+1).padStart(2,"0")}`;
+      // Mois de versement = mi2+1
+      const miPay  = (mi2+1)%12;
+      const yrPay  = mi2===11 ? yr2+1 : yr2;
+      const vR=(client.imports||[]).filter(im=>im.type==="ventes_produits"&&im.mois===key2).flatMap(im=>im.rows);
+      const aR=(client.imports||[]).filter(im=>im.type==="autres_ventes"&&im.mois===key2).flatMap(im=>im.rows);
+      const cR=(client.imports||[]).filter(im=>im.type==="charges"&&im.mois===key2).flatMap(im=>im.rows);
+      const coll=vR.reduce((s,r)=>s+Math.round(parseFloat(r.ca_ht||0)*0.20),0)+aR.reduce((s,r)=>s+Math.round(parseFloat(r.ca_ht||0)*parseFloat(r.taux_tva||20)/100),0);
+      const ded=cR.filter(r=>r.tva_recuperable==="oui").reduce((s,r)=>s+Math.round(parseFloat(r.montant_ht||0)*parseFloat(r.taux_tva||20)/100),0);
+      const k2=calcMonthKpis(client,mi2,yr2);
+      return {l:MONTHS[mi2], lPay:MONTHS[miPay], coll, ded, solde:coll-ded, hasData:k2.hasData};
+    });
+
+    const moyVerser = Math.round(tva12.filter(m=>m.hasData&&m.solde>0).reduce((s,m)=>s+m.solde,0) / (tva12.filter(m=>m.hasData&&m.solde>0).length||1));
+
+    return (
+      <div style={{padding:24}} className="fade-up">
+        <PageHeader title="Ma TVA" sub={`Opérations de ${MONTHS[moisIdx]} ${moisYear} — versement à l'État le ${dateLimite}`}/>
+
+        {/* Bandeau décalage M / M+1 */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",alignItems:"center",gap:12,marginBottom:20,padding:"14px 18px",background:"#f8fafc",border:`1px solid ${C.border}`,borderRadius:12}}>
+          <div style={{textAlign:"center",padding:"10px 14px",background:"#fff",borderRadius:8,border:`1px solid ${C.borderLight}`}}>
+            <div style={{fontSize:11,fontWeight:800,textTransform:"uppercase",color:C.textLight,letterSpacing:"0.06em",marginBottom:4}}>Période des opérations</div>
+            <div style={{fontSize:18,fontWeight:900,color:C.primary}}>{MONTHS[moisIdx]} {moisYear}</div>
+            <div style={{fontSize:11,color:C.textMid,marginTop:3}}>Ventes & charges de ce mois</div>
+          </div>
+          <div style={{textAlign:"center",fontSize:22,color:C.textLight}}>→</div>
+          <div style={{textAlign:"center",padding:"10px 14px",background:aVerser?"#fef2f2":"#ecfdf5",borderRadius:8,border:`1px solid ${aVerser?"#fecaca":"#6ee7b7"}`}}>
+            <div style={{fontSize:11,fontWeight:800,textTransform:"uppercase",color:C.textLight,letterSpacing:"0.06em",marginBottom:4}}>Versement à l'État</div>
+            <div style={{fontSize:18,fontWeight:900,color:aVerser?C.red:C.green}}>{moisPaiementNom} {moisPaiementYear}</div>
+            <div style={{fontSize:11,color:aVerser?"#991b1b":"#065f46",marginTop:3,fontWeight:700}}>
+              {aVerser ? `⚠ À payer avant le ${dateLimite}` : soldeTVA < 0 ? `✓ Crédit de TVA à reporter` : "Aucune donnée"}
+            </div>
+          </div>
+        </div>
+
+        {/* Alerte trésorerie */}
+        {aVerser && (
+          <div style={{padding:"12px 16px",background:"#fff7ed",border:`1px solid #fed7aa`,borderRadius:10,marginBottom:20,fontSize:13,color:"#92400e",display:"flex",alignItems:"flex-start",gap:10}}>
+            <span style={{fontSize:18}}>💡</span>
+            <div>
+              <strong>Impact trésorerie :</strong> Le solde TVA de <strong>{fmt(soldeTVA)}</strong> calculé sur <strong>{MONTHS[moisIdx]}</strong> sera prélevé de votre compte en <strong>{moisPaiementNom}</strong>. Provisionnez cette somme dès maintenant.
+            </div>
+          </div>
+        )}
+        {soldeTVA < 0 && (
+          <div style={{padding:"12px 16px",background:"#ecfdf5",border:`1px solid #6ee7b7`,borderRadius:10,marginBottom:20,fontSize:13,color:"#065f46",display:"flex",alignItems:"flex-start",gap:10}}>
+            <span style={{fontSize:18}}>✅</span>
+            <div>
+              <strong>Crédit de TVA :</strong> Votre TVA déductible dépasse la TVA collectée sur <strong>{MONTHS[moisIdx]}</strong>. Vous avez un crédit de <strong>{fmt(Math.abs(soldeTVA))}</strong> reportable sur <strong>{moisPaiementNom}</strong> ou remboursable sur demande.
+            </div>
+          </div>
+        )}
+
+        {/* KPIs */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:24}}>
+          <KpiCard label={`TVA collectée — ${MONTHS[moisIdx]}`} value={fmt(tvaCollectee)} sub="Sur ventes & autres recettes" color={C.primary}/>
+          <KpiCard label={`TVA déductible — ${MONTHS[moisIdx]}`} value={fmt(tvaDeductible)} sub="Sur charges récupérables" color={C.green}/>
+          <KpiCard label={aVerser?`À verser en ${moisPaiementNom}`:`Crédit en ${moisPaiementNom}`} value={fmt(Math.abs(soldeTVA))} sub={aVerser?`Avant le ${dateLimite}`:"Report ou remboursement"} color={aVerser?C.red:C.green}/>
+        </div>
+
+        {/* Détail collectée */}
+        <Card>
+          <SectionHead title={`TVA collectée — ${MONTHS[moisIdx]} ${moisYear}`} sub="Détail par source de revenus"/>
+          <div style={{padding:"8px 20px 16px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${C.borderLight}`,fontSize:13}}>
+              <span style={{color:C.textMid}}>Ventes prestations ({ventesRows.length} ligne{ventesRows.length>1?"s":""})</span>
+              <span style={{fontWeight:800,color:C.text}}>{fmt(tvaCollecteeVentes)}</span>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${C.borderLight}`,fontSize:13}}>
+              <span style={{color:C.textMid}}>Autres ventes & refacturations ({autresVentesRows.length} ligne{autresVentesRows.length>1?"s":""})</span>
+              <span style={{fontWeight:800,color:C.text}}>{fmt(tvaCollecteeAutres)}</span>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",padding:"10px 0",fontSize:13,fontWeight:800}}>
+              <span style={{color:C.text}}>Total TVA collectée</span>
+              <span style={{color:C.primary}}>{fmt(tvaCollectee)}</span>
+            </div>
+          </div>
+        </Card>
+
+        {/* Détail déductible */}
+        <Card style={{marginTop:16}}>
+          <SectionHead title={`TVA déductible — ${MONTHS[moisIdx]} ${moisYear}`} sub="Charges avec TVA récupérable"/>
+          <div style={{padding:"8px 20px 16px"}}>
+            {chargeRows.filter(r=>r.tva_recuperable==="oui").length===0?(
+              <div style={{padding:"20px 0",textAlign:"center",color:C.textLight,fontSize:13}}>Aucune charge avec TVA récupérable ce mois</div>
+            ):(
+              chargeRows.filter(r=>r.tva_recuperable==="oui").map((r,i)=>{
+                const tva=Math.round(parseFloat(r.montant_ht||0)*parseFloat(r.taux_tva||20)/100);
+                return (
+                  <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${C.borderLight}`,fontSize:12}}>
+                    <div>
+                      <span style={{fontWeight:700,color:C.text}}>{r.fournisseur||r.libelle}</span>
+                      <span style={{color:C.textLight,marginLeft:8}}>{r.libelle}</span>
+                    </div>
+                    <div style={{display:"flex",gap:16,alignItems:"center"}}>
+                      <span style={{color:C.textMid,fontSize:11}}>HT: {fmt(parseFloat(r.montant_ht||0))} × {r.taux_tva||20}%</span>
+                      <span style={{fontWeight:800,color:C.green}}>{fmt(tva)}</span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+            <div style={{display:"flex",justifyContent:"space-between",padding:"10px 0",fontSize:13,fontWeight:800,marginTop:4}}>
+              <span style={{color:C.text}}>Total TVA déductible</span>
+              <span style={{color:C.green}}>{fmt(tvaDeductible)}</span>
+            </div>
+          </div>
+        </Card>
+
+        {/* Graphique 12 mois avec double ligne mois calcul / mois paiement */}
+        <Card style={{marginTop:16}}>
+          <SectionHead title="Historique TVA — 12 mois" sub="Mois de calcul → versement effectif le mois suivant"/>
+          <div style={{padding:"14px 20px 12px"}}>
+            <div style={{display:"flex",gap:20,marginBottom:12,fontSize:11,color:C.textMid}}>
+              <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:10,height:10,borderRadius:2,background:C.primary,display:"inline-block"}}></span>Collectée</span>
+              <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:10,height:10,borderRadius:2,background:C.green,display:"inline-block"}}></span>Déductible</span>
+              <span style={{display:"flex",alignItems:"center",gap:4,marginLeft:"auto",fontStyle:"italic"}}>Versement à l'État : mois suivant (avant le 24)</span>
+            </div>
+            <BarChart2
+              data={tva12.map(m=>({l:m.l,v1:m.coll,v2:m.ded,active:m.l===MONTHS[moisIdx]}))}
+              c1={C.primary} c2={C.green} h={100}
+              label1="TVA collectée" label2="TVA déductible" labelUnit=" €"
+            />
+            {/* Tableau récap mois par mois avec décalage */}
+            <div style={{marginTop:16,overflowX:"auto"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                <thead>
+                  <tr style={{background:C.bg}}>
+                    <th style={{padding:"6px 10px",textAlign:"left",color:C.textLight,fontWeight:700,borderBottom:`1px solid ${C.border}`}}>Mois opérations</th>
+                    <th style={{padding:"6px 10px",textAlign:"right",color:C.primary,fontWeight:700,borderBottom:`1px solid ${C.border}`}}>Collectée</th>
+                    <th style={{padding:"6px 10px",textAlign:"right",color:C.green,fontWeight:700,borderBottom:`1px solid ${C.border}`}}>Déductible</th>
+                    <th style={{padding:"6px 10px",textAlign:"right",color:C.text,fontWeight:700,borderBottom:`1px solid ${C.border}`}}>Solde</th>
+                    <th style={{padding:"6px 10px",textAlign:"center",color:C.textLight,fontWeight:700,borderBottom:`1px solid ${C.border}`}}>Versement dû en</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tva12.filter(m=>m.hasData).map((m,i)=>{
+                    const isCurrentMonth = m.l===MONTHS[moisIdx];
+                    const soldePos = m.solde > 0;
+                    return (
+                      <tr key={i} style={{background:isCurrentMonth?"rgba(0,86,83,0.06)":"transparent",borderBottom:`1px solid ${C.borderLight}`}}>
+                        <td style={{padding:"7px 10px",fontWeight:isCurrentMonth?800:400,color:isCurrentMonth?C.primary:C.text}}>
+                          {m.l} {isCurrentMonth && <span style={{fontSize:10,background:C.primary,color:"#fff",borderRadius:4,padding:"1px 5px",marginLeft:4}}>ce mois</span>}
+                        </td>
+                        <td style={{padding:"7px 10px",textAlign:"right",color:C.primary,fontWeight:600}}>{fmt(m.coll)}</td>
+                        <td style={{padding:"7px 10px",textAlign:"right",color:C.green,fontWeight:600}}>{fmt(m.ded)}</td>
+                        <td style={{padding:"7px 10px",textAlign:"right",fontWeight:800,color:soldePos?C.red:C.green}}>{soldePos?"+":""}{fmt(m.solde)}</td>
+                        <td style={{padding:"7px 10px",textAlign:"center",fontWeight:700,color:soldePos?"#92400e":"#065f46",background:soldePos?"#fff7ed":"#ecfdf5",borderRadius:6}}>
+                          {soldePos ? `⚠ ${m.lPay}` : `✓ ${m.lPay}`}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr style={{background:C.bg}}>
+                    <td colSpan={3} style={{padding:"8px 10px",fontWeight:800,color:C.text,fontSize:12}}>Moyenne mensuelle à verser</td>
+                    <td colSpan={2} style={{padding:"8px 10px",textAlign:"right",fontWeight:900,color:C.red,fontSize:13}}>{fmt(moyVerser)} / mois</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   // ── CRÉANCES CLIENTS ──────────────────────────────────
   // ── CRÉANCES & DETTES ────────────────────────────────
