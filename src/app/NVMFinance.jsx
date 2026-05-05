@@ -737,7 +737,8 @@ function AdminClients({ clients, onViewAsClient, onAddClient, onUpdateClient, on
  <span style={{width:9,height:9,borderRadius:"50%",background:c.status==="healthy"?C.green:c.status==="warning"?C.orange:C.red,display:"inline-block",marginTop:4}}/>
  </div>
  <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
- {[["CA mensuel",fmt(c.kpis.ca),C.text],["Résultat",fmt(c.kpis.result),c.kpis.result>=0?C.green:C.red],["Trésorerie",fmt(c.tresorerie?.soldeInitial||c.kpis.tresorerie),(c.tresorerie?.soldeInitial||c.kpis.tresorerie)>=0?C.green:C.red],["Responsable",c.manager,C.textMid]].map(([l,v,col])=>(
+ {(()=>{const lk=calcMonthKpis(c,CUR_M,CUR_Y);const ca=lk.hasData?lk.ca:c.kpis.ca;const res=lk.hasData?lk.result:c.kpis.result;const treso=calcTresoEstimee(c,CUR_M,CUR_Y);
+          return[["CA mensuel",fmt(ca),C.text],["Résultat",fmt(res),res>=0?C.green:C.red],["Trésorerie",fmt(treso),treso>=0?C.green:C.red],["Responsable",c.manager,C.textMid]];})().map(([l,v,col])=>(
  <div key={l} style={{display:"flex",justifyContent:"space-between",fontSize:12}}><span style={{color:C.textLight}}>{l}</span><strong style={{color:col}}>{v}</strong></div>
  ))}
  </div>
@@ -882,21 +883,33 @@ function AdminSaisie({ clients, onUpdateClient }) {
  type="file"
  accept=".csv,.txt"
  onChange={handleFileChange}
+ ref={el=>{ if(el) el._csvInput=true; }}
+ id="csv-file-input"
+ style={{
+ display:"block",
+ margin:"0 auto 8px",
+ fontSize:13,
+ fontFamily:"inherit",
+ cursor:"pointer",
+ }}
+ />
+ <button
+ onClick={()=>{ const el=document.getElementById("csv-file-input"); if(el) el.click(); }}
  style={{
  display:"block",
  margin:"0 auto",
- padding:"10px 20px",
- background:C.primary,
- color:"white",
- border:"none",
+ padding:"8px 20px",
+ background:"white",
+ color:C.primary,
+ border:`1.5px solid ${C.primary}`,
  borderRadius:8,
- fontSize:13,
+ fontSize:12,
  fontWeight:800,
  fontFamily:"inherit",
  cursor:"pointer",
- width:"auto",
- }}
- />
+ }}>
+ Ou cliquer ici pour ouvrir le Finder
+ </button>
  <div style={{marginTop:12,fontSize:11,color:C.textLight}}>Formats acceptés : .csv · Séparateur ; ou ,</div>
  </div>
  </div>
@@ -907,11 +920,23 @@ function AdminSaisie({ clients, onUpdateClient }) {
  <div style={{fontSize:12,fontWeight:800,color:C.textMid,marginBottom:10}}>
  Imports enregistrés — {CSV_MODULES.find(m=>m.id===mod)?.label}
  </div>
- {(client.imports||[]).filter(imp=>imp.type===mod).map(imp=>(
+ {(client.imports||[]).filter(imp=>imp.type===mod).sort((a,b)=>a.mois>b.mois?-1:1).map(imp=>(
  <div key={imp.id} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 12px",background:C.bg,borderRadius:8,marginBottom:6}}>
  <Pill color={C.green}>{imp.mois}</Pill>
  <span style={{fontSize:12,fontWeight:700,color:C.text}}>{imp.count} ligne{imp.count>1?"s":""}</span>
  <span style={{fontSize:11,color:C.textLight}}>le {imp.importedAt}</span>
+ <div style={{marginLeft:"auto"}}>
+   <Btn small variant="ghost" style={{color:C.red,borderColor:C.red+"44",fontSize:11,padding:"2px 8px"}}
+     onClick={async()=>{
+       if(!window.confirm(`Supprimer l'import ${imp.mois} ?`)) return;
+       const newImports = (client.imports||[]).filter(i=>i.id!==imp.id);
+       onUpdateClient(client.id,{imports:newImports});
+       try{ await supabase.from("imports_csv").delete().eq("id",imp.id); }
+       catch(e){console.error(e);}
+     }}>
+     Supprimer
+   </Btn>
+ </div>
  </div>
  ))}
  </div>
@@ -1221,22 +1246,7 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
   const investissements = client.investissements||[];
   const imports     = client.imports||[];
   const chargeEmprunt = emprunts.reduce((s,e)=>{ const m=e.capital*(e.taux/100)/(1-Math.pow(1+e.taux/100,-e.duree)); return s+Math.round(m+e.assurance); },0);
-  const soldeInitial = client.tresorerie?.soldeInitial||client.kpis.tresorerie||0;
-  // Calculer la trésorerie cumulée jusqu'au mois affiché
-  const treso = (() => {
-    let cumul = soldeInitial;
-    for(let i=0; i<12; i++) {
-      const offset = moisIdx - 11 + i;
-      const mi2 = ((offset%12)+12)%12;
-      const yr2 = moisYear + Math.floor(offset/12);
-      const k2 = calcMonthKpis(client, mi2, yr2);
-      if(k2.hasData) {
-        const flux = k2.ca*0.95 - (k2.charges+k2.salaires)*0.95 - chargeEmprunt;
-        cumul += flux;
-      }
-    }
-    return Math.round(cumul);
-  })();
+  const treso = calcTresoEstimee(client, moisIdx, moisYear);
   const vncTotal    = investissements.reduce((s,inv)=>{const am=Math.round(inv.montantHT/(inv.duree||36));const me=Math.min(inv.duree,moisIdx+1);return s+Math.max(0,inv.montantHT-am*me);},0);
 
   // ── Données 12 mois glissants
@@ -3136,7 +3146,10 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear }) {
  {emprunts.length===0&&<Card><div style={{textAlign:"center",padding:"40px",color:C.textLight}}><div style={{fontSize:36,marginBottom:12}}></div><div style={{fontWeight:700,fontSize:14}}>Aucun emprunt enregistré</div></div></Card>}
  {emprunts.map(e=>{
  const mens=e.capital*(e.taux/100)/(1-Math.pow(1+e.taux/100,-e.duree));
- const moisPasses=Math.min(e.duree,moisIdx+1);
+ const dateD=e.dateDebut?new Date(e.dateDebut):new Date(CUR_Y-1,0,1);
+ const moisDebutEmprunt=dateD.getFullYear()*12+dateD.getMonth();
+ const moisCourantTotal=moisYear*12+moisIdx;
+ const moisPasses=Math.min(e.duree,Math.max(0,moisCourantTotal-moisDebutEmprunt+1));
  const rows2=[]; let restant=e.capital;
  for(let i=0;i<Math.min(e.duree,12);i++){const int=Math.round(restant*e.taux/100*100)/100;const cap=Math.round((mens-int)*100)/100;restant=Math.max(0,Math.round((restant-cap)*100)/100);rows2.push({m:MONTHS[i%12],int,cap,restant,sortie:Math.round(mens+e.assurance)});}
  let rCur=e.capital;for(let i=0;i<moisPasses;i++){const int=rCur*e.taux/100;rCur=Math.max(0,rCur-(mens-int));}
@@ -4960,6 +4973,22 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear }) {
 // 
 // CALCUL DYNAMIQUE DES ALERTES depuis les KPIs du mois
 // 
+function calcTresoEstimee(client, toMi, toYr) {
+  const si = client.tresorerie?.soldeInitial||0;
+  const ds = client.tresorerie?.dateSolde||null;
+  if(!ds) return si;
+  let cYr=parseInt(ds.split("-")[0]), cMi=parseInt(ds.split("-")[1])-1+1;
+  if(cMi>11){cMi=0;cYr++;}
+  const emp=(client.emprunts||[]).reduce((s,e)=>{const m=e.capital*(e.taux/100)/(1-Math.pow(1+e.taux/100,-e.duree));return s+Math.round(m+(e.assurance||0));},0);
+  let cumul=si, maxIt=48;
+  while((cYr<toYr||(cYr===toYr&&cMi<=toMi))&&maxIt-->0){
+    const k=calcMonthKpis(client,cMi,cYr);
+    if(k.hasData){ cumul+=Math.round(k.ca*0.95-(k.charges+k.salaires)*0.95-emp); }
+    cMi++;if(cMi>11){cMi=0;cYr++;}
+  }
+  return Math.round(cumul);
+}
+
 function calcAlertes(client, moisIdx, moisYear) {
   const kpis = calcMonthKpis(client, moisIdx, moisYear);
   const emprunts = client.emprunts||[];
