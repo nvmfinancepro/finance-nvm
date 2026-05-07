@@ -606,7 +606,7 @@ function ClientSidebar({ view, setView, onLogout, clientName, alertCount }) {
  ]},
  { label:"ANALYSE", items:[
  {id:"comparaison",   icon:"↔", label:"Comparaison périodes"},
- {id:"previsionnel",  icon:"→", label:"Prévisionnel 2026"},
+ {id:"previsionnel",  icon:"→", label:"Prévisionnel"},
  ]},
  ];
  return (
@@ -968,7 +968,7 @@ function AdminFinancier({ clients, onUpdateClient }) {
  </Card>
  <div style={{display:"flex",gap:0,borderBottom:`2px solid ${C.border}`}}>
  {[["emprunts"," Emprunts"],["investissements"," Investissements"],["tresorerie"," Trésorerie"],["is","∑ IS"]].map(([id,l])=>(
- <button key={id} onClick={()=>setTab(id)} style={{padding:"10px 20px",fontSize:13,fontWeight:tab===id?800:600,color:tab===id?C.primary:C.textLight,borderBottom:tab===id?`3px solid ${C.primary}`:"3px solid transparent",background:"none",border:"none",cursor:"pointer",marginBottom:"-2px"}}>{l}</button>
+ <button key={id} onClick={()=>setTab(id)} style={{padding:"10px 20px",fontSize:13,fontWeight:tab===id?800:600,color:tab===id?C.primary:C.textLight,borderTop:"none",borderLeft:"none",borderRight:"none",borderBottom:tab===id?`3px solid ${C.primary}`:"3px solid transparent",background:"none",cursor:"pointer",marginBottom:"-2px"}}>{l}</button>
  ))}
  </div>
  {tab==="emprunts"&&<EmpruntsForm client={client} onUpdate={onUpdateClient}/>}
@@ -1241,52 +1241,51 @@ function LineChart({ data, color=C.primary, height=80 }) {
 // 
 // CLIENT DASHBOARD — Pro avec graphiques
 // 
-
-// ── BarChart2 — tooltip SVG inline
-const BarChart2 = ({data, c1=C.primary, c2=C.green, h=90, label1="V1", label2="V2", labelUnit=""}) => {
-  const W=500, pad=6;
+function BarChart2({data, c1=C.primary, c2=C.green, h=90, label1="V1", label2="V2", labelUnit=""}) {
+  const W=500, pad=8;
   const [hov, setHov] = useState(null);
   const max=Math.max(...data.map(d=>Math.max(d.v1,d.v2||0)),1);
   const n=data.length;
   const bw=Math.max(6,Math.floor((W-pad*(n*2+2))/(n*2)));
-  const TW=160, TH=d=>d.v2!=null?52:36;
-  return (
-    <svg viewBox={`0 0 ${W} ${h+22}`} width="100%" style={{display:"block"}} onMouseLeave={()=>setHov(null)}>
-      <line x1={0} y1={h-4} x2={W} y2={h-4} stroke={C.borderLight} strokeWidth={1}/>
-      {data.map((d,i)=>{
-        const h1=Math.round((d.v1/max)*(h-4));
-        const h2=Math.round(((d.v2||0)/max)*(h-4));
-        const x=pad+(i*(bw*2+pad*2));
-        return (
-          <g key={i} style={{cursor:"crosshair"}} onMouseEnter={()=>setHov(i)} onMouseLeave={()=>setHov(null)}>
-            <rect x={x} y={0} width={bw*2+1} height={h+4} fill="transparent"/>
-            <rect x={x} y={h-4-h1} width={bw} height={h1} rx={2} fill={c1} opacity={hov===i||d.active?1:0.55}/>
-            {d.v2!=null&&<rect x={x+bw+1} y={h-4-h2} width={bw} height={h2} rx={2} fill={c2} opacity={hov===i||d.active?1:0.55}/>}
-            {(hov===i||d.active)&&<rect x={x-1} y={0} width={bw*2+3} height={h+2} fill="none" stroke={c1} strokeWidth={1} rx={2} opacity={0.35}/>}
-            <text x={x+bw} y={h+14} textAnchor="middle" fontSize={8} fill={d.active?C.text:C.textLight} fontWeight={d.active?700:400} fontFamily="Nunito,sans-serif">{d.l}</text>
-          </g>
-        );
-      })}
-      {/* Tooltip SVG positionné localement */}
-      {hov!=null&&(()=>{
-        const d=data[hov];
-        const bwT=bw*2+pad*2;
-        const x=pad+(hov*(bw*2+pad*2));
-        const tx=Math.min(W-TW-4, Math.max(4, x+bwT/2-TW/2));
-        const h1=Math.round((d.v1/max)*(h-4));
-        const ty=Math.max(4, h-4-h1-TH(d)-6);
-        return (
-          <g pointerEvents="none">
-            <rect x={tx} y={ty} width={TW} height={TH(d)} rx={6} fill={C.primaryDark}/>
-            <text x={tx+8} y={ty+14} fontSize={10} fontWeight={800} fill="white" fontFamily="Nunito,sans-serif">{d.l}</text>
-            <text x={tx+8} y={ty+28} fontSize={9} fill="rgba(255,255,255,0.8)" fontFamily="Nunito,sans-serif">{label1}: {labelUnit?d.v1.toLocaleString("fr-FR")+labelUnit:fmt(d.v1)}</text>
-            {d.v2!=null&&<text x={tx+8} y={ty+41} fontSize={9} fill="rgba(255,255,255,0.8)" fontFamily="Nunito,sans-serif">{label2}: {labelUnit?d.v2.toLocaleString("fr-FR")+labelUnit:fmt(d.v2)}</text>}
-          </g>
-        );
-      })()}
-    </svg>
-  );
-};
+    const TW=160, TH=d=>d.v2!=null?52:36;
+    return (
+      <svg viewBox={`0 0 ${W} ${h+22}`} width="100%" style={{display:"block"}} onMouseLeave={()=>setHov(null)}>
+        <line x1={0} y1={h-4} x2={W} y2={h-4} stroke={C.borderLight} strokeWidth={1}/>
+        {data.map((d,i)=>{
+          const h1=Math.round((d.v1/max)*(h-4));
+          const h2=Math.round(((d.v2||0)/max)*(h-4));
+          const x=pad+(i*(bw*2+pad*2));
+          return (
+            <g key={i} style={{cursor:"crosshair"}} onMouseEnter={()=>setHov(i)} onMouseLeave={()=>setHov(null)}>
+              <rect x={x} y={0} width={bw*2+1} height={h+4} fill="transparent"/>
+              <rect x={x} y={h-4-h1} width={bw} height={h1} rx={2} fill={c1} opacity={hov===i||d.active?1:0.55}/>
+              {d.v2!=null&&<rect x={x+bw+1} y={h-4-h2} width={bw} height={h2} rx={2} fill={c2} opacity={hov===i||d.active?1:0.55}/>}
+              {(hov===i||d.active)&&<rect x={x-1} y={0} width={bw*2+3} height={h+2} fill="none" stroke={c1} strokeWidth={1} rx={2} opacity={0.35}/>}
+              <text x={x+bw} y={h+14} textAnchor="middle" fontSize={8} fill={d.active?C.text:C.textLight} fontWeight={d.active?700:400} fontFamily="Nunito,sans-serif">{d.l}</text>
+            </g>
+          );
+        })}
+        {/* Tooltip SVG positionné localement */}
+        {hov!=null&&(()=>{
+          const d=data[hov];
+          const bwT=bw*2+pad*2;
+          const x=pad+(hov*(bw*2+pad*2));
+          const tx=Math.min(W-TW-4, Math.max(4, x+bwT/2-TW/2));
+          const h1=Math.round((d.v1/max)*(h-4));
+          const ty=Math.max(4, h-4-h1-TH(d)-6);
+          return (
+            <g pointerEvents="none">
+              <rect x={tx} y={ty} width={TW} height={TH(d)} rx={6} fill={C.primaryDark}/>
+              <text x={tx+8} y={ty+14} fontSize={10} fontWeight={800} fill="white" fontFamily="Nunito,sans-serif">{d.l}</text>
+              <text x={tx+8} y={ty+28} fontSize={9} fill="rgba(255,255,255,0.8)" fontFamily="Nunito,sans-serif">{label1}: {labelUnit?d.v1.toLocaleString("fr-FR")+labelUnit:fmt(d.v1)}</text>
+              {d.v2!=null&&<text x={tx+8} y={ty+41} fontSize={9} fill="rgba(255,255,255,0.8)" fontFamily="Nunito,sans-serif">{label2}: {labelUnit?d.v2.toLocaleString("fr-FR")+labelUnit:fmt(d.v2)}</text>}
+            </g>
+          );
+        })()}
+      </svg>
+    );
+}
+
 
 function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMoisIdx, moisYear }) {
   const kpis        = calcMonthKpis(client, moisIdx, moisYear);
@@ -1314,11 +1313,28 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
   const saisonnalite = months12.map(m=>({ l:m.l, coef:m.ca>0?(m.ca/avgCA):0, ca:m.ca }));
 
   // ── Trésorerie cumulative
-  let tresoRun = treso;
+  // Trésorerie cumulée : partir du solde initial, accumuler les résultats depuis dateSolde
+  const si = client.tresorerie?.soldeInitial||0;
+  const ds = client.tresorerie?.dateSolde||null;
+  const dsYr = ds ? parseInt(ds.split("-")[0]) : null;
+  const dsMi = ds ? parseInt(ds.split("-")[1])-1 : null;
+  // Calculer le solde de trésorerie au début de months12[0]
+  // en partant du solde initial et en cumulant jusqu'au mois précédent le premier mois du graphique
+  const firstMonth = months12[0];
+  const prevMi = firstMonth.mi === 0 ? 11 : firstMonth.mi - 1;
+  const prevYr = firstMonth.mi === 0 ? firstMonth.yr - 1 : firstMonth.yr;
+  // Solde au début du graphique = calcTresoEstimee jusqu'au mois précédent
+  let tresoRun = ds ? (calcTresoEstimee(client, prevMi, prevYr) || si) : si;
   const tresoData = months12.map(m=>{
-    const solde = m.ca*0.95 - (m.charges+m.salaires)*0.95 - chargeEmprunt;
-    tresoRun = tresoRun + solde;
-    return { l:m.l, solde, cumul:tresoRun };
+    const moisTotal = m.yr*12 + m.mi;
+    const datesoldeTotal = ds ? (dsYr*12 + dsMi) : -1;
+    const apresDateSolde = !ds || moisTotal >= datesoldeTotal;
+    if(apresDateSolde) {
+      const solde = m.hasData ? m.result : 0;
+      tresoRun = tresoRun + solde;
+      return { l:m.l, solde, cumul:tresoRun, available:true };
+    }
+    return { l:m.l, solde:0, cumul:null, available:false };
   });
 
   // ── Alertes dynamiques
@@ -1332,17 +1348,20 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
   const [tooltip, setTooltip] = useState(null);
   const Tooltip = () => null; // plus utilisé — tooltips dans le SVG directement
 
+  // ── BarChart2 — défini en top-level (function BarChart2)
 
   // ── LineAreaChart — tooltip SVG inline
   const LineAreaChart = ({data, color=C.primary, h=80, showZero=false, labelFn}) => {
     const [hov, setHov] = useState(null);
     if(data.length<2) return null;
-    const vals=data.map(d=>d.v);
-    const maxV=Math.max(...vals,showZero?0:vals[0]);
-    const minV=Math.min(...vals,showZero?0:vals[0]);
+    const vals=data.map(d=>d.v!=null?d.v:null);
+    const validVals=vals.filter(v=>v!=null);
+    if(validVals.length<2) return null;
+    const maxV=Math.max(...validVals,showZero?0:validVals[0]);
+    const minV=Math.min(...validVals,showZero?0:validVals[0]);
     const range=maxV-minV||1;
     const xs=data.map((_,i)=>pad+i*(W-pad*2)/(data.length-1));
-    const ys=data.map(d=>h-4-Math.round(((d.v-minV)/range)*(h-8)));
+    const ys=data.map(d=>d.v!=null?h-4-Math.round(((d.v-minV)/range)*(h-8)):null);
     const zeroY=showZero?Math.min(h-4,Math.max(4,h-4-Math.round(((0-minV)/range)*(h-8)))):h-4;
     const path="M"+xs.map((x,i)=>`${x},${ys[i]}`).join(" L");
     const area=`M${xs[0]},${zeroY} L`+xs.map((x,i)=>`${x},${ys[i]}`).join(" L")+` L${xs[xs.length-1]},${zeroY} Z`;
@@ -1836,12 +1855,12 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
           <div style={{padding:"14px 20px 12px"}}>
             <Legend items={[{l:"Solde cumulé",c:treso>=0?C.green:C.red,round:true}]}/>
             <LineAreaChart
-              data={tresoData.map((m,i)=>({l:months12[i].l,v:m.cumul,active:months12[i].mi===moisIdx&&months12[i].yr===moisYear}))}
+              data={tresoData.map((m,i)=>({l:months12[i].l,v:m.cumul,active:months12[i].mi===moisIdx&&months12[i].yr===moisYear,unavailable:!m.available}))}
               color={treso>=0?C.green:C.red} h={80} showZero={true} labelFn={v=>`Trésorerie : ${fmt(v)}`}
             />
             <div style={{marginTop:4,fontSize:11,color:C.textMid,display:"flex",justifyContent:"space-between"}}>
               <span>Solde initial : <strong>{fmt(treso)}</strong></span>
-              <span>Solde estimé : <strong style={{color:tresoData[tresoData.length-1]?.cumul>=0?C.green:C.red}}>{fmt(tresoData[tresoData.length-1]?.cumul||0)}</strong></span>
+              <span>Solde {tresoData[tresoData.length-1]?.available?"estimé":"indisponible"} : <strong style={{color:tresoData[tresoData.length-1]?.available?(tresoData[tresoData.length-1]?.cumul>=0?C.green:C.red):C.textLight}}>{tresoData[tresoData.length-1]?.available?fmt(tresoData[tresoData.length-1]?.cumul||0):"—"}</strong></span>
             </div>
           </div>
         </Card>
@@ -1952,7 +1971,7 @@ function ClientDonnees({ client, moisIdx, setMoisIdx, moisYear }) {
  const kpis = calcMonthKpis(client, moisIdx, moisYear);
  const amortMensuel = kpis.amort;
  const isD = client.is||{totalPrecedent:0,taux:15};
- const treso = client.tresorerie?.soldeInitial||client.kpis.tresorerie||0;
+ const treso = calcTresoEstimee(client, moisIdx, moisYear);
  const chargeEmprunt = emprunts.reduce((s,e)=>{ const m=e.capital*(e.taux/100)/(1-Math.pow(1+e.taux/100,-e.duree)); return s+Math.round(m+e.assurance); },0);
  const moisKey = getMonthKey(moisIdx, moisYear);
 
@@ -2312,7 +2331,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear }) {
  const moisKey = `${moisYear}-${String(moisIdx+1).padStart(2,"0")}`;
  const chargeEmprunt = emprunts.reduce((s,e)=>{ const m=e.capital*(e.taux/100)/(1-Math.pow(1+e.taux/100,-e.duree)); return s+Math.round(m+e.assurance); },0);
  const amort = kpis.amort;
- const treso = client.tresorerie?.soldeInitial||client.kpis.tresorerie||0;
+ const treso = calcTresoEstimee(client, moisIdx, moisYear);
  const isD = client.is||{totalPrecedent:0,taux:15};
  const provIS = Math.max(0,Math.round((kpis.ebe)*isD.taux/100));
 
@@ -2588,8 +2607,20 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear }) {
  // SALAIRES 
   if (view==="salaires") {
     const salRows = imports.filter(i=>i.type==="salaires"&&i.mois===moisKey).flatMap(i=>i.rows);
-    const salBrut = Math.round(kpis.salaires*0.83);
-    const netSal  = Math.round(kpis.salaires*0.75);
+    // Calcul depuis les vraies données CSV
+    const salBrut = salRows.length>0
+      ? salRows.reduce((s,r)=>s+parseFloat(r.salaire_brut||0),0)
+      : Math.round(kpis.salaires*0.83);
+    const salPatronales = salRows.length>0
+      ? salRows.reduce((s,r)=>s+parseFloat(r.cotisations_patronales||0),0)
+      : Math.round(kpis.salaires*0.30);
+    const salSalariales = salRows.length>0
+      ? salRows.reduce((s,r)=>s+parseFloat(r.cotisations_salariales||0),0)
+      : Math.round(kpis.salaires*0.22);
+    const netSal = salRows.length>0
+      ? salRows.reduce((s,r)=>s+parseFloat(r.salaire_net||0),0)
+      : Math.round(kpis.salaires*0.75);
+    const coutEmployeur = salBrut + salPatronales;
     // Réalité légale :
     // - Salaires nets   → versés aux employés CE mois (M)
     // - Cotis. sal.     → reversées à l'URSSAF en M+1 (DSN mensuelle, prélèvement le 15 M+1)
@@ -2904,10 +2935,12 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear }) {
  if (view==="tresorerie") {
  // Calcul détaillé de chaque flux pour le mois sélectionné 
  const k2 = kpis;
- const salBrut = Math.round(k2.salaires * 0.83); // salaires bruts
- const cotSal = Math.round(k2.salaires * 0.21); // cotisations salariales (retenues sur salaire, décaissées M)
- const netSalaire = Math.round(k2.salaires * 0.75); // net versé aux employés (M)
- const cotPat = Math.round(k2.salaires * 0.46); // cotisations patronales (URSSAF, décaissées M+1)
+ // Salaires : utiliser vraies données CSV si disponibles, sinon approximation
+ const salRows = (client.imports||[]).filter(i=>i.type==="salaires"&&i.mois===moisKey).flatMap(i=>i.rows||[]);
+ const salBrut = salRows.length>0 ? salRows.reduce((s,r)=>s+parseFloat(r.salaire_brut||0),0) : Math.round(k2.salaires*0.83);
+ const netSalaire = salRows.length>0 ? salRows.reduce((s,r)=>s+parseFloat(r.salaire_net||0),0) : Math.round(k2.salaires*0.75);
+ const cotSal = salRows.length>0 ? salRows.reduce((s,r)=>s+parseFloat(r.cotisations_salariales||0),0) : Math.round(k2.salaires*0.21);
+ const cotPat = salRows.length>0 ? salRows.reduce((s,r)=>s+parseFloat(r.cotisations_patronales||0),0) : Math.round(k2.salaires*0.46);
  const tvaCollectee = Math.round(k2.ca * 0.20); // TVA collectée sur ventes
  const tvaDeductible= Math.round((k2.ca - k2.marge) * 0.20 + k2.charges * 0.18); // TVA déductible
  const tvaNette = Math.max(0, tvaCollectee - tvaDeductible); // TVA à reverser (M+1)
@@ -3434,132 +3467,6 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear }) {
 
  // IMPÔT SUR LES SOCIÉTÉS 
  if (view==="is") {
- const isD2 = client.is||{totalPrecedent:0,taux:15};
- const tauxIS = isD2.taux;
- const resultatFiscal = kpis.ebe - amort; // base de calcul IS
- const isAnnuelEstime = Math.max(0, Math.round(resultatFiscal * 12 * tauxIS/100)); // extrapolation annuelle
- const provMensuelle = Math.round(isAnnuelEstime/12);
- const isN1 = isD2.totalPrecedent||0; // IS payé l'an dernier
- // Acomptes IS : 4 versements de 25% de l'IS N-1 (15/03, 15/06, 15/09, 15/12)
- const acompte = Math.round(isN1/4);
- const soldeIS = Math.max(0, isAnnuelEstime - isN1); // solde dû au 15/05/N+1
- // Calendrier des versements
- const versements = [
- {date:"15 mars "+moisYear, libelle:"1er acompte", montant:acompte, type:"acompte", base:"25% de l'IS N-1"},
- {date:"15 juin "+moisYear, libelle:"2ème acompte", montant:acompte, type:"acompte", base:"25% de l'IS N-1"},
- {date:"15 septembre "+moisYear,libelle:"3ème acompte", montant:acompte, type:"acompte", base:"25% de l'IS N-1"},
- {date:"15 décembre "+moisYear, libelle:"4ème acompte", montant:acompte, type:"acompte", base:"25% de l'IS N-1"},
- {date:"15 mai "+(moisYear+1), libelle:"Solde IS", montant:soldeIS, type:"solde", base:"IS réel N - acomptes versés"},
- ];
- // Provision mensuelle sur 6 mois
- const historiqueIS = Array.from({length:6},(_,i)=>{
- const mi=((moisIdx-5+i)+12)%12;
- const yr=moisIdx-5+i<0?moisYear-1:moisYear;
- const km=calcMonthKpis(client,mi,yr);
- const res=km.ebe-km.amort;
- return {mois:MONTHS[mi]+" "+yr,resultat:res,provision:Math.max(0,Math.round(res*tauxIS/100))};
- });
-
- return (
- <div style={{padding:24}} className="fade-up">
- <PageHeader title="Impôt sur les sociétés (IS)" sub="Provision mensuelle, acomptes et calendrier de versement"/>
- <div style={{padding:"12px 16px",background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,marginBottom:20,fontSize:13,color:C.textMid,lineHeight:1.7}}>
- <strong>Note :</strong> L'IS se calcule sur le bénéfice fiscal annuel. Vous versez des acomptes trimestriels basés sur l'IS de l'année précédente, puis un solde en mai de l'année suivante. Provisionner chaque mois évite les mauvaises surprises.
- </div>
-
- <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:20}}>
- <KpiCard label="Taux IS applicable" value={tauxIS+"%"} sub={tauxIS===15?"Taux réduit PME":"Taux normal"} color={C.primary}/>
- <KpiCard label="Résultat fiscal mensuel" value={fmt(resultatFiscal)} sub="EBE – Amortissements" color={resultatFiscal>=0?C.text:C.red}/>
- <KpiCard label="Provision mensuelle" value={fmt(provMensuelle)} sub="A mettre de côté chaque mois" color={C.orange}/>
- <KpiCard label="IS annuel estimé" value={fmt(isAnnuelEstime)} sub="Extrapolation sur 12 mois" color={C.red}/>
- </div>
-
- {/* CALCUL DÉTAILLÉ */}
- <Card style={{marginBottom:16}}>
- <SectionHead title={`Calcul de l'IS — ${MONTHS[moisIdx]} ${moisYear}`}/>
- <table style={{width:"100%",borderCollapse:"collapse"}}>
- <tbody>
- {[
- {l:"EBE (Excédent Brut d'Exploitation)", v:kpis.ebe, desc:"Résultat avant amort., IS et charges financières"},
- {l:"— Amortissements déductibles", v:-amort, desc:"Déductibles fiscalement"},
- {l:"= Résultat fiscal mensuel", v:resultatFiscal, bold:true,sep:true,c:resultatFiscal>=0?C.primary:C.red,desc:"Base de calcul de l'IS"},
- {l:"× Taux IS ("+tauxIS+"%)", v:null, desc:"Taux applicable à votre situation",extra:tauxIS+"%"},
- {l:"= IS mensuel estimé", v:provMensuelle, bold:true,sep:true,c:C.orange,desc:"A provisionner chaque mois"},
- {l:"× 12 mois = IS annuel estimé", v:isAnnuelEstime, bold:true,c:C.red,desc:"Estimation sur une année complète"},
- {l:"— Acomptes déjà versés (base IS N-1)", v:-isN1, desc:`IS payé en ${moisYear-1} : ${fmt(isN1)}`},
- {l:"= Solde IS dû au 15/05/"+(moisYear+1), v:soldeIS, bold:true,sep:true,c:C.red,desc:"Impact trésorerie mai "+(moisYear+1)},
- ].filter(r=>r!==null).map((r,i)=>{
- if(r.extra) return <tr key={i} style={{borderBottom:`1px solid ${C.borderLight}`}}><td style={{padding:"10px 16px",fontSize:13,color:C.textMid,width:"40%"}}>{r.l}</td><td style={{padding:"10px 16px",fontSize:11,color:C.textLight}}>{r.desc}</td><td style={{padding:"10px 16px",textAlign:"right",fontWeight:800,color:C.primary}}>{r.extra}</td></tr>;
- return (
- <tr key={i} style={{borderBottom:r.sep?`2px solid ${C.border}`:`1px solid ${C.borderLight}`,background:r.sep?C.bg:""}}>
- <td style={{padding:"10px 16px",fontSize:13,fontWeight:r.bold?800:500,color:r.c||C.text,width:"40%"}}>{r.l}</td>
- <td style={{padding:"10px 16px",fontSize:11,color:C.textLight}}>{r.desc}</td>
- <td style={{padding:"10px 16px",textAlign:"right",fontFamily:"'Courier New',monospace",fontSize:13,fontWeight:r.bold?900:500,color:r.c||(r.v<0?C.red:C.text)}}>
- {r.v===null?"—":r.v<0?`(${fmt(Math.abs(r.v))})`:fmt(r.v)}
- </td>
- </tr>
- );
- })}
- </tbody>
- </table>
- </Card>
-
- {/* CALENDRIER VERSEMENTS */}
- <Card style={{marginBottom:16}}>
- <SectionHead title={`Calendrier de versement IS — ${moisYear}/${moisYear+1}`} sub="Dates et montants des décaissements à prévoir"/>
- <div style={{overflowX:"auto"}}>
- <table style={{width:"100%",borderCollapse:"collapse"}}>
- <thead><tr><Th>Date</Th><Th>Nature</Th><Th>Base de calcul</Th><Th right>Montant à verser</Th><Th>Impact tréso</Th></tr></thead>
- <tbody>
- {versements.map((v,i)=>(
- <Tr key={i} style={{background:v.type==="solde"?C.redBg:""}}>
- <Td bold>{v.date}</Td>
- <Td>{v.libelle}</Td>
- <Td color={C.textMid}>{v.base}</Td>
- <Td right mono bold color={v.type==="solde"?C.red:C.orange}>{fmt(v.montant)}</Td>
- <Td><Pill color={v.type==="solde"?C.red:C.orange}>{v.type==="solde"?"Solde — prévoir":"Acompte"}</Pill></Td>
- </Tr>
- ))}
- <Tr style={{background:C.bg}}>
- <Td bold>TOTAL</Td><Td/><Td/>
- <Td right mono bold color={C.red}>{fmt(versements.reduce((s,v)=>s+v.montant,0))}</Td>
- <Td/>
- </Tr>
- </tbody>
- </table>
- </div>
- </Card>
-
- {/* HISTORIQUE PROVISIONS */}
- <Card>
- <SectionHead title="Provisions mensuelles IS — 6 derniers mois" sub="Suivi du résultat fiscal et de la provision recommandée"/>
- <div style={{overflowX:"auto"}}>
- <table style={{width:"100%",borderCollapse:"collapse"}}>
- <thead><tr><Th>Mois</Th><Th right>Résultat fiscal mensuel</Th><Th right>Provision IS recommandée</Th></tr></thead>
- <tbody>
- {historiqueIS.map((r,i)=>(
- <Tr key={i} style={{background:i===historiqueIS.length-1?C.bg:""}}>
- <Td bold>{r.mois}{i===historiqueIS.length-1?" ":""}</Td>
- <Td right mono color={r.resultat>=0?C.text:C.red}>{fmt(r.resultat)}</Td>
- <Td right mono bold color={C.orange}>{fmt(r.provision)}</Td>
- </Tr>
- ))}
- <Tr style={{background:C.bg}}>
- <Td bold>Total 6 mois</Td>
- <Td right mono bold>{fmt(historiqueIS.reduce((s,r)=>s+r.resultat,0))}</Td>
- <Td right mono bold color={C.orange}>{fmt(historiqueIS.reduce((s,r)=>s+r.provision,0))}</Td>
- </Tr>
- </tbody>
- </table>
- </div>
- </Card>
- </div>
- );
- }
-
-
-  // ── IS — IMPÔT SUR LES SOCIÉTÉS ─────────────────────
-  if (view==="is") {
     const isD = client.is||{totalPrecedent:0,taux:15};
 
     // Résultat imposable = EBE - amortissements
@@ -3747,99 +3654,107 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear }) {
   }
 
   if (view==="tva") {
-    // ── Données du mois sélectionné (M) ──────────────────────────────────────
-    const ventesRows      = (client.imports||[]).filter(i=>i.type==="ventes_produits"&&i.mois===moisKey).flatMap(i=>i.rows);
-    const autresVentesRows= (client.imports||[]).filter(i=>i.type==="autres_ventes"&&i.mois===moisKey).flatMap(i=>i.rows);
-    const chargeRows      = (client.imports||[]).filter(i=>i.type==="charges"&&i.mois===moisKey).flatMap(i=>i.rows);
+    // Mois courant affiché
+    const ventesRows = (client.imports||[]).filter(i=>i.type==="ventes_produits"&&i.mois===moisKey).flatMap(i=>i.rows);
+    const autresVentesRows = (client.imports||[]).filter(i=>i.type==="autres_ventes"&&i.mois===moisKey).flatMap(i=>i.rows);
+    const chargeRows = (client.imports||[]).filter(i=>i.type==="charges"&&i.mois===moisKey).flatMap(i=>i.rows);
 
-    // TVA collectée M
+    // TVA collectée / déductible du mois affiché (sera payée le mois suivant)
     const tvaCollecteeVentes = ventesRows.reduce((s,r)=>s+Math.round(parseFloat(r.ca_ht||0)*0.20),0);
     const tvaCollecteeAutres = autresVentesRows.reduce((s,r)=>s+Math.round(parseFloat(r.ca_ht||0)*parseFloat(r.taux_tva||20)/100),0);
     const tvaCollectee = tvaCollecteeVentes + tvaCollecteeAutres;
-
-    // TVA déductible M
     const tvaDeductible = chargeRows.filter(r=>r.tva_recuperable==="oui").reduce((s,r)=>
       s+Math.round(parseFloat(r.montant_ht||0)*parseFloat(r.taux_tva||20)/100),0);
+    const soldeMois = tvaCollectee - tvaDeductible; // solde du mois affiché → payable mois suivant
 
-    const soldeTVA = tvaCollectee - tvaDeductible;
-    const aVerser  = soldeTVA > 0;
+    // TVA à payer CE mois = solde du mois précédent (décalage -1)
+    const prevOffset = moisIdx - 1;
+    const prevMi = ((prevOffset%12)+12)%12;
+    const prevYr = moisYear + Math.floor(prevOffset/12);
+    const prevKey = `${prevYr}-${String(prevMi+1).padStart(2,"0")}`;
+    const prevVentes = (client.imports||[]).filter(i=>i.type==="ventes_produits"&&i.mois===prevKey).flatMap(i=>i.rows);
+    const prevAutres = (client.imports||[]).filter(i=>i.type==="autres_ventes"&&i.mois===prevKey).flatMap(i=>i.rows);
+    const prevCharges = (client.imports||[]).filter(i=>i.type==="charges"&&i.mois===prevKey).flatMap(i=>i.rows);
+    const prevColl = prevVentes.reduce((s,r)=>s+Math.round(parseFloat(r.ca_ht||0)*0.20),0)
+                   + prevAutres.reduce((s,r)=>s+Math.round(parseFloat(r.ca_ht||0)*parseFloat(r.taux_tva||20)/100),0);
+    const prevDed = prevCharges.filter(r=>r.tva_recuperable==="oui").reduce((s,r)=>
+      s+Math.round(parseFloat(r.montant_ht||0)*parseFloat(r.taux_tva||20)/100),0);
+    const soldeTVA = prevColl - prevDed; // ce qu'on paie ce mois
+    const aVerser = soldeTVA > 0;
+    const MONTHS_FR = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
 
-    // ── Mois M+1 = mois de paiement effectif ─────────────────────────────────
-    const moisPaiementIdx  = (moisIdx + 1) % 12;
-    const moisPaiementYear = moisIdx === 11 ? moisYear + 1 : moisYear;
-    const moisPaiementNom  = MONTHS[moisPaiementIdx];
-    // Date limite légale : 24 du mois M+1 (ou 19 si télépaiement + CA > 230k€, simplifié ici)
-    const dateLimite = `24 ${moisPaiementNom} ${moisPaiementYear}`;
-
-    // ── TVA 12 mois : collectée et déductible sur M, versement en M+1 ────────
+    // TVA 12 mois
     const tva12 = Array.from({length:12},(_,i)=>{
       const offset = moisIdx - 11 + i;
-      const mi2    = ((offset%12)+12)%12;
-      const yr2    = moisYear + Math.floor(offset/12);
-      const key2   = `${yr2}-${String(mi2+1).padStart(2,"0")}`;
-      // Mois de versement = mi2+1
-      const miPay  = (mi2+1)%12;
-      const yrPay  = mi2===11 ? yr2+1 : yr2;
+      const mi2 = ((offset%12)+12)%12;
+      const yr2 = moisYear + Math.floor(offset/12);
+      const key2 = `${yr2}-${String(mi2+1).padStart(2,"0")}`;
+      const k2 = calcMonthKpis(client, mi2, yr2);
       const vR=(client.imports||[]).filter(im=>im.type==="ventes_produits"&&im.mois===key2).flatMap(im=>im.rows);
       const aR=(client.imports||[]).filter(im=>im.type==="autres_ventes"&&im.mois===key2).flatMap(im=>im.rows);
       const cR=(client.imports||[]).filter(im=>im.type==="charges"&&im.mois===key2).flatMap(im=>im.rows);
       const coll=vR.reduce((s,r)=>s+Math.round(parseFloat(r.ca_ht||0)*0.20),0)+aR.reduce((s,r)=>s+Math.round(parseFloat(r.ca_ht||0)*parseFloat(r.taux_tva||20)/100),0);
       const ded=cR.filter(r=>r.tva_recuperable==="oui").reduce((s,r)=>s+Math.round(parseFloat(r.montant_ht||0)*parseFloat(r.taux_tva||20)/100),0);
-      const k2=calcMonthKpis(client,mi2,yr2);
-      return {l:MONTHS[mi2], lPay:MONTHS[miPay], coll, ded, solde:coll-ded, hasData:k2.hasData};
+      return {l:MONTHS[mi2],coll,ded,solde:coll-ded,hasData:k2.hasData};
     });
 
-    const moyVerser = Math.round(tva12.filter(m=>m.hasData&&m.solde>0).reduce((s,m)=>s+m.solde,0) / (tva12.filter(m=>m.hasData&&m.solde>0).length||1));
+    // Mois de versement = mois suivant le mois affiché
+    const verseMi = (moisIdx+1)%12;
+    const verseYr = moisIdx===11 ? moisYear+1 : moisYear;
+    const dateLimit = `24 ${MONTHS_FR[verseMi]} ${verseYr}`;
+
+    // Tableau historique 12 mois
+    const tva12hist = Array.from({length:12},(_,i)=>{
+      const off = moisIdx - 11 + i;
+      const mi2 = ((off%12)+12)%12;
+      const yr2 = moisYear + Math.floor(off/12);
+      const key2 = `${yr2}-${String(mi2+1).padStart(2,"0")}`;
+      const vR2=(client.imports||[]).filter(im=>im.type==="ventes_produits"&&im.mois===key2).flatMap(im=>im.rows);
+      const aR2=(client.imports||[]).filter(im=>im.type==="autres_ventes"&&im.mois===key2).flatMap(im=>im.rows);
+      const cR2=(client.imports||[]).filter(im=>im.type==="charges"&&im.mois===key2).flatMap(im=>im.rows);
+      const coll2=vR2.reduce((s,r)=>s+Math.round(parseFloat(r.ca_ht||0)*0.20),0)+aR2.reduce((s,r)=>s+Math.round(parseFloat(r.ca_ht||0)*parseFloat(r.taux_tva||20)/100),0);
+      const ded2=cR2.filter(r=>r.tva_recuperable==="oui").reduce((s,r)=>s+Math.round(parseFloat(r.montant_ht||0)*parseFloat(r.taux_tva||20)/100),0);
+      const hasData2 = calcMonthKpis(client,mi2,yr2).hasData;
+      const verseMi2 = (mi2+1)%12;
+      const verseYr2 = mi2===11?yr2+1:yr2;
+      return {l:MONTHS_FR[mi2],yr:yr2,mi:mi2,coll:coll2,ded:ded2,solde:coll2-ded2,hasData:hasData2,verseMois:MONTHS_FR[verseMi2],actif:i===11};
+    });
+    const moyVerser = Math.round(tva12hist.filter(m=>m.hasData&&m.solde>0).reduce((s,m)=>s+m.solde,0)/(tva12hist.filter(m=>m.hasData&&m.solde>0).length||1));
 
     return (
       <div style={{padding:24}} className="fade-up">
-        <PageHeader title="Ma TVA" sub={`Opérations de ${MONTHS[moisIdx]} ${moisYear} — versement à l'État le ${dateLimite}`}/>
+        <PageHeader title="Ma TVA" sub={`Opérations de ${MONTHS_FR[moisIdx]} ${moisYear} — versement à l'État le ${dateLimit}`}/>
 
-        {/* Bandeau décalage M / M+1 */}
-        <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",alignItems:"center",gap:12,marginBottom:20,padding:"14px 18px",background:"#f8fafc",border:`1px solid ${C.border}`,borderRadius:12}}>
-          <div style={{textAlign:"center",padding:"10px 14px",background:"#fff",borderRadius:8,border:`1px solid ${C.borderLight}`}}>
-            <div style={{fontSize:11,fontWeight:800,textTransform:"uppercase",color:C.textLight,letterSpacing:"0.06em",marginBottom:4}}>Période des opérations</div>
-            <div style={{fontSize:18,fontWeight:900,color:C.primary}}>{MONTHS[moisIdx]} {moisYear}</div>
-            <div style={{fontSize:11,color:C.textMid,marginTop:3}}>Ventes & charges de ce mois</div>
+        {/* Bloc décalage Oct → Nov */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:0,marginBottom:16,alignItems:"stretch"}}>
+          <div style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:"10px 0 0 10px",padding:"16px 20px",textAlign:"center"}}>
+            <div style={{fontSize:11,fontWeight:800,color:C.textMid,textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:6}}>Période des opérations</div>
+            <div style={{fontSize:22,fontWeight:900,color:C.text}}>{MONTHS_FR[moisIdx]} {moisYear}</div>
+            <div style={{fontSize:12,color:C.textMid,marginTop:4}}>Ventes & charges de ce mois</div>
           </div>
-          <div style={{textAlign:"center",fontSize:22,color:C.textLight}}>→</div>
-          <div style={{textAlign:"center",padding:"10px 14px",background:aVerser?"#fef2f2":"#ecfdf5",borderRadius:8,border:`1px solid ${aVerser?"#fecaca":"#6ee7b7"}`}}>
-            <div style={{fontSize:11,fontWeight:800,textTransform:"uppercase",color:C.textLight,letterSpacing:"0.06em",marginBottom:4}}>Versement à l'État</div>
-            <div style={{fontSize:18,fontWeight:900,color:aVerser?C.red:C.green}}>{moisPaiementNom} {moisPaiementYear}</div>
-            <div style={{fontSize:11,color:aVerser?"#991b1b":"#065f46",marginTop:3,fontWeight:700}}>
-              {aVerser ? `⚠ À payer avant le ${dateLimite}` : soldeTVA < 0 ? `✓ Crédit de TVA à reporter` : "Aucune donnée"}
-            </div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:"0 12px",background:C.bg,borderTop:`1px solid ${C.border}`,borderBottom:`1px solid ${C.border}`}}>
+            <span style={{fontSize:20,color:C.textMid}}>→</span>
+          </div>
+          <div style={{background:"#fef2f2",border:`1px solid #fecaca`,borderRadius:"0 10px 10px 0",padding:"16px 20px",textAlign:"center"}}>
+            <div style={{fontSize:11,fontWeight:800,color:C.red,textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:6}}>Versement à l'État</div>
+            <div style={{fontSize:22,fontWeight:900,color:C.red}}>{MONTHS_FR[verseMi]} {verseYr}</div>
+            <div style={{fontSize:12,color:C.red,marginTop:4}}>⚠ À payer avant le {dateLimit}</div>
           </div>
         </div>
 
-        {/* Alerte trésorerie */}
-        {aVerser && (
-          <div style={{padding:"12px 16px",background:"#fff7ed",border:`1px solid #fed7aa`,borderRadius:10,marginBottom:20,fontSize:13,color:"#92400e",display:"flex",alignItems:"flex-start",gap:10}}>
-            <span style={{fontSize:18}}>💡</span>
-            <div>
-              <strong>Impact trésorerie :</strong> Le solde TVA de <strong>{fmt(soldeTVA)}</strong> calculé sur <strong>{MONTHS[moisIdx]}</strong> sera prélevé de votre compte en <strong>{moisPaiementNom}</strong>. Provisionnez cette somme dès maintenant.
-            </div>
-          </div>
-        )}
-        {soldeTVA < 0 && (
-          <div style={{padding:"12px 16px",background:"#ecfdf5",border:`1px solid #6ee7b7`,borderRadius:10,marginBottom:20,fontSize:13,color:"#065f46",display:"flex",alignItems:"flex-start",gap:10}}>
-            <span style={{fontSize:18}}>✅</span>
-            <div>
-              <strong>Crédit de TVA :</strong> Votre TVA déductible dépasse la TVA collectée sur <strong>{MONTHS[moisIdx]}</strong>. Vous avez un crédit de <strong>{fmt(Math.abs(soldeTVA))}</strong> reportable sur <strong>{moisPaiementNom}</strong> ou remboursable sur demande.
-            </div>
-          </div>
-        )}
+        {/* Bandeau alerte impact tréso */}
+        {aVerser&&<div style={{padding:"12px 16px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:10,marginBottom:16,fontSize:13,color:"#92400e"}}>
+          💡 <strong>Impact trésorerie :</strong> Le solde TVA de <strong>{fmt(soldeTVA)}</strong> calculé sur <strong>{MONTHS_FR[prevMi]} {prevYr}</strong> sera prélevé de votre compte en <strong>{MONTHS_FR[moisIdx]} {moisYear}</strong>. Provisionnez cette somme dès maintenant.
+        </div>}
 
-        {/* KPIs */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:24}}>
-          <KpiCard label={`TVA collectée — ${MONTHS[moisIdx]}`} value={fmt(tvaCollectee)} sub="Sur ventes & autres recettes" color={C.primary}/>
-          <KpiCard label={`TVA déductible — ${MONTHS[moisIdx]}`} value={fmt(tvaDeductible)} sub="Sur charges récupérables" color={C.green}/>
-          <KpiCard label={aVerser?`À verser en ${moisPaiementNom}`:`Crédit en ${moisPaiementNom}`} value={fmt(Math.abs(soldeTVA))} sub={aVerser?`Avant le ${dateLimite}`:"Report ou remboursement"} color={aVerser?C.red:C.green}/>
+        {/* 3 KPIs */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:20}}>
+          <KpiCard label={`TVA collectée — ${MONTHS_FR[moisIdx]}`} value={fmt(tvaCollectee)} sub="Sur ventes & autres recettes" color={C.primary}/>
+          <KpiCard label={`TVA déductible — ${MONTHS_FR[moisIdx]}`} value={fmt(tvaDeductible)} sub="Sur charges récupérables" color={C.green}/>
+          <KpiCard label={`À verser en ${MONTHS_FR[verseMi]}`} value={fmt(Math.abs(soldeMois))} sub={`Avant le ${dateLimit}`} color={soldeMois>0?C.red:C.green}/>
         </div>
-
-        {/* Détail collectée */}
         <Card>
-          <SectionHead title={`TVA collectée — ${MONTHS[moisIdx]} ${moisYear}`} sub="Détail par source de revenus"/>
+          <SectionHead title="Détail TVA collectée" sub="Par source de revenus"/>
           <div style={{padding:"8px 20px 16px"}}>
             <div style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${C.borderLight}`,fontSize:13}}>
               <span style={{color:C.textMid}}>Ventes prestations ({ventesRows.length} ligne{ventesRows.length>1?"s":""})</span>
@@ -3855,10 +3770,8 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear }) {
             </div>
           </div>
         </Card>
-
-        {/* Détail déductible */}
         <Card style={{marginTop:16}}>
-          <SectionHead title={`TVA déductible — ${MONTHS[moisIdx]} ${moisYear}`} sub="Charges avec TVA récupérable"/>
+          <SectionHead title="Détail TVA déductible" sub="Charges avec TVA récupérable"/>
           <div style={{padding:"8px 20px 16px"}}>
             {chargeRows.filter(r=>r.tva_recuperable==="oui").length===0?(
               <div style={{padding:"20px 0",textAlign:"center",color:C.textLight,fontSize:13}}>Aucune charge avec TVA récupérable ce mois</div>
@@ -3885,65 +3798,66 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear }) {
             </div>
           </div>
         </Card>
-
-        {/* Graphique 12 mois avec double ligne mois calcul / mois paiement */}
         <Card style={{marginTop:16}}>
-          <SectionHead title="Historique TVA — 12 mois" sub="Mois de calcul → versement effectif le mois suivant"/>
+          <SectionHead title="Historique TVA — 12 mois" sub="Collectée vs déductible vs solde"/>
           <div style={{padding:"14px 20px 12px"}}>
-            <div style={{display:"flex",gap:20,marginBottom:12,fontSize:11,color:C.textMid}}>
+            <div style={{display:"flex",gap:16,marginBottom:10,fontSize:11,color:C.textMid}}>
               <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:10,height:10,borderRadius:2,background:C.primary,display:"inline-block"}}></span>Collectée</span>
               <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:10,height:10,borderRadius:2,background:C.green,display:"inline-block"}}></span>Déductible</span>
-              <span style={{display:"flex",alignItems:"center",gap:4,marginLeft:"auto",fontStyle:"italic"}}>Versement à l'État : mois suivant (avant le 24)</span>
+              <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:10,height:10,borderRadius:2,background:C.red,display:"inline-block"}}></span>À verser</span>
             </div>
             <BarChart2
-              data={tva12.map(m=>({l:m.l,v1:m.coll,v2:m.ded,active:m.l===MONTHS[moisIdx]}))}
+              data={tva12hist.map(m=>({l:m.l,v1:m.coll,v2:m.ded,active:m.actif}))}
               c1={C.primary} c2={C.green} h={100}
               label1="TVA collectée" label2="TVA déductible" labelUnit=" €"
             />
-            {/* Tableau récap mois par mois avec décalage */}
-            <div style={{marginTop:16,overflowX:"auto"}}>
-              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                <thead>
-                  <tr style={{background:C.bg}}>
-                    <th style={{padding:"6px 10px",textAlign:"left",color:C.textLight,fontWeight:700,borderBottom:`1px solid ${C.border}`}}>Mois opérations</th>
-                    <th style={{padding:"6px 10px",textAlign:"right",color:C.primary,fontWeight:700,borderBottom:`1px solid ${C.border}`}}>Collectée</th>
-                    <th style={{padding:"6px 10px",textAlign:"right",color:C.green,fontWeight:700,borderBottom:`1px solid ${C.border}`}}>Déductible</th>
-                    <th style={{padding:"6px 10px",textAlign:"right",color:C.text,fontWeight:700,borderBottom:`1px solid ${C.border}`}}>Solde</th>
-                    <th style={{padding:"6px 10px",textAlign:"center",color:C.textLight,fontWeight:700,borderBottom:`1px solid ${C.border}`}}>Versement dû en</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tva12.filter(m=>m.hasData).map((m,i)=>{
-                    const isCurrentMonth = m.l===MONTHS[moisIdx];
-                    const soldePos = m.solde > 0;
-                    return (
-                      <tr key={i} style={{background:isCurrentMonth?"rgba(0,86,83,0.06)":"transparent",borderBottom:`1px solid ${C.borderLight}`}}>
-                        <td style={{padding:"7px 10px",fontWeight:isCurrentMonth?800:400,color:isCurrentMonth?C.primary:C.text}}>
-                          {m.l} {isCurrentMonth && <span style={{fontSize:10,background:C.primary,color:"#fff",borderRadius:4,padding:"1px 5px",marginLeft:4}}>ce mois</span>}
-                        </td>
-                        <td style={{padding:"7px 10px",textAlign:"right",color:C.primary,fontWeight:600}}>{fmt(m.coll)}</td>
-                        <td style={{padding:"7px 10px",textAlign:"right",color:C.green,fontWeight:600}}>{fmt(m.ded)}</td>
-                        <td style={{padding:"7px 10px",textAlign:"right",fontWeight:800,color:soldePos?C.red:C.green}}>{soldePos?"+":""}{fmt(m.solde)}</td>
-                        <td style={{padding:"7px 10px",textAlign:"center",fontWeight:700,color:soldePos?"#92400e":"#065f46",background:soldePos?"#fff7ed":"#ecfdf5",borderRadius:6}}>
-                          {soldePos ? `⚠ ${m.lPay}` : `✓ ${m.lPay}`}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr style={{background:C.bg}}>
-                    <td colSpan={3} style={{padding:"8px 10px",fontWeight:800,color:C.text,fontSize:12}}>Moyenne mensuelle à verser</td>
-                    <td colSpan={2} style={{padding:"8px 10px",textAlign:"right",fontWeight:900,color:C.red,fontSize:13}}>{fmt(moyVerser)} / mois</td>
-                  </tr>
-                </tfoot>
-              </table>
+            <div style={{marginTop:12,display:"flex",justifyContent:"space-between",fontSize:11,color:C.textMid}}>
+              <span>Moy. à verser : <strong style={{color:C.text}}>{fmt(moyVerser)}</strong>/mois</span>
+              <span>Ce mois : <strong style={{color:soldeMois>0?C.red:C.green}}>+{fmt(Math.abs(soldeMois))}</strong></span>
+            </div>
+          </div>
+        </Card>
+
+        {/* Tableau historique 12 mois */}
+        <Card style={{marginTop:16}}>
+          <SectionHead title="Détail mensuel TVA" sub="Mois par mois avec décalage de versement"/>
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse"}}>
+              <thead>
+                <tr style={{background:C.bg}}>
+                  <Th>Mois opérations</Th>
+                  <Th right>Collectée</Th>
+                  <Th right>Déductible</Th>
+                  <Th right>Solde</Th>
+                  <Th right>Versement dû en</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {tva12hist.filter(m=>m.hasData).map((m,i,arr)=>(
+                  <Tr key={i} style={{background:m.actif?C.bg:""}}>
+                    <Td bold>{m.l} {m.actif&&<span style={{background:C.primary,color:"white",borderRadius:6,padding:"2px 8px",fontSize:10,fontWeight:800,marginLeft:6}}>ce mois</span>}</Td>
+                    <Td right mono color={C.primary}>{fmt(m.coll)}</Td>
+                    <Td right mono color={C.green}>{fmt(m.ded)}</Td>
+                    <Td right>
+                      <Pill color={m.solde>=0?C.red:C.green} bg={(m.solde>=0?C.red:C.green)+"18"}>
+                        {m.solde>=0?"+":""}{fmt(m.solde)}
+                      </Pill>
+                    </Td>
+                    <Td right><span style={{color:C.orange,fontSize:11}}>⚠ {m.verseMois}</span></Td>
+                  </Tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{padding:"12px 20px",display:"flex",justifyContent:"space-between",borderTop:`1px solid ${C.borderLight}`,fontSize:12,fontWeight:700,color:C.textMid}}>
+              <span>Moyenne mensuelle à verser</span>
+              <span style={{color:C.red,fontSize:14,fontWeight:900}}>{fmt(moyVerser)} / mois</span>
             </div>
           </div>
         </Card>
       </div>
     );
   }
+
 
   // ── CRÉANCES CLIENTS ──────────────────────────────────
   // ── CRÉANCES & DETTES ────────────────────────────────
@@ -4605,7 +4519,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear }) {
     const moisLocal  = moisGlobal % 12;             // 0-11
     // adj est indexé par mois : { 0: {ca:2, sal:15}, 3: {taux_marge:1.5}, ... }
     const adj = adjPrev;
-    const mi=moisPrev;  // déclaré ICI avant adjM qui en dépend
+    const mi=moisLocal;  // index mois 0-11 (moisLocal = moisPrev % 12)
     const adjM = adj[mi] || {};  // ajustements du mois sélectionné
     const setAdjM = (id, val) => {
       const cur = adj[mi] || {};
@@ -4624,13 +4538,30 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear }) {
       const key=`${yr}-${String(mi+1).padStart(2,"0")}`;
       const rv=(type)=>(client.imports||[]).filter(i=>i.type===type&&i.mois===key).flatMap(i=>i.rows);
       const vR=rv("ventes_produits"), cR=rv("charges"), sR=rv("salaires");
-      if(field==="ca")     return vR.reduce((s,r)=>s+parseFloat(r.ca_ht||0),0);
-      if(field==="marge")  return vR.reduce((s,r)=>s+parseFloat(r.marge_ht||0),0);
-      if(field==="chF")    return cR.filter(r=>r.type==="fixe")    .reduce((s,r)=>s+parseFloat(r.montant_ht||0),0);
-      if(field==="chV")    return cR.filter(r=>r.type==="variable").reduce((s,r)=>s+parseFloat(r.montant_ht||0),0);
-      if(field==="chA")    return cR.filter(r=>!r.type||r.type==="autre").reduce((s,r)=>s+parseFloat(r.montant_ht||0),0);
-      if(field==="sal")    return sR.reduce((s,r)=>s+parseFloat(r.salaire_brut||0)+parseFloat(r.cotisations_patronales||0),0);
-      return 0;
+      const getRaw = () => {
+        if(field==="ca")   return vR.reduce((s,r)=>s+parseFloat(r.ca_ht||0),0);
+        if(field==="marge")return vR.reduce((s,r)=>s+parseFloat(r.marge_ht||0),0);
+        if(field==="chF")  return cR.filter(r=>r.type==="fixe").reduce((s,r)=>s+parseFloat(r.montant_ht||0),0);
+        if(field==="chV")  return cR.filter(r=>r.type==="variable").reduce((s,r)=>s+parseFloat(r.montant_ht||0),0);
+        if(field==="chA")  return cR.filter(r=>!r.type||r.type==="autre").reduce((s,r)=>s+parseFloat(r.montant_ht||0),0);
+        if(field==="sal")  return sR.reduce((s,r)=>s+parseFloat(r.salaire_brut||0)+parseFloat(r.cotisations_patronales||0),0);
+        return 0;
+      };
+      const raw = getRaw();
+      // Si pas de données réelles pour l année N demandée → estimer depuis N1 + tendance réelle
+      if(raw===0 && yr===N) {
+        const k_N1 = getI(N1, mi, field);
+        if(k_N1===0) return 0;
+        const moisReels = Array.from({length:CUR_M+1},(_,m2)=>{
+          const r=getI(N,m2,field), p=getI(N1,m2,field);
+          return p>0?r/p:null;
+        }).filter(v=>v!==null&&v>0);
+        const tendance = moisReels.length>0
+          ? moisReels.reduce((s,v)=>s+v,0)/moisReels.length
+          : 1.1;
+        return Math.round(k_N1 * tendance);
+      }
+      return raw;
     };
     const hasI=(yr,mi)=>(client.imports||[]).some(i=>i.mois===`${yr}-${String(mi+1).padStart(2,"0")}`&&["ventes_produits","charges","salaires"].includes(i.type));
     // Pour 2027 : un mois est dispo seulement si le mois correspondant de 2026 est importé
@@ -4711,14 +4642,14 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear }) {
     const projAm = (client.investissements||[]).reduce((s,inv)=>{
       const debut=inv.dateMEP?new Date(inv.dateMEP):new Date(N1,0,1);
       const mDebut=debut.getFullYear()*12+debut.getMonth();
-      const mActuel=N*12+mi;
+      const mActuel=moisAnnee*12+moisLocal;
       if(mActuel<mDebut||mActuel>=mDebut+(inv.duree||36)) return s;
       return s+Math.round(inv.montantHT/(inv.duree||36));
     },0);
     const projRemb=(client.emprunts||[]).reduce((s,e)=>{
       const debut=e.dateDebut?new Date(e.dateDebut):new Date(N1,0,1);
       const mDebut=debut.getFullYear()*12+debut.getMonth();
-      const mActuel=N*12+mi;
+      const mActuel=moisAnnee*12+moisLocal;
       if(mActuel<mDebut||mActuel>=mDebut+e.duree) return s;
       return s+Math.round(e.capital*(e.taux/100)/(1-Math.pow(1+e.taux/100,-e.duree))+e.assurance);
     },0);
@@ -4793,13 +4724,14 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear }) {
     let seuilMois=null, seuilAnnee=null, cumR=0;
     for(const g of allMoisProj){
       const mL=g%12, mA=g<12?N:NF;
-      const ca=getI(N1,mL,"ca"); if(ca===0) continue;
+      const baseS=g<12?N1:N;  // 2026 basé sur N1(2025), 2027 basé sur N(2026 réel)
+      const ca=getI(baseS,mL,"ca"); if(ca===0) continue;
       const adjM2=adj[g]||{}, aM2=(id)=>adjM2[id]!==undefined?parseFloat(adjM2[id]):0;
       const pCa=Math.round(ca*(1+(aM2("ca")!==0?txCA_ann+aM2("ca"):txCA_ann)/100));
-      const _ca1=ca,_mg1=getI(N1,mL,"marge"),_chV1=getI(N1,mL,"chV");
+      const _ca1=ca,_mg1=getI(baseS,mL,"marge"),_chV1=getI(baseS,mL,"chV");
       const _txMg=_ca1>0?_mg1/_ca1*100:tauxMgBase, _txMgF=aM2("taux_marge")!==0?_txMg+aM2("taux_marge"):_txMg;
       const _rChV=_ca1>0?_chV1/_ca1*100:ratioChVBase, _rChVF=aM2("ratio_chv")!==0?_rChV+aM2("ratio_chv"):_rChV;
-      const r=Math.round(pCa*_txMgF/100)-Math.round(getI(N1,mL,"chF")*(1+(aM2("chF")!==0?txChF_ann+aM2("chF"):txChF_ann)/100))-Math.round(pCa*_rChVF/100)-Math.round(getI(N1,mL,"chA")*(1+(aM2("chA")!==0?txChA_ann+aM2("chA"):txChA_ann)/100))-Math.round(getI(N1,mL,"sal")*(1+(aM2("sal")!==0?txSal_ann+aM2("sal"):txSal_ann)/100))-projAm;
+      const r=Math.round(pCa*_txMgF/100)-Math.round(getI(baseS,mL,"chF")*(1+(aM2("chF")!==0?txChF_ann+aM2("chF"):txChF_ann)/100))-Math.round(pCa*_rChVF/100)-Math.round(getI(baseS,mL,"chA")*(1+(aM2("chA")!==0?txChA_ann+aM2("chA"):txChA_ann)/100))-Math.round(getI(baseS,mL,"sal")*(1+(aM2("sal")!==0?txSal_ann+aM2("sal"):txSal_ann)/100))-projAm;
       cumR+=r-Math.max(0,Math.round(r*isD.taux/100));
       if(cumR>0&&seuilMois===null){seuilMois=mL; seuilAnnee=mA;}
     }
@@ -4882,7 +4814,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear }) {
 
     return (
       <div style={{padding:24}} className="fade-up">
-        <PageHeader title="Prévisionnel hybride" sub={`Projection ${N} · Marge et charges variables calculées depuis le CA prévu · Ajustement disponible pour chaque exception`} hidePicker/>
+        <PageHeader title="Prévisionnel hybride" sub={`Projection ${moisAnnee} · Marge et charges variables calculées depuis le CA prévu · Ajustement disponible pour chaque exception`} hidePicker/>
 
         {/* KPIs */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:16}}>
@@ -4896,8 +4828,8 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear }) {
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
           <div style={{padding:"10px 14px",background:C.bg,border:`1px solid ${C.green}33`,borderRadius:8,fontSize:12,color:C.textMid,lineHeight:1.7}}>
             <strong style={{color:C.primary}}>Logique automatique :</strong><br/>
-            Marge brute = CA prévu × <strong>{tauxMgFinal.toFixed(1)}%</strong> (taux historique {N1})<br/>
-            Charges variables = CA prévu × <strong>{ratioChVFinal.toFixed(1)}%</strong> (ratio historique {N1})<br/>
+            Marge brute = CA prévu × <strong>{tauxMgFinal.toFixed(1)}%</strong> (taux historique {base1})<br/>
+            Charges variables = CA prévu × <strong>{ratioChVFinal.toFixed(1)}%</strong> (ratio historique {base1})<br/>
             Emprunts, amortissements, IS → calculés depuis les contrats
           </div>
           <div style={{padding:"10px 14px",background:"#fffbeb",border:`1px solid ${C.orange}33`,borderRadius:8,fontSize:12,color:C.textMid,lineHeight:1.7}}>
@@ -4941,16 +4873,16 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear }) {
         ))}
 
         <Card>
-          <SectionHead title={`${MONTHS[mi]} ${moisAnnee} — Prévisionnel détaillé`}
+          <SectionHead title={`${MONTHS[moisLocal]} ${moisAnnee} — Prévisionnel détaillé`}
             sub="Ajust. = correction exceptionnelle en +/- (ex: +2% taux marge, +15% salaires) · Écarts = prévu N vs réel N-1"/>
           <div style={{overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
               <thead><tr>
                 <th style={{...cHL,width:"22%"}}>Ligne</th>
-                <th style={cH}>{N3}</th>
-                <th style={cH}>{N2}</th>
-                <th style={cH}>{N1} réel</th>
-                <th style={cH}>Tx {N2}→{N1} / Ratio</th>
+                <th style={cH}>{base3}</th>
+                <th style={cH}>{base2}</th>
+                <th style={cH}>{base1} réel</th>
+                <th style={cH}>Tx {base2}→{base1} / Ratio</th>
                 <th style={{...cH,background:"#003d3a"}}>Ajust. +/-</th>
                 <th style={cHp}>{moisAnnee} prévu</th>
                 <th style={cHe}>Écart €</th>
@@ -5179,13 +5111,15 @@ function calcTresoEstimee(client, toMi, toYr) {
   const si = client.tresorerie?.soldeInitial||0;
   const ds = client.tresorerie?.dateSolde||null;
   if(!ds) return si;
-  let cYr=parseInt(ds.split("-")[0]), cMi=parseInt(ds.split("-")[1])-1+1;
-  if(cMi>11){cMi=0;cYr++;}
+  const dsYr2=parseInt(ds.split("-")[0]), dsMi2=parseInt(ds.split("-")[1])-1;
+  // Si le mois demandé est avant dateSolde, retourner null
+  if(toYr*12+toMi < dsYr2*12+dsMi2) return null;
   const emp=(client.emprunts||[]).reduce((s,e)=>{const m=e.capital*(e.taux/100)/(1-Math.pow(1+e.taux/100,-e.duree));return s+Math.round(m+(e.assurance||0));},0);
+  let cYr=dsYr2, cMi=dsMi2;
   let cumul=si, maxIt=48;
   while((cYr<toYr||(cYr===toYr&&cMi<=toMi))&&maxIt-->0){
     const k=calcMonthKpis(client,cMi,cYr);
-    if(k.hasData){ cumul+=Math.round(k.ca*0.95-(k.charges+k.salaires)*0.95-emp); }
+    if(k.hasData){ cumul+=k.result; }
     cMi++;if(cMi>11){cMi=0;cYr++;}
   }
   return Math.round(cumul);
@@ -5195,7 +5129,7 @@ function calcAlertes(client, moisIdx, moisYear) {
   const kpis = calcMonthKpis(client, moisIdx, moisYear);
   const emprunts = client.emprunts||[];
   const chargeEmprunt = emprunts.reduce((s,e)=>{ const m=e.capital*(e.taux/100)/(1-Math.pow(1+e.taux/100,-e.duree)); return s+Math.round(m+e.assurance); },0);
-  const treso = client.tresorerie?.soldeInitial||client.kpis.tresorerie||0;
+  const treso = calcTresoEstimee(client, moisIdx, moisYear);
   const alerts = [];
 
   // ── Résultat net négatif
@@ -5732,7 +5666,7 @@ export default function App() {
   };
 
   const ADMIN_TITLES={clients:`Portefeuille clients (${clients.length})`,acces:"Accès & mots de passe clients",saisie:"Saisie & Import CSV",financier:"Donnees financieres",alertes:"Centre d'alertes",rapports:"Rapports IA"};
-  const CLIENT_TITLES={dashboard:"Tableau de bord",alertes:"Mes alertes",ventes:"Mes ventes",achats:"Mes couts d'achat",charges:"Mes charges",salaires:"Ma masse salariale",creances:"Mes créances clients",dettes:"Mes dettes fournisseurs",resultat:"Mon resultat financier",tresorerie:"Ma tresorerie",emprunts:"Mes emprunts",investissements:"Mes investissements",is:"Mon impot (IS)",catalogue:"Mon catalogue produits", comparaison:"Comparaison de périodes", previsionnel:"Prévisionnel hybride 2026"};
+  const CLIENT_TITLES={dashboard:"Tableau de bord",alertes:"Mes alertes",ventes:"Mes ventes",achats:"Mes couts d'achat",charges:"Mes charges",salaires:"Ma masse salariale",creances:"Mes créances clients",dettes:"Mes dettes fournisseurs",resultat:"Mon resultat financier",tresorerie:"Ma tresorerie",emprunts:"Mes emprunts",investissements:"Mes investissements",is:"Mon impot (IS)",catalogue:"Mon catalogue produits", comparaison:"Comparaison de périodes", previsionnel:"Prévisionnel"};
 
   // Modal credentials nouveau client (admin)
   const CredentialsModal = newClientCredentials ? (
