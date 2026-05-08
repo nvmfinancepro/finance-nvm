@@ -48,7 +48,7 @@ const Logo = ({ width=120, white=false }) => {
 };
 
 
-function useCountUp(target, duration=1800, start=false) {
+function useCountUp(target: number, duration: number=1800, start: boolean=false) {
   const [val, setVal] = useState(0);
   useEffect(() => {
     if (!start) return;
@@ -108,7 +108,7 @@ export default function SitePage() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const a = (d=0) => ({ opacity:loaded?1:0, transform:loaded?"translateY(0)":"translateY(24px)", transition:`opacity .7s ease ${d}s, transform .7s ease ${d}s` });
+  const a = (d: number=0) => ({ opacity:loaded?1:0, transform:loaded?"translateY(0)":"translateY(24px)", transition:`opacity .7s ease ${d}s, transform .7s ease ${d}s` });
 
   const gMax = Math.max(...GRAPH_POINTS), gMin = Math.min(...GRAPH_POINTS);
   const gPts = GRAPH_POINTS.map((v,i) => [i*(560/11), 80-((v-gMin)/(gMax-gMin))*70]);
