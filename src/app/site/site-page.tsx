@@ -152,8 +152,8 @@ export default function SitePage() {
             ))}
           </div>
           <div style={{display:"flex",gap:10,alignItems:"center"}}>
-            <a href="/demo" style={{fontSize:13,fontWeight:800,color:C.primary,textDecoration:"none",background:C.bg,padding:"8px 18px",borderRadius:100,border:`1px solid ${C.light}`,transition:"all .2s"}}>Voir la démo</a>
-            <a href="https://meet.brevo.com/nathan-van-meer-1" className="cta-main" style={{background:C.primary,color:"#fff",padding:"9px 22px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 16px rgba(0,86,83,.2)",transition:"all .2s"}}>Prendre RDV</a>
+            <a href="https://nvm-finance.vercel.app" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Espace client</a>
+            <a href="https://meet.brevo.com/nathan-van-meer-1" style={{background:C.primary,color:"#fff",padding:"9px 22px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 16px rgba(0,86,83,.2)"}}>Prendre RDV</a>
           </div>
         </div>
       </header>
