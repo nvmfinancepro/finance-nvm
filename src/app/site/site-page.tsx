@@ -1,7 +1,7 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 
-const C = { primary:"#005653", green:"#21C45D", bg:"#ecfdf5", text:"#002e2c", mid:"#2d6b68", light:"#a7d4d0", border:"#c8e8e5", red:"#dc2626", orange:"#d97706" };
+const C = { primary:"#005653", green:"#21C45D", bg:"#ecfdf5", text:"#002e2c", mid:"#2d6b68", light:"#a7d4d0", border:"#c8e8e5" };
 
 const LogoSVG = ({ width=160, showLabel=false, labelColor="#005653", fillColor="#005552", brightGreen="#21C45D" }) => (
   <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:Math.round(width*0.07)}}>
@@ -35,546 +35,365 @@ const pct = (n) => (n==null||isNaN(n))?"—":`${Number(n).toFixed(1)} %`;
 
 // CSV TEMPLATES PAR SECTEUR
 
-
-// Textes accrocheurs par onglet
-const TAB_HOOKS = {
-  "Tableau de bord": {title:"Tout votre business en un coup d'œil.", sub:"CA, marge, EBE, trésorerie — mis à jour chaque mois. Fini les surprises."},
-  "Mes alertes": {title:"Soyez alerté avant que ça devienne urgent.", sub:"Notre système détecte les dérives en amont. Vous agissez, pas vous réagissez."},
-  "Mes ventes": {title:"Vos ventes analysées ligne par ligne.", sub:"CA HT, panier moyen, évolution mensuelle — votre performance commerciale au détail."},
-  "Mes coûts d'achat": {title:"Maîtrisez ce que vous dépensez pour vendre.", sub:"Coûts d'achat, ratio CA, évolution — optimisez votre marge à la source."},
-  "Mes charges": {title:"Vos charges fixes et variables sous contrôle.", sub:"Loyer, abonnements, sous-traitance — chaque euro décortiqué pour trouver des leviers."},
-  "Ma masse salariale": {title:"Le coût réel de votre équipe, sans surprise.", sub:"Brut, net, cotisations — la vraie charge mensuelle de votre masse salariale."},
-  "Mes créances clients": {title:"Sachez qui vous doit de l'argent, et depuis quand.", sub:"Relances facilitées, retards identifiés — préservez votre trésorerie."},
-  "Mes dettes fournisseurs": {title:"Anticipez vos paiements fournisseurs.", sub:"Échéances claires, montants dus — gérez vos sorties de trésorerie sereinement."},
-  "Mon résultat": {title:"Votre résultat réel, pas estimé.", sub:"Du CA au résultat net — chaque ligne calculée pour que vous sachiez où vous en êtes vraiment."},
-  "Mon impôt (IS)": {title:"Provisionnez votre IS sans stress.", sub:"Estimation mensuelle de votre impôt sur les sociétés — plus de mauvaises surprises en fin d'année."},
-  "Ma TVA": {title:"TVA collectée, déductible, à verser — en clair.", sub:"Décalage M+1 expliqué, historique 12 mois, impact trésorerie calculé automatiquement."},
-  "Ma trésorerie": {title:"Votre cash en temps réel, et ce qui arrive.", sub:"Solde actuel, flux mensuels, projection — ne soyez plus jamais pris au dépourvu."},
-  "Mes emprunts": {title:"Suivez vos emprunts sans vous perdre.", sub:"Capital restant dû, mensualités, taux — votre dette bancaire sous contrôle."},
-  "Mes investissements": {title:"Amortissez intelligemment vos actifs.", sub:"Valeur nette, dotation mensuelle, durée restante — votre patrimoine professionnel suivi."},
-  "Prévisionnel": {title:"Décidez avec confiance grâce aux projections.", sub:"N+1 et N+2 calculés sur vos données réelles — anticipez, planifiez, recrutez en sécurité."},
+const Logo = ({ width=120, white=false }) => {
+  const fillColor = white ? "white" : "#005552";
+  const brightGreen = white ? "white" : "#21C45D";
+  const textColor = white ? "white" : "#005653";
+  return (
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+      <LogoSVG width={width} showLabel={false} fillColor={fillColor} brightGreen={brightGreen} labelColor={textColor}/>
+      <span style={{fontSize:Math.round(width*0.16),fontWeight:900,color:textColor,letterSpacing:"0.06em",textTransform:"uppercase"}}>NVM Finance</span>
+    </div>
+  );
 };
 
-const SIDEBAR = [
-  {sec:"Vue générale", items:["Tableau de bord","Mes alertes"]},
-  {sec:"Mon activité", items:["Mes ventes","Mes coûts d'achat","Mes charges","Ma masse salariale","Mes créances clients","Mes dettes fournisseurs"]},
-  {sec:"Mes finances", items:["Mon résultat","Mon impôt (IS)","Ma TVA","Ma trésorerie","Mes emprunts","Mes investissements"]},
-  {sec:"Analyse", items:["Prévisionnel"]},
-];
 
-const TABS = SIDEBAR.flatMap(s => s.items);
-const mo = ["M","J","J","A","S","O","N","D","J","F","M","A"];
-
-function LineChart({data, color=C.primary, id="lc"}) {
-  const max=Math.max(...data), min=Math.min(...data);
-  const w=380, h=60;
-  const pts=data.map((v,i)=>[i*(w/11), h-((v-min)/(max-min||1))*52]);
-  const path="M"+pts.map(p=>p.join(",")).join(" L");
-  const area=`M0,${h} L${pts.map(p=>p.join(",")).join(" L")} L${w},${h} Z`;
-  return (
-    <svg viewBox={`0 0 ${w} ${h+10}`} width="100%" style={{display:"block"}}>
-      <defs><linearGradient id={id} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity="0.12"/><stop offset="100%" stopColor={color} stopOpacity="0"/></linearGradient></defs>
-      <path d={area} fill={`url(#${id})`}/>
-      <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
-      {pts.map(([x,y],i)=><circle key={i} cx={x} cy={y} r={i===11?4:2} fill={i===11?color:"#fff"} stroke={color} strokeWidth={i===11?0:1.5}/>)}
-      {mo.map((m,i)=><text key={i} x={i*(w/11)} y={h+9} textAnchor="middle" fontSize="7" fill={i===11?C.text:"#6aaca8"} fontFamily="Nunito" fontWeight={i===11?800:600}>{m}</text>)}
-    </svg>
-  );
+function useCountUp(target, duration=1800, start=false) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    if (!start) return;
+    const s = Date.now();
+    const tick = () => {
+      const p = Math.min((Date.now()-s)/duration, 1);
+      const ease = 1 - Math.pow(1-p, 3);
+      setVal(Math.round(target * ease));
+      if (p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, [start, target, duration]);
+  return val;
 }
 
-function BarChart({data, color=C.primary, id="bc"}) {
-  const max=Math.max(...data);
-  return (
-    <svg viewBox="0 0 380 70" width="100%" style={{display:"block"}}>
-      {data.map((v,i)=>{
-        const bw=380/12-3, bx=i*(380/12)+1.5, bh=(v/max)*54;
-        return <g key={i}>
-          <rect x={bx} y={60-bh} width={bw} height={bh} rx="2" fill={i===11?color:color+"55"}/>
-          <text x={bx+bw/2} y={69} textAnchor="middle" fontSize="7" fill={i===11?C.text:"#6aaca8"} fontFamily="Nunito" fontWeight={i===11?800:600}>{mo[i]}</text>
-        </g>;
-      })}
-    </svg>
-  );
-}
+const GRAPH_POINTS = [42,48,39,55,49,62,58,68,64,74,70,88];
 
-function KpiCard({label, value, delta, ok=true}) {
-  return (
-    <div style={{background:"#fff",borderRadius:10,padding:"12px 14px",border:`0.5px solid ${C.border}`}}>
-      <div style={{fontSize:8,fontWeight:700,color:"#6aaca8",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:4}}>{label}</div>
-      <div style={{fontSize:16,fontWeight:900,color:C.text}}>{value}</div>
-      {delta && <div style={{fontSize:8.5,fontWeight:700,color:ok?"#059669":C.red,marginTop:2}}>{delta}</div>}
-    </div>
-  );
-}
+const IconChart = () => (
+  <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+    <rect x="4" y="20" width="6" height="12" rx="2" fill="rgba(33,196,93,.25)"/>
+    <rect x="14" y="13" width="6" height="19" rx="2" fill="rgba(33,196,93,.45)"/>
+    <rect x="24" y="6" width="6" height="26" rx="2" fill="#21C45D"/>
+    <path d="M7 20 Q17 13 27 8" stroke="rgba(255,255,255,.3)" strokeWidth="1.5" strokeDasharray="3 2"/>
+  </svg>
+);
 
-function TabContent({tab}) {
-  const bars=[48,55,42,60,52,68,63,70,66,78,72,100];
-  const treso=[42,48,39,55,49,62,58,66,61,72,68,94];
+const IconShield = () => (
+  <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+    <path d="M18 3 L30 8 L30 18 C30 25 24 30 18 32 C12 30 6 25 6 18 L6 8 Z" fill="rgba(33,196,93,.15)" stroke="#21C45D" strokeWidth="1.5"/>
+    <path d="M12 18 L16 22 L24 13" stroke="#21C45D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
 
-  const Row = ({l,v1,v2,v3,bold,green}) => (
-    <div style={{padding:"5px 12px",borderBottom:`0.5px solid #f0f9f8`,display:"flex",justifyContent:"space-between",background:bold?"#f0faf8":"#fff"}}>
-      <span style={{fontSize:10,fontWeight:bold?800:600,color:bold?C.text:"#6aaca8"}}>{l}</span>
-      <span style={{fontSize:10,fontWeight:800,color:green?C.green:v1?.startsWith("−")?C.red:C.primary}}>{v1}</span>
-    </div>
-  );
+const IconRocket = () => (
+  <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+    <path d="M18 5 C18 5 26 10 26 20 L18 31 L10 20 C10 10 18 5 18 5Z" fill="rgba(33,196,93,.15)" stroke="#21C45D" strokeWidth="1.5"/>
+    <circle cx="18" cy="17" r="3.5" fill="#21C45D"/>
+    <path d="M10 22 L6 27" stroke="rgba(33,196,93,.5)" strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M26 22 L30 27" stroke="rgba(33,196,93,.5)" strokeWidth="1.5" strokeLinecap="round"/>
+  </svg>
+);
 
-  const Table = ({headers, rows}) => (
-    <div style={{background:"#fff",borderRadius:10,border:`0.5px solid ${C.border}`,overflow:"hidden"}}>
-      <div style={{display:"grid",gridTemplateColumns:`repeat(${headers.length},1fr)`,padding:"6px 12px",background:C.bg,gap:8}}>
-        {headers.map((h,i)=><span key={i} style={{fontSize:7,fontWeight:800,color:"#6aaca8",textTransform:"uppercase"}}>{h}</span>)}
-      </div>
-      {rows.map((r,i)=>(
-        <div key={i} style={{display:"grid",gridTemplateColumns:`repeat(${r.length},1fr)`,padding:"6px 12px",gap:8,background:i%2===0?"#fff":"#f8fffe",borderTop:`0.5px solid #f0f9f8`}}>
-          {r.map((c,j)=><span key={j} style={{fontSize:10,fontWeight:j===0?600:700,color:j===0?C.text:typeof c==="string"&&c.startsWith("−")?C.red:C.primary}}>{c}</span>)}
-        </div>
-      ))}
-    </div>
-  );
-
-  const Card = ({title, sub, children}) => (
-    <div style={{background:"#fff",borderRadius:12,border:`0.5px solid ${C.border}`,marginBottom:10,overflow:"hidden"}}>
-      {title && <div style={{padding:"10px 14px",borderBottom:`0.5px solid ${C.border}`}}>
-        <div style={{fontSize:11,fontWeight:800,color:C.text}}>{title}</div>
-        {sub && <div style={{fontSize:9,fontWeight:600,color:"#6aaca8"}}>{sub}</div>}
-      </div>}
-      <div style={{padding:"10px 14px"}}>{children}</div>
-    </div>
-  );
-
-  switch(tab) {
-    case "Tableau de bord": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="CA mensuel" value="35 400 €" delta="↑ +18% vs mars"/>
-          <KpiCard label="Marge brute" value="94.9%" delta="↑ +2.1 pts"/>
-          <KpiCard label="EBE" value="18 750 €" delta="↑ +24%"/>
-          <KpiCard label="Trésorerie" value="94 200 €" delta="↑ +12%"/>
-        </div>
-        <Card title="CA mensuel — 12 mois glissants" sub="Évolution de votre chiffre d'affaires">
-          <LineChart data={bars} id="ca"/>
-        </Card>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-          <Card title="Répartition charges" sub="En cours">
-            <div style={{display:"flex",flexDirection:"column",gap:6}}>
-              {[{l:"Salaires",v:"9 089 €",p:52},{l:"Charges fixes",v:"2 250 €",p:13},{l:"Variables",v:"3 150 €",p:18},{l:"Amortis.",v:"222 €",p:1}].map((r,i)=>(
-                <div key={i}>
-                  <div style={{display:"flex",justifyContent:"space-between",fontSize:9,fontWeight:600,color:C.mid,marginBottom:2}}><span>{r.l}</span><span style={{fontWeight:800,color:C.text}}>{r.v}</span></div>
-                  <div style={{height:4,background:"#e8f5f4",borderRadius:2}}><div style={{height:"100%",width:`${r.p}%`,background:C.primary,borderRadius:2}}/></div>
-                </div>
-              ))}
-            </div>
-          </Card>
-          <Card title="Alertes actives" sub="3 à surveiller">
-            {[{c:C.red,t:"Trésorerie critique",s:"Seuil atteint en juin"},{c:C.orange,t:"Marge en baisse",s:"−4.2 pts vs mars"},{c:"#2563eb",t:"IS à anticiper",s:"3 758 € ce trimestre"}].map((a,i)=>(
-              <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                <div style={{width:7,height:7,borderRadius:"50%",background:a.c,flexShrink:0}}/>
-                <div><div style={{fontSize:10,fontWeight:800,color:C.text}}>{a.t}</div><div style={{fontSize:8,color:"#6aaca8"}}>{a.s}</div></div>
-              </div>
-            ))}
-          </Card>
-        </div>
-      </div>
-    );
-
-    case "Mes alertes": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="Alertes critiques" value="1" delta="Trésorerie" ok={false}/>
-          <KpiCard label="Alertes moyennes" value="2" delta="Marge + IS" ok={false}/>
-          <KpiCard label="Tout va bien" value="12 ✓" delta="Indicateurs stables"/>
-        </div>
-        {[
-          {bg:"#fef2f2",bc:"#fecaca",c:C.red,t:"Trésorerie critique",s:"Solde estimé sous le seuil d'alerte en juin 2026. Prenez des mesures dès maintenant.",action:"Voir ma trésorerie →"},
-          {bg:"#fffbeb",bc:"#fde68a",c:C.orange,t:"Marge brute en baisse",s:"Marge brute −4.2 pts vs mars 2026. Vos coûts d'achat ont augmenté de 8%.",action:"Analyser mes coûts →"},
-          {bg:"#eff6ff",bc:"#bfdbfe",c:"#2563eb",t:"IS à anticiper",s:"Provision IS estimée à 3 758 € ce trimestre. Provisionnez dès maintenant.",action:"Voir mon IS →"},
-        ].map((a,i)=>(
-          <div key={i} style={{padding:"14px 16px",borderRadius:12,background:a.bg,border:`1px solid ${a.bc}`,marginBottom:10}}>
-            <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:4}}>{a.t}</div>
-            <div style={{fontSize:11,fontWeight:600,color:"#6aaca8",marginBottom:8}}>{a.s}</div>
-            <span style={{fontSize:10,fontWeight:800,color:a.c,cursor:"pointer"}}>{a.action}</span>
-          </div>
-        ))}
-      </div>
-    );
-
-    case "Mes ventes": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="CA HT" value="35 000 €" delta="↑ +18% vs mars"/>
-          <KpiCard label="Nb ventes" value="12 lignes" delta="↑ +3 vs mars"/>
-          <KpiCard label="Panier moyen" value="2 917 €" delta="↑ +8%"/>
-        </div>
-        <Card title="Évolution CA — 12 mois" sub="Chiffre d'affaires mensuel HT">
-          <LineChart data={bars} id="v1"/>
-        </Card>
-        <Table headers={["Produit / Service","CA HT","Marge"]} rows={[["Prestation conseil","12 000 €","99%"],["Formation en ligne","8 500 €","99%"],["Audit financier","7 200 €","99%"],["Accompagnement","5 400 €","99%"]]}/>
-      </div>
-    );
-
-    case "Mes coûts d'achat": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="Total achats HT" value="1 800 €" delta="↓ −5% vs mars"/>
-          <KpiCard label="Ratio CA" value="5.1%" delta="Stable"/>
-          <KpiCard label="Marge brute" value="94.9%" delta="↑ +0.3 pts"/>
-        </div>
-        <Card title="Évolution achats — 12 mois">
-          <BarChart data={[22,25,18,28,20,24,21,26,23,27,24,18]} color="#6aaca8" id="ac"/>
-        </Card>
-        <Table headers={["Fournisseur","Catégorie","Montant HT"]} rows={[["Fournisseur A","Matières premières","800 €"],["Fournisseur B","Consommables","620 €"],["Fournisseur C","Packaging","380 €"]]}/>
-      </div>
-    );
-
-    case "Mes charges": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="Charges fixes" value="2 250 €" delta="Loyer, abonnements"/>
-          <KpiCard label="Charges variables" value="3 150 €" delta="9% du CA"/>
-          <KpiCard label="Total charges" value="5 400 €" delta="↑ +3% vs mars" ok={false}/>
-        </div>
-        <Card title="Répartition charges" sub="Fixes vs variables">
-          <BarChart data={[44,46,40,48,42,52,48,54,50,58,52,54]} color={C.primary} id="ch"/>
-        </Card>
-        <Table headers={["Charge","Type","Montant"]} rows={[["Loyer bureau","Fixe","1 200 €"],["Logiciels SaaS","Fixe","650 €"],["Assurances","Fixe","400 €"],["Sous-traitance","Variable","2 200 €"],["Déplacements","Variable","950 €"]]}/>
-      </div>
-    );
-
-    case "Ma masse salariale": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="Salaires bruts" value="9 089 €" delta="3 employés"/>
-          <KpiCard label="Nets versés" value="6 817 €" delta="Ce mois"/>
-          <KpiCard label="Cotisations" value="4 178 €" delta="Sal. + pat." ok={false}/>
-          <KpiCard label="Coût total" value="13 267 €" delta="Charge réelle" ok={false}/>
-        </div>
-        <Card title="Évolution masse salariale — 12 mois">
-          <BarChart data={[78,80,78,82,80,84,82,86,84,88,86,91]} color={C.primary} id="ms"/>
-        </Card>
-        <Table headers={["Employé","Brut","Net","Cotisations"]} rows={[["Employé A","4 200 €","3 150 €","1 932 €"],["Employé B","3 189 €","2 392 €","1 467 €"],["Employé C","1 700 €","1 275 €","782 €"]]}/>
-      </div>
-    );
-
-    case "Mes créances clients": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="Total créances" value="18 500 €" delta="5 factures" ok={false}/>
-          <KpiCard label="Dans les délais" value="12 000 €" delta="≤ 30 jours"/>
-          <KpiCard label="En retard" value="6 500 €" delta="⚠ +30 jours" ok={false}/>
-        </div>
-        <Card title="Délais de paiement" sub="Répartition par ancienneté">
-          <BarChart data={[0,0,0,12000,0,0,0,0,0,0,6500,0]} color={C.primary} id="cc"/>
-        </Card>
-        <Table headers={["Client","Facture","Montant","Délai"]} rows={[["Client A","#042","5 200 €","12 j ✓"],["Client B","#039","6 800 €","38 j ⚠"],["Client C","#044","3 500 €","5 j ✓"],["Client D","#037","3 000 €","45 j ⚠"]]}/>
-      </div>
-    );
-
-    case "Mes dettes fournisseurs": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="Total dettes" value="8 200 €" delta="3 fournisseurs" ok={false}/>
-          <KpiCard label="À payer ce mois" value="4 500 €" delta="Échéance Mai"/>
-          <KpiCard label="Délai moyen" value="28 jours" delta="Dans les normes"/>
-        </div>
-        <Card title="Échéances fournisseurs" sub="Calendrier des paiements à venir">
-          <BarChart data={[0,0,0,0,0,0,0,0,4500,0,3700,0]} color={C.orange} id="df"/>
-        </Card>
-        <Table headers={["Fournisseur","Montant","Échéance"]} rows={[["Fournisseur A","3 200 €","15 prochain mois"],["Fournisseur B","2 800 €","22 prochain mois"],["Fournisseur C","2 200 €","30 prochain mois"]]}/>
-      </div>
-    );
-
-    case "Mon résultat": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="CA HT" value="35 000 €" delta="↑ +18%"/>
-          <KpiCard label="Marge brute" value="94.9%" delta="33 200 €"/>
-          <KpiCard label="EBE" value="18 750 €" delta="53.6% du CA"/>
-          <KpiCard label="Résultat net" value="16 528 €" delta="↑ +24%"/>
-        </div>
-        <Card title="Compte de résultat simplifié" sub="En cours">
-          {[{l:"CA HT",v:"35 000 €",b:false},{l:"− Coûts d'achat",v:"−1 800 €",b:false,r:true},{l:"= Marge brute",v:"33 200 €",b:true},{l:"− Charges",v:"−5 400 €",b:false,r:true},{l:"− Masse salariale",v:"−9 089 €",b:false,r:true},{l:"= EBE",v:"18 750 €",b:true},{l:"− Amortissements",v:"−222 €",b:false,r:true},{l:"= Résultat avant IS",v:"18 528 €",b:true},{l:"− IS (15%)",v:"−2 000 €",b:false,r:true},{l:"= Résultat net",v:"16 528 €",b:true,g:true}].map((r,i)=>(
-            <div key={i} style={{padding:"5px 12px",borderBottom:"0.5px solid #f0f9f8",display:"flex",justifyContent:"space-between",background:r.b?"#f0faf8":"#fff"}}>
-              <span style={{fontSize:10,fontWeight:r.b?800:600,color:r.b?C.text:"#6aaca8"}}>{r.l}</span>
-              <span style={{fontSize:10,fontWeight:800,color:r.g?C.green:r.r?C.red:C.primary}}>{r.v}</span>
-            </div>
-          ))}
-        </Card>
-      </div>
-    );
-
-    case "Mon impôt (IS)": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="Résultat avant IS" value="18 528 €" delta="Base de calcul"/>
-          <KpiCard label="Taux IS applicable" value="15%" delta="PME taux réduit"/>
-          <KpiCard label="IS estimé ce mois" value="2 779 €" delta="Provision mensuelle" ok={false}/>
-        </div>
-        <Card title="Provision IS cumulée — 2026" sub="Montant à provisionner chaque mois">
-          <BarChart data={[18,20,22,25,28,30,32,34,36,38,40,28]} color={C.orange} id="is"/>
-        </Card>
-        <Card title="Simulation annuelle">
-          {[{l:"Résultat fiscal estimé 2026",v:"198 336 €"},{l:"IS taux réduit 15% (jusqu'à 42 500 €)",v:"6 375 €"},{l:"IS taux normal 25% (au-delà)",v:"38 959 €"},{l:"IS total estimé",v:"45 334 €",b:true}].map((r,i)=>(
-            <div key={i} style={{padding:"5px 12px",borderBottom:"0.5px solid #f0f9f8",display:"flex",justifyContent:"space-between",background:r.b?"#f0faf8":"#fff"}}>
-              <span style={{fontSize:10,fontWeight:r.b?800:600,color:r.b?C.text:"#6aaca8"}}>{r.l}</span>
-              <span style={{fontSize:10,fontWeight:800,color:r.b?C.orange:C.primary}}>{r.v}</span>
-            </div>
-          ))}
-        </Card>
-      </div>
-    );
-
-    case "Ma TVA": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="TVA collectée — Avr" value="7 000 €" delta="Sur ventes"/>
-          <KpiCard label="TVA déductible — Avr" value="1 465 €" delta="Sur charges"/>
-          <KpiCard label="À verser en Mai" value="5 535 €" delta="Avant le 24 Mai" ok={false}/>
-        </div>
-        <div style={{background:"#fff",borderRadius:10,border:`0.5px solid ${C.border}`,padding:"10px 14px",marginBottom:10,display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:8,alignItems:"center"}}>
-          <div style={{textAlign:"center"}}>
-            <div style={{fontSize:9,fontWeight:800,color:"#6aaca8",textTransform:"uppercase"}}>Opérations</div>
-            <div style={{fontSize:14,fontWeight:900,color:C.text}}>Période en cours</div>
-          </div>
-          <div style={{fontSize:18,color:"#6aaca8"}}>→</div>
-          <div style={{textAlign:"center",background:"#fef2f2",borderRadius:8,padding:"8px"}}>
-            <div style={{fontSize:9,fontWeight:800,color:C.red,textTransform:"uppercase"}}>Versement</div>
-            <div style={{fontSize:14,fontWeight:900,color:C.red}}>Mai 2026</div>
-            <div style={{fontSize:8,color:C.red}}>avant le 24 Mai</div>
-          </div>
-        </div>
-        <Card title="TVA — 12 mois glissants">
-          <BarChart data={[44,48,40,58,46,62,57,65,60,72,66,70]} color={C.primary} id="tva"/>
-        </Card>
-      </div>
-    );
-
-    case "Ma trésorerie": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="Solde actuel" value="94 200 €" delta="↑ +8 400 €"/>
-          <KpiCard label="Flux mensuel" value="+8 400 €" delta="↑ vs mars"/>
-          <KpiCard label="Point le plus bas" value="39 000 €" delta="Mois N-9"/>
-          <KpiCard label="Projection Juin" value="78 900 €" delta="⚠ Surveiller" ok={false}/>
-        </div>
-        <Card title="Évolution trésorerie — 12 mois" sub="Solde mensuel estimé">
-          <LineChart data={treso} id="tr" color={C.primary}/>
-        </Card>
-        <Card title="Flux ce mois" sub="Entrées et sorties principales">
-          {[{l:"Recettes clients",v:"+35 000 €",ok:true},{l:"Salaires nets",v:"−6 817 €",ok:false},{l:"Charges fixes",v:"−2 250 €",ok:false},{l:"TVA versée",v:"−5 305 €",ok:false},{l:"Rembt emprunt",v:"−592 €",ok:false},{l:"Flux net",v:"+8 400 €",ok:true,b:true}].map((r,i)=>(
-            <div key={i} style={{padding:"5px 12px",borderBottom:"0.5px solid #f0f9f8",display:"flex",justifyContent:"space-between",background:r.b?"#f0faf8":"#fff"}}>
-              <span style={{fontSize:10,fontWeight:r.b?800:600,color:r.b?C.text:"#6aaca8"}}>{r.l}</span>
-              <span style={{fontSize:10,fontWeight:800,color:r.ok?C.green:C.red}}>{r.v}</span>
-            </div>
-          ))}
-        </Card>
-      </div>
-    );
-
-    case "Mes emprunts": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="Capital restant dû" value="42 800 €" delta="1 emprunt actif" ok={false}/>
-          <KpiCard label="Mensualité" value="−592 €" delta="Prélevée auto" ok={false}/>
-          <KpiCard label="Taux" value="2.8%" delta="72 mois restants"/>
-        </div>
-        <Card title="Tableau d'amortissement" sub="Emprunt BNP — Jan 2020">
-          {[{l:"Capital initial",v:"50 000 €"},{l:"Capital remboursé",v:"7 200 €"},{l:"Capital restant dû",v:"42 800 €",b:true},{l:"Intérêts payés",v:"1 840 €"},{l:"Mensualité",v:"592 €/mois",b:true},{l:"Durée restante",v:"72 mois"}].map((r,i)=>(
-            <div key={i} style={{padding:"5px 12px",borderBottom:"0.5px solid #f0f9f8",display:"flex",justifyContent:"space-between",background:r.b?"#f0faf8":"#fff"}}>
-              <span style={{fontSize:10,fontWeight:r.b?800:600,color:r.b?C.text:"#6aaca8"}}>{r.l}</span>
-              <span style={{fontSize:10,fontWeight:800,color:C.primary}}>{r.v}</span>
-            </div>
-          ))}
-        </Card>
-      </div>
-    );
-
-    case "Mes investissements": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="Total investi" value="8 000 €" delta="3 actifs"/>
-          <KpiCard label="Amortissement/mois" value="222 €" delta="Charge comptable"/>
-          <KpiCard label="Valeur nette" value="5 336 €" delta="Valeur résiduelle"/>
-        </div>
-        <Table headers={["Actif","Valeur","Amort./mois","Fin"]} rows={[["MacBook Pro M3","2 800 €","78 €","Dans 2 ans"],["Logiciel compta","1 200 €","33 €","Dans 2 ans"],["Matériel bureau","4 000 €","111 €","Dans 3 ans"]]}/>
-      </div>
-    );
-
-    case "Prévisionnel": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="CA prévu N+1" value="438 K €" delta="↑ +42% vs 2025"/>
-          <KpiCard label="EBE prévu" value="234 K €" delta="↑ +51%"/>
-          <KpiCard label="Résultat net" value="193 K €" delta="↑ +48%"/>
-          <KpiCard label="Tréso estimée" value="102 K €" delta="↑ +8%"/>
-        </div>
-        <Card title="Prévisionnel N+1 vs réel N" sub="Comparaison automatique sur vos données">
-          <div style={{overflowX:"auto"}}>
-            <table style={{width:"100%",borderCollapse:"collapse"}}>
-              <thead><tr style={{background:C.bg}}>
-                {["Indicateur","N-2","N-1 réel","Tendance","N+1 prévu"].map((h,i)=><th key={i} style={{padding:"5px 10px",fontSize:7,fontWeight:800,color:"#6aaca8",textTransform:"uppercase",textAlign:"left"}}>{h}</th>)}
-              </tr></thead>
-              <tbody>
-                {[["CA HT","228 K€","312 K€","+37%","438 K€"],["Marge brute","226 K€","310 K€","+37%","437 K€"],["Charges totales","51 K€","62 K€","+22%","76 K€"],["EBE","106 K€","155 K€","+46%","234 K€"],["Résultat net","88 K€","130 K€","+48%","193 K€"]].map((r,i)=>(
-                  <tr key={i} style={{background:i%2===0?"#fff":"#f8fffe"}}>
-                    {r.map((c,j)=><td key={j} style={{padding:"5px 10px",fontSize:10,fontWeight:j===0||j===4?800:600,color:j===3?"#059669":j===4?C.primary:j===0?C.text:"#6aaca8"}}>{c}</td>)}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      </div>
-    );
-
-    default: return null;
-  }
-}
-
-export default function DemoPage() {
-  const [tabIdx, setTabIdx] = useState(0);
-  const [progress, setProgress] = useState(0);
+export default function SitePage() {
   const [loaded, setLoaded] = useState(false);
-  const [paused, setPaused] = useState(false);
-  const DURATION = 5000;
+  const [scrolled, setScrolled] = useState(false);
+  const [heroVisible, setHeroVisible] = useState(false);
 
-  useEffect(() => { setTimeout(()=>setLoaded(true), 100); }, []);
+  const ca = useCountUp(35400, 2000, heroVisible);
+  const mg = useCountUp(949, 1800, heroVisible);
+  const ebe = useCountUp(18750, 2200, heroVisible);
+  const tr = useCountUp(94200, 2400, heroVisible);
 
   useEffect(() => {
-    if (paused) return;
-    const start = Date.now();
-    const id = setInterval(() => {
-      const pct = ((Date.now()-start)/DURATION)*100;
-      if (pct >= 100) {
-        setTabIdx(t => (t+1) % TABS.length);
-        setProgress(0);
-      } else {
-        setProgress(pct);
-      }
-    }, 40);
-    return () => clearInterval(id);
-  }, [tabIdx, paused]);
+    setTimeout(() => { setLoaded(true); setHeroVisible(true); }, 200);
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
-  const goTo = (i) => { setTabIdx(i); setProgress(0); setPaused(true); setTimeout(()=>setPaused(false), 8000); };
+  const a = (d=0) => ({ opacity:loaded?1:0, transform:loaded?"translateY(0)":"translateY(24px)", transition:`opacity .7s ease ${d}s, transform .7s ease ${d}s` });
 
-  const hook = TAB_HOOKS[TABS[tabIdx]];
-  const a = (d=0) => ({opacity:loaded?1:0, transform:loaded?"translateY(0)":"translateY(16px)", transition:`all .6s ease ${d}s`});
+  const gMax = Math.max(...GRAPH_POINTS), gMin = Math.min(...GRAPH_POINTS);
+  const gPts = GRAPH_POINTS.map((v,i) => [i*(560/11), 80-((v-gMin)/(gMax-gMin))*70]);
+  const gPath = "M" + gPts.map(p=>p.join(",")).join(" L");
+  const gArea = `M0,80 L${gPts.map(p=>p.join(",")).join(" L")} L560,80 Z`;
+
+  const KPIS = [
+    { label:"CA mensuel", display: ca.toLocaleString("fr-FR")+" €", delta:"+18%" },
+    { label:"Marge brute", display: (mg/10).toFixed(1)+"%", delta:"+2.1 pts" },
+    { label:"EBE", display: ebe.toLocaleString("fr-FR")+" €", delta:"+24%" },
+    { label:"Trésorerie", display: tr.toLocaleString("fr-FR")+" €", delta:"+12%" },
+  ];
 
   return (
-    <div style={{fontFamily:"'Nunito',sans-serif", background:"#fff", minHeight:"100vh", color:C.text}}>
+    <div style={{fontFamily:"'Nunito',sans-serif", background:"#fff", color:C.text, minHeight:"100vh", overflowX:"hidden"}}>
       <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
-      <style>{`@keyframes fadeSlide{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:translateX(0)}} .tab-content{animation:fadeSlide .3s ease}`}</style>
+      <style>{`
+        *{box-sizing:border-box;}
+        @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+        @keyframes float2{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+        @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+        .kpi-card:hover{transform:translateY(-3px)!important;box-shadow:0 12px 40px rgba(0,86,83,.12)!important;}
+        .feat-card:hover{transform:translateY(-4px);box-shadow:0 20px 48px rgba(0,86,83,.1);border-color:#a7d4d0!important;}
+        .nav-link:hover{color:#005653!important;background:#f0faf8;}
+        .cta-main:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,86,83,.35)!important;}
+        .cta-outline:hover{background:#ecfdf5!important;}
+        .pillar:hover{background:rgba(255,255,255,.06)!important;}
+      `}</style>
 
-      {/* NAV SITE */}
-      <header style={{background:"rgba(255,255,255,.97)",backdropFilter:"blur(12px)",borderBottom:`1px solid ${C.border}`,position:"sticky",top:0,zIndex:100}}>
-        <div style={{display:"flex",justifyContent:"center",paddingTop:18,paddingBottom:12}}>
-          <LogoSVG width={80} showLabel={true} labelColor="#005653" fillColor="#005552" brightGreen="#21C45D"/>
+      {/* HEADER */}
+      <header style={{position:"sticky",top:0,zIndex:100,background:scrolled?"rgba(255,255,255,.98)":"rgba(255,255,255,.85)",backdropFilter:"blur(20px)",borderBottom:scrolled?`1px solid ${C.border}`:"1px solid transparent",transition:"all .4s"}}>
+        {/* Logo centré */}
+        <div style={{display:"flex",justifyContent:"center",paddingTop:20,paddingBottom:12}}>
+          <Logo width={90}/>
         </div>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 48px 14px",borderTop:`1px solid ${C.border}`}}>
+        {/* Barre nav + CTA */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 48px 14px",borderTop:`1px solid ${C.border}`,marginTop:4}}>
           <div style={{display:"flex",gap:4,alignItems:"center"}}>
             {[{h:"/site",l:"Accueil"},{h:"/site/services",l:"Nos offres"},{h:"https://nvmfinance.wordpress.com",l:"À propos"}].map((lk,i)=>(
-              <a key={i} href={lk.h} style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>
-                {lk.l}
-              </a>
+              <a key={i} href={lk.h} className="nav-link" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8,transition:"all .2s"}}>{lk.l}</a>
             ))}
           </div>
           <div style={{display:"flex",gap:10,alignItems:"center"}}>
-            <a href="/demo" style={{fontSize:13,fontWeight:800,color:C.primary,textDecoration:"none",background:C.bg,padding:"8px 18px",borderRadius:100,border:`1px solid ${C.light}`}}>Voir la démo</a>
-            <a href="https://meet.brevo.com/nathan-van-meer-1" style={{background:C.primary,color:"#fff",padding:"9px 22px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none"}}>Prendre RDV</a>
+            <a href="/demo" style={{fontSize:13,fontWeight:800,color:C.primary,textDecoration:"none",background:C.bg,padding:"8px 18px",borderRadius:100,border:`1px solid ${C.light}`,transition:"all .2s"}}>Voir la démo</a>
+            <a href="https://meet.brevo.com/nathan-van-meer-1" className="cta-main" style={{background:C.primary,color:"#fff",padding:"9px 22px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 16px rgba(0,86,83,.2)",transition:"all .2s"}}>Prendre RDV</a>
           </div>
         </div>
       </header>
 
-      {/* BANDEAU DEMO */}
-      <div style={{background:"#fffbeb",borderBottom:"1px solid #fde68a",padding:"10px 48px",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#d97706" strokeWidth="1.5"/><path d="M8 5v3M8 10v1" stroke="#d97706" strokeWidth="1.5" strokeLinecap="round"/></svg>
-        <span style={{fontSize:13,fontWeight:700,color:"#92400e"}}>Ceci est une démonstration avec des données fictives — pas un vrai accès client.</span>
-        <a href="https://meet.brevo.com/nathan-van-meer-1" style={{fontSize:12,fontWeight:800,color:"#d97706",textDecoration:"underline"}}>Demander un vrai accès →</a>
-      </div>
-
       {/* HERO */}
-      <div style={{background:`linear-gradient(180deg,#f8fffe 0%,${C.bg} 100%)`, padding:"40px 48px 0", textAlign:"center"}}>
-        <div style={{...a(0), marginBottom:8}}>
-          <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#fff",border:`1px solid ${C.light}`,color:C.primary,padding:"4px 16px",borderRadius:100,fontSize:11,fontWeight:800,letterSpacing:"0.06em",textTransform:"uppercase"}}>
-            <span style={{width:6,height:6,borderRadius:"50%",background:C.green,display:"inline-block"}}/>
-            Démo interactive
-          </span>
-        </div>
-        <h1 style={{...a(.1),fontSize:"clamp(26px,3vw,40px)",fontWeight:900,color:C.text,marginBottom:8,lineHeight:1.1}}>
-          Visualisez ce que vous aurez dans votre espace client.
-        </h1>
-        <p style={{...a(.2),fontSize:15,fontWeight:600,color:C.mid,marginBottom:8,maxWidth:560,margin:"0 auto 8px"}}>
-          Cette page vous montre les fonctionnalités et l'interface de l'outil NVM Finance avec des données fictives. Votre vrai espace client sera connecté à vos données réelles.
-        </p>
-        <p style={{...a(.22),fontSize:13,fontWeight:700,color:"#6aaca8",marginBottom:24,maxWidth:500,margin:"0 auto 24px"}}>
-          Cliquez sur les onglets ou laissez défiler automatiquement.
-        </p>
+      <section style={{background:"linear-gradient(155deg,#f0faf8 0%,#fff 45%,#ecfdf5 100%)",padding:"88px 48px 0",position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",inset:0,backgroundImage:`linear-gradient(${C.border} 1px,transparent 1px),linear-gradient(90deg,${C.border} 1px,transparent 1px)`,backgroundSize:"48px 48px",opacity:.35,pointerEvents:"none"}}/>
+        <div style={{position:"absolute",top:-100,right:-100,width:500,height:500,borderRadius:"50%",background:"radial-gradient(circle,rgba(33,196,93,.07) 0%,transparent 70%)",pointerEvents:"none"}}/>
 
-        {/* Barre de progression + onglet actif */}
-        <div style={{...a(.3),display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:24}}>
-          <div style={{background:"#fff",border:`1px solid ${C.light}`,borderRadius:100,padding:"4px 16px",fontSize:11,fontWeight:800,color:C.primary}}>{TABS[tabIdx]}</div>
-          <div style={{width:100,height:3,background:C.border,borderRadius:2,overflow:"hidden"}}>
-            <div style={{height:"100%",width:`${progress}%`,background:C.primary,transition:"width .04s linear",borderRadius:2}}/>
-          </div>
-          <span style={{fontSize:10,fontWeight:600,color:"#6aaca8"}}>{tabIdx+1}/{TABS.length}</span>
-        </div>
-
-        {/* Message accrocheur */}
-        <div key={tabIdx} style={{...a(0),background:"#fff",border:`1px solid ${C.border}`,borderRadius:16,padding:"16px 24px",maxWidth:600,margin:"0 auto 28px",boxShadow:"0 4px 20px rgba(0,86,83,.06)"}}>
-          <div style={{fontSize:15,fontWeight:900,color:C.text,marginBottom:4}}>{hook.title}</div>
-          <div style={{fontSize:13,fontWeight:600,color:C.mid}}>{hook.sub}</div>
-        </div>
-
-        {/* MOCKUP PRINCIPAL */}
-        <div style={{...a(.4),width:"100%",maxWidth:960,margin:"0 auto",background:"#f0faf8",borderRadius:"16px 16px 0 0",border:`1.5px solid ${C.border}`,borderBottom:"none",boxShadow:"0 -4px 48px rgba(0,86,83,.1)",overflow:"hidden"}}>
-          {/* Barre de fenêtre */}
-          <div style={{background:C.primary,padding:"10px 16px",display:"flex",alignItems:"center",gap:6}}>
-            {["#ff5f57","#febc2e","#28c840"].map((c,i)=><div key={i} style={{width:10,height:10,borderRadius:"50%",background:c}}/>)}
-            <span style={{marginLeft:8,fontSize:9,color:"rgba(255,255,255,.3)",fontWeight:600}}>nvm-finance.vercel.app — Espace client — Audit Finance Test</span>
-          </div>
-          <div style={{display:"flex",height:440}}>
-            {/* SIDEBAR cliquable */}
-            <div style={{width:175,minWidth:175,background:C.primary,display:"flex",flexDirection:"column",overflowY:"auto"}}>
-              <div style={{padding:"13px 14px 10px",fontSize:12,fontWeight:900,color:"#fff",borderBottom:"1px solid rgba(255,255,255,.08)"}}>NVM Finance</div>
-              {SIDEBAR.map((g,gi)=>(
-                <div key={gi}>
-                  <div style={{padding:"7px 14px 2px",fontSize:7.5,fontWeight:800,color:"rgba(255,255,255,.28)",letterSpacing:"0.1em",textTransform:"uppercase",marginTop:gi>0?4:0}}>{g.sec}</div>
-                  {g.items.map((it)=>{
-                    const idx = TABS.indexOf(it);
-                    const isActive = tabIdx === idx;
-                    return (
-                      <div key={it} onClick={()=>goTo(idx)} style={{padding:"6px 14px",fontSize:10.5,fontWeight:isActive?800:600,color:isActive?"#fff":"rgba(255,255,255,.45)",background:isActive?"rgba(255,255,255,.1)":"transparent",borderLeft:isActive?`2.5px solid ${C.green}`:"2.5px solid transparent",transition:"all .25s",cursor:"pointer"}}>{it}</div>
-                    );
-                  })}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:72,alignItems:"center",maxWidth:1200,margin:"0 auto",position:"relative"}}>
+          <div>
+            <h1 style={{...a(.1),fontSize:"clamp(38px,4.5vw,58px)",fontWeight:900,lineHeight:1.1,color:C.text,marginBottom:24}}>
+              Prenez les bonnes<br/>décisions. Avec les<br/><em style={{color:C.primary,fontStyle:"normal",borderBottom:`3px solid ${C.green}`}}>bons chiffres.</em>
+            </h1>
+            <p style={{...a(.2),fontSize:17,fontWeight:600,color:C.mid,lineHeight:1.75,marginBottom:12,maxWidth:460}}>
+              NVM Finance transforme vos données comptables en un tableau de bord vivant, analysé par des experts financiers.
+            </p>
+            <p style={{...a(.22),fontSize:14,fontWeight:800,color:C.primary,marginBottom:36}}>Mise en place en 48h · Sans engagement.</p>
+            <div style={{...a(.3),display:"flex",gap:12,flexWrap:"wrap",marginBottom:40}}>
+              <a href="https://meet.brevo.com/nathan-van-meer-1" className="cta-main" style={{background:C.primary,color:"#fff",padding:"15px 32px",borderRadius:100,fontSize:15,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 24px rgba(0,86,83,.25)",transition:"all .2s"}}>Demander une analyse gratuite</a>
+              <a href="/demo" className="cta-outline" style={{background:"#fff",color:C.primary,padding:"15px 32px",borderRadius:100,fontSize:15,fontWeight:800,textDecoration:"none",border:`2px solid ${C.light}`,transition:"all .2s"}}>Voir la démo →</a>
+            </div>
+            <div style={{...a(.4),display:"flex",gap:0,paddingTop:28,borderTop:`1px solid ${C.border}`}}>
+              {[{n:"+40%",l:"Gain de rentabilité moyen constaté"},{n:"−3h",l:"Gagnées par semaine sur la gestion financière"},{n:"360°",l:"Visibilité sur toute votre activité"}].map((t,i)=>(
+                <div key={i} style={{flex:1,paddingRight:24,borderRight:i<2?`1px solid ${C.border}`:"none",marginRight:i<2?24:0}}>
+                  <div style={{fontSize:28,fontWeight:900,color:C.primary}}>{t.n}</div>
+                  <div style={{fontSize:11,fontWeight:700,color:"#6aaca8",marginTop:4,lineHeight:1.4}}>{t.l}</div>
                 </div>
               ))}
             </div>
-            {/* CONTENU */}
-            <div style={{flex:1,padding:14,overflowY:"auto",background:"#f8fffe"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+          </div>
+
+          {/* RIGHT */}
+          <div style={{...a(.35),position:"relative",paddingBottom:32,paddingRight:24}}>
+            <div style={{background:"#fff",borderRadius:24,boxShadow:"0 32px 80px rgba(0,86,83,.14),0 0 0 1px rgba(0,86,83,.06)",padding:"28px",animation:"float 7s ease-in-out infinite"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:22}}>
                 <div>
-                  <div style={{fontSize:14,fontWeight:900,color:C.text}}>{TABS[tabIdx]}</div>
-                  
+                  <div style={{fontSize:10,fontWeight:800,color:"#6aaca8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4}}>Tableau de bord</div>
+                  <div style={{fontSize:15,fontWeight:900,color:C.text}}>Tableau de bord</div>
                 </div>
-                <span style={{fontSize:8.5,fontWeight:800,color:C.green,background:"rgba(33,196,93,.1)",padding:"2px 10px",borderRadius:100}}>● En direct</span>
+                <div style={{display:"flex",alignItems:"center",gap:6,background:C.bg,padding:"5px 12px",borderRadius:100,border:`1px solid ${C.border}`}}>
+                  <div style={{width:7,height:7,borderRadius:"50%",background:C.green,animation:"pulse-dot 2s infinite"}}/>
+                  <span style={{fontSize:10,fontWeight:800,color:C.primary}}>En direct</span>
+                </div>
               </div>
-              <div key={tabIdx} className="tab-content">
-                <TabContent tab={TABS[tabIdx]}/>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}>
+                {KPIS.map((k,i)=>(
+                  <div key={i} className="kpi-card" style={{background:i%2===0?"#f8fffe":C.bg,borderRadius:12,padding:"13px 15px",border:`1px solid ${C.border}`,transition:"all .3s"}}>
+                    <div style={{fontSize:9,fontWeight:700,color:"#6aaca8",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:5}}>{k.label}</div>
+                    <div style={{fontSize:20,fontWeight:900,color:C.text,fontVariantNumeric:"tabular-nums"}}>{k.display}</div>
+                    <div style={{fontSize:10,fontWeight:800,color:"#059669",marginTop:3}}>↑ {k.delta}</div>
+                  </div>
+                ))}
               </div>
+              <div style={{background:"#f8fffe",borderRadius:12,padding:"14px 16px",border:`1px solid ${C.border}`}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                  <span style={{fontSize:10,fontWeight:800,color:C.mid}}>Trésorerie — 12 mois</span>
+                  <span style={{fontSize:10,fontWeight:800,color:C.green}}>↑ +12%</span>
+                </div>
+                <svg viewBox="0 0 560 92" width="100%" style={{display:"block",overflow:"visible"}}>
+                  <defs><linearGradient id="hg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.primary} stopOpacity="0.12"/><stop offset="100%" stopColor={C.primary} stopOpacity="0"/></linearGradient></defs>
+                  <path d={gArea} fill="url(#hg)"/>
+                  <path d={gPath} fill="none" stroke={C.primary} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"/>
+                  {gPts.map(([x,y],i)=><circle key={i} cx={x} cy={y} r={i===11?5:2} fill={i===11?C.primary:"#fff"} stroke={C.primary} strokeWidth={i===11?0:1.5}/>)}
+                  <rect x={gPts[11][0]-32} y={gPts[11][1]-26} width={64} height={20} rx={6} fill={C.primary}/>
+                  <text x={gPts[11][0]} y={gPts[11][1]-12} textAnchor="middle" fontSize="9" fill="white" fontFamily="Nunito" fontWeight="800">94 200 €</text>
+                  {["M","J","J","A","S","O","N","D","J","F","M","A"].map((m,i)=>(
+                    <text key={i} x={i*(560/11)} y={90} textAnchor="middle" fontSize="9" fill={i===11?C.text:"#6aaca8"} fontFamily="Nunito" fontWeight={i===11?800:600}>{m}</text>
+                  ))}
+                </svg>
+              </div>
+            </div>
+            <div style={{position:"absolute",top:-16,right:0,background:"#fff",borderRadius:16,boxShadow:"0 8px 32px rgba(220,38,38,.14),0 0 0 1px rgba(220,38,38,.08)",padding:"11px 15px",display:"flex",alignItems:"center",gap:10,animation:"float2 7s ease-in-out infinite .9s"}}>
+              <div style={{width:30,height:30,borderRadius:9,background:"#fef2f2",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}>🔔</div>
+              <div><div style={{fontSize:10,fontWeight:800,color:"#991b1b"}}>Alerte trésorerie</div><div style={{fontSize:9,fontWeight:600,color:"#6aaca8"}}>Seuil critique juin</div></div>
+            </div>
+            <div style={{position:"absolute",bottom:0,left:-16,background:"#fff",borderRadius:16,boxShadow:`0 8px 32px rgba(0,86,83,.12),0 0 0 1px rgba(0,86,83,.06)`,padding:"11px 15px",display:"flex",alignItems:"center",gap:10,animation:"float2 7s ease-in-out infinite 1.8s"}}>
+              <div style={{width:30,height:30,borderRadius:9,background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}>📈</div>
+              <div><div style={{fontSize:10,fontWeight:800,color:C.primary}}>Prévisionnel N+1</div><div style={{fontSize:9,fontWeight:600,color:"#059669"}}>CA prévu +42% ↑</div></div>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* CTA FINAL */}
-      <section style={{background:C.primary,padding:"56px 48px",textAlign:"center"}}>
-        <h2 style={{fontSize:32,fontWeight:900,color:"#fff",marginBottom:10,lineHeight:1.1}}>Prêt à avoir cette visibilité sur votre activité ?</h2>
-        <p style={{fontSize:15,fontWeight:600,color:"rgba(255,255,255,.7)",marginBottom:28}}>Mise en place en 48h · Analyse gratuite · Sans engagement</p>
-        <a href="https://meet.brevo.com/nathan-van-meer-1" style={{background:C.green,color:C.text,padding:"16px 44px",borderRadius:100,fontSize:16,fontWeight:900,textDecoration:"none",display:"inline-block",boxShadow:"0 4px 24px rgba(33,196,93,.3)"}}>
-          Demander mon accès gratuit →
-        </a>
-        <div style={{marginTop:14,fontSize:12,fontWeight:700,color:"rgba(255,255,255,.4)"}}>nathan@nvm-finance.fr · 07 83 65 76 39</div>
+        <div style={{display:"flex",justifyContent:"center",padding:"52px 0 0",position:"relative"}}>
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
+            <span style={{fontSize:10,fontWeight:700,color:"#6aaca8",letterSpacing:"0.1em",textTransform:"uppercase"}}>Découvrir</span>
+            <div style={{width:1,height:28,background:`linear-gradient(${C.border},transparent)`}}/>
+          </div>
+        </div>
       </section>
-      <footer style={{background:"#002e2c",padding:"18px 48px",textAlign:"center"}}>
-        <p style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,.3)"}}>© 2026 NVM Finance — Données de démonstration fictives</p>
+
+      {/* 3 PILIERS */}
+      <section style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",background:C.primary}}>
+        {[
+          {ic:<IconChart/>,t:"Pilotage précis",p:"CA, marge, EBE, trésorerie — une vision financière structurée et exploitable en temps réel chaque mois."},
+          {ic:<IconShield/>,t:"Anticipation des risques",p:"Notre système détecte les dérives avant qu'elles impactent votre activité. Alertes automatiques et analyse experte."},
+          {ic:<IconRocket/>,t:"Performance durable",p:"Recommandations concrètes adaptées à votre situation pour optimiser vos résultats et développer sereinement."},
+        ].map((p,i)=>(
+          <div key={i} className="pillar" style={{padding:"44px 40px",borderLeft:i>0?"1px solid rgba(255,255,255,.1)":"none",transition:"background .25s",cursor:"default"}}>
+            <div style={{marginBottom:16}}>{p.ic}</div>
+            <div style={{fontSize:12,fontWeight:800,color:C.green,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>{p.t}</div>
+            <p style={{fontSize:14,fontWeight:600,color:"rgba(255,255,255,.65)",lineHeight:1.7,margin:0}}>{p.p}</p>
+          </div>
+        ))}
+      </section>
+
+      {/* FEATURES */}
+      <section style={{padding:"96px 48px",background:"#fff"}}>
+        <div style={{maxWidth:1100,margin:"0 auto"}}>
+          <div style={{textAlign:"center",marginBottom:56}}>
+            <h2 style={{fontSize:"clamp(28px,3.5vw,44px)",fontWeight:900,color:C.text,marginBottom:12,lineHeight:1.12}}>
+              Pas juste des chiffres.<br/><em style={{color:C.primary,fontStyle:"normal"}}>Des décisions.</em>
+            </h2>
+            <p style={{fontSize:16,fontWeight:600,color:C.mid,maxWidth:480,margin:"0 auto",lineHeight:1.65}}>Là où d'autres outils s'arrêtent aux données, NVM Finance va jusqu'à l'action.</p>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:20}}>
+            {[
+              {ic:<><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="10" width="3" height="8" rx="1" stroke="#005653" strokeWidth="1.5"/><rect x="8" y="6" width="3" height="12" rx="1" stroke="#005653" strokeWidth="1.5"/><rect x="14" y="2" width="3" height="16" rx="1" stroke="#005653" strokeWidth="1.5"/><path d="M2 8 L8 4 L14 1" stroke="#21C45D" strokeWidth="1.5" strokeLinecap="round"/></svg></>,h:"Vision financière 360°",p:"CA, marge, EBE, trésorerie, TVA, IS, prévisionnel — tout calculé automatiquement depuis vos imports."},
+              {ic:<><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2C7 2 5 5 5 8v4l-2 2v1h14v-1l-2-2V8c0-3-2-6-5-6z" stroke="#005653" strokeWidth="1.5" strokeLinecap="round"/><path d="M8 17a2 2 0 004 0" stroke="#005653" strokeWidth="1.5"/><circle cx="14" cy="4" r="3" fill="#005653"/></svg></>,h:"Alertes avant les problèmes",p:"Trésorerie critique, marge en chute, IS à anticiper — identifiés et signalés avant que ça devienne urgent."},
+              {ic:<><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M2 14 L6 8 L10 11 L14 4 L18 2" stroke="#005653" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M15 2 L18 2 L18 5" stroke="#005653" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></>,h:"Prévisionnel intelligent",p:"Projection N+1 et N+2 basée sur vos données réelles. Tendances calculées, ajustements mois par mois."},
+              {ic:<><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="4" stroke="#005653" strokeWidth="1.5"/><path d="M3 18c0-3.3 3.1-6 7-6s7 2.7 7 6" stroke="#005653" strokeWidth="1.5" strokeLinecap="round"/><path d="M13 5l2 2-4 4" stroke="#005653" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></>,h:"Analyse et recommandations",p:"Notre équipe analyse vos données et propose des solutions concrètes adaptées à votre situation réelle."},
+              {ic:<><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="8" width="14" height="10" rx="2" stroke="#005653" strokeWidth="1.5"/><path d="M7 8V6a3 3 0 016 0v2" stroke="#005653" strokeWidth="1.5" strokeLinecap="round"/><circle cx="10" cy="13" r="1.5" fill="#005653"/></svg></>,h:"Espace client sécurisé",p:"Accès personnalisé par entreprise. Interface claire, zéro formation requise, disponible 24h/24."},
+              {ic:<><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="#005653" strokeWidth="1.5"/><path d="M10 6v4l3 3" stroke="#005653" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></>,h:"Opérationnel en 48h",p:"Importez vos données CSV, on s'occupe du reste. Tableau de bord opérationnel en 2 jours."},
+            ].map((f,i)=>(
+              <div key={i} className="feat-card" style={{background:"#f8fffe",borderRadius:16,padding:"24px 22px",border:`1px solid ${C.border}`,transition:"all .3s",cursor:"default"}}>
+                <div style={{marginBottom:16,width:40,height:40,borderRadius:10,background:C.bg,display:"flex",alignItems:"center",justifyContent:"center"}}>{f.ic}</div>
+                <div style={{fontSize:15,fontWeight:900,color:C.text,marginBottom:8}}>{f.h}</div>
+                <p style={{fontSize:13,fontWeight:600,color:C.mid,lineHeight:1.7,margin:0}}>{f.p}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CHECKLIST */}
+      <section style={{background:"linear-gradient(135deg,#003d3a 0%,#005653 100%)",padding:"96px 48px",position:"relative",overflow:"hidden"}}>
+        <div style={{maxWidth:880,margin:"0 auto",display:"grid",gridTemplateColumns:"1fr 1fr",gap:64,alignItems:"center",position:"relative"}}>
+          <div>
+            <h2 style={{fontSize:"clamp(28px,3.2vw,40px)",fontWeight:900,color:"#fff",lineHeight:1.15,marginBottom:16}}>Ce que vous gagnez dès le premier mois.</h2>
+            <p style={{fontSize:15,fontWeight:600,color:"rgba(255,255,255,.6)",lineHeight:1.75,marginBottom:32}}>Une clarté financière que peu d'entreprises ont — sans embaucher un DAF.</p>
+            <a href="https://meet.brevo.com/nathan-van-meer-1" style={{background:C.green,color:C.text,padding:"14px 32px",borderRadius:100,fontSize:14,fontWeight:900,textDecoration:"none",display:"inline-block",boxShadow:"0 4px 20px rgba(33,196,93,.3)"}}>Démarrer maintenant →</a>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            {["Vision exacte de votre rentabilité chaque mois","Risques identifiés avant qu'ils deviennent des problèmes","Recommandations concrètes adaptées à votre activité","Prévisionnel fiable pour décider avec confiance","Moins de temps sur les chiffres, plus sur votre métier","Sérénité : vous savez exactement où vous en êtes"].map((t,i)=>(
+              <div key={i} style={{display:"flex",alignItems:"flex-start",gap:12}}>
+                <div style={{width:22,height:22,borderRadius:7,background:"rgba(33,196,93,.2)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>
+                  <svg viewBox="0 0 12 12" fill="none" width="12" height="12"><path d="M2 6l3 3 5-5" stroke={C.green} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+                <span style={{fontSize:14,fontWeight:700,color:"rgba(255,255,255,.87)",lineHeight:1.45}}>{t}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+
+      {/* AVIS CLIENTS */}
+      <section style={{padding:"80px 48px",background:"#f8fffe"}}>
+        <div style={{maxWidth:1100,margin:"0 auto"}}>
+          <div style={{textAlign:"center",marginBottom:48}}>
+            <h2 style={{fontSize:"clamp(24px,3vw,38px)",fontWeight:900,color:C.text,marginBottom:10}}>Ce que disent nos clients</h2>
+            <p style={{fontSize:15,fontWeight:600,color:C.mid}}>Des dirigeants qui ont repris le contrôle de leurs finances.</p>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:24}}>
+            {[
+              {name:"Sophie M.",role:"Dirigeante, cabinet RH",avis:"Avant NVM Finance, je regardais mes chiffres une fois par an avec mon comptable. Maintenant je sais exactement où j'en suis chaque mois. C'est rassurant.",stars:5},
+              {name:"Thomas B.",role:"Gérant, agence digitale",avis:"L'alerte trésorerie m'a sauvé en juin. J'aurais pas vu venir le creux sans le tableau de bord. Mise en place rapide, équipe réactive.",stars:5},
+              {name:"Claire D.",role:"Fondatrice, e-commerce",avis:"Enfin une vision claire de ma marge réelle produit par produit. Le prévisionnel m'aide à planifier mes recrutements avec confiance.",stars:5},
+            ].map((a,i)=>(
+              <div key={i} style={{background:"#fff",borderRadius:16,padding:"24px",border:`1px solid ${C.border}`,display:"flex",flexDirection:"column",gap:16}}>
+                <div style={{display:"flex",gap:2}}>
+                  {Array.from({length:a.stars}).map((_,j)=>(
+                    <svg key={j} width="16" height="16" viewBox="0 0 16 16"><path d="M8 1l1.8 3.6L14 5.4l-3 2.9.7 4.1L8 10.4l-3.7 2L5 8.3 2 5.4l4.2-.8z" fill="#21C45D"/></svg>
+                  ))}
+                </div>
+                <p style={{fontSize:14,fontWeight:600,color:C.mid,lineHeight:1.7,margin:0,fontStyle:"italic"}}>"{a.avis}"</p>
+                <div style={{borderTop:`1px solid ${C.border}`,paddingTop:12}}>
+                  <div style={{fontSize:13,fontWeight:800,color:C.text}}>{a.name}</div>
+                  <div style={{fontSize:11,fontWeight:600,color:"#6aaca8"}}>{a.role}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section style={{padding:"96px 48px",textAlign:"center",background:`linear-gradient(180deg,#fff 0%,${C.bg} 100%)`}}>
+        <h2 style={{fontSize:"clamp(28px,3.5vw,46px)",fontWeight:900,color:C.text,marginBottom:12,lineHeight:1.1}}>
+          Prêt à transformer vos données<br/>en décisions rentables ?
+        </h2>
+        <p style={{fontSize:16,fontWeight:600,color:C.mid,marginBottom:40}}>Analyse financière gratuite · Sans engagement · Mise en place en 48h</p>
+        <div style={{display:"inline-flex",flexDirection:"column",alignItems:"center",gap:16,background:"#fff",border:`1.5px solid ${C.border}`,borderRadius:24,padding:"40px 56px",boxShadow:"0 16px 64px rgba(0,86,83,.08)"}}>
+          <a href="https://meet.brevo.com/nathan-van-meer-1" className="cta-main" style={{background:C.primary,color:"#fff",padding:"18px 48px",borderRadius:100,fontSize:17,fontWeight:900,textDecoration:"none",boxShadow:"0 4px 24px rgba(0,86,83,.25)",transition:"all .2s"}}>
+            Demander mon analyse gratuite
+          </a>
+          <div style={{display:"flex",gap:20,alignItems:"center"}}>
+            <span style={{fontSize:12,fontWeight:700,color:"#6aaca8"}}>nathan@nvm-finance.fr</span>
+            <span style={{width:3,height:3,borderRadius:"50%",background:C.border,display:"inline-block"}}/>
+            <span style={{fontSize:12,fontWeight:700,color:"#6aaca8"}}>07 83 65 76 39</span>
+          </div>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer style={{background:"#002e2c",padding:"48px 48px 24px"}}>
+        <div style={{maxWidth:1100,margin:"0 auto"}}>
+          <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr",gap:40,paddingBottom:40,borderBottom:"1px solid rgba(255,255,255,.1)"}}>
+            <div>
+              <Logo width={80} white={true}/>
+              <p style={{fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",lineHeight:1.7,marginTop:16,maxWidth:280}}>
+                Pilotage financier sur-mesure pour les entreprises qui veulent décider avec les bons chiffres.
+              </p>
+              <div style={{marginTop:16,display:"flex",flexDirection:"column",gap:4}}>
+                <a href="mailto:nathan@nvm-finance.fr" style={{fontSize:12,fontWeight:600,color:"rgba(255,255,255,.4)",textDecoration:"none"}}>nathan@nvm-finance.fr</a>
+                <span style={{fontSize:12,fontWeight:600,color:"rgba(255,255,255,.4)"}}>07 83 65 76 39</span>
+              </div>
+            </div>
+            <div>
+              <div style={{fontSize:11,fontWeight:800,color:"rgba(255,255,255,.3)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Navigation</div>
+              {[{h:"/site",l:"Accueil"},{h:"/site/services",l:"Nos offres"},{h:"/demo",l:"Voir la démo"},{h:"https://nvmfinance.wordpress.com",l:"À propos"}].map((lk,i)=>(
+                <a key={i} href={lk.h} style={{display:"block",fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>{lk.l}</a>
+              ))}
+            </div>
+            <div>
+              <div style={{fontSize:11,fontWeight:800,color:"rgba(255,255,255,.3)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Contact</div>
+              <a href="https://meet.brevo.com/nathan-van-meer-1" style={{display:"block",fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Prendre RDV</a>
+              <a href="mailto:nathan@nvm-finance.fr" style={{display:"block",fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Nous écrire</a>
+            </div>
+            <div>
+              <div style={{fontSize:11,fontWeight:800,color:"rgba(255,255,255,.3)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Légal</div>
+              <a href="/site/mentions-legales" style={{display:"block",fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Mentions légales</a>
+              <a href="/site/confidentialite" style={{display:"block",fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Politique de confidentialité</a>
+              <a href="/site/cgv" style={{display:"block",fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>CGV</a>
+            </div>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",paddingTop:24,flexWrap:"wrap",gap:12}}>
+            <p style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,.25)"}}>© 2026 NVM Finance — Tous droits réservés</p>
+            <p style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,.25)"}}>ANALYSE FINANCIÈRE · SUIVI DE PERFORMANCE · PILOTAGE D'ACTIVITÉ</p>
+          </div>
+        </div>
       </footer>
     </div>
   );
