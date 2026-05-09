@@ -147,7 +147,7 @@ export default function SitePage() {
         {/* Barre nav + CTA */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 48px 14px",borderTop:`1px solid ${C.border}`,marginTop:4}}>
           <div style={{display:"flex",gap:4,alignItems:"center"}}>
-            {[{h:"/site",l:"Accueil"},{h:"/site/services",l:"Nos offres"},{h:"https://nvmfinance.wordpress.com",l:"À propos"}].map((lk,i)=>(
+            {[{h:"/site",l:"Accueil"},{h:"/site/services",l:"Nos offres"}].map((lk,i)=>(
               <a key={i} href={lk.h} className="nav-link" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8,transition:"all .2s"}}>{lk.l}</a>
             ))}
           </div>
@@ -373,7 +373,7 @@ export default function SitePage() {
             </div>
             <div>
               <div style={{fontSize:11,fontWeight:800,color:"rgba(255,255,255,.3)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Navigation</div>
-              {[{h:"/site",l:"Accueil"},{h:"/site/services",l:"Nos offres"},{h:"/demo",l:"Voir la démo"},{h:"https://nvmfinance.wordpress.com",l:"À propos"}].map((lk,i)=>(
+              {[{h:"/site",l:"Accueil"},{h:"/site/services",l:"Nos offres"},{h:"/demo",l:"Voir la démo"}].map((lk,i)=>(
                 <a key={i} href={lk.h} style={{display:"block",fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>{lk.l}</a>
               ))}
             </div>
