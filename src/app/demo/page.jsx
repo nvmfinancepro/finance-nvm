@@ -470,7 +470,7 @@ export default function DemoPage() {
         </div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 48px 14px",borderTop:`1px solid ${C.border}`}}>
           <div style={{display:"flex",gap:4,alignItems:"center"}}>
-            {[{h:"/site",l:"Accueil"},{h:"/site/services",l:"Nos offres"},{h:"https://nvmfinance.wordpress.com",l:"À propos"}].map((lk,i)=>(
+            {[{h:"/site",l:"Accueil"},{h:"/site/services",l:"Nos offres"}].map((lk,i)=>(
               <a key={i} href={lk.h} style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>
                 {lk.l}
               </a>
