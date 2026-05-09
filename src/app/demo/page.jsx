@@ -478,7 +478,7 @@ export default function DemoPage() {
           </div>
           <div style={{display:"flex",gap:10,alignItems:"center"}}>
                         <a href="https://nvm-finance.vercel.app" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Espace client</a>
-            <a href="https://meet.brevo.com/nathan-van-meer-1" style={{background:C.primary,color:"#fff",padding:"9px 22px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 16px rgba(0,86,83,.2)"}}>Prendre RDV</a>
+            <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" style={{background:C.primary,color:"#fff",padding:"9px 22px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 16px rgba(0,86,83,.2)"}}>Prendre RDV</a>
           </div>
         </div>
       </header>
@@ -487,7 +487,7 @@ export default function DemoPage() {
       <div style={{background:"#fffbeb",borderBottom:"1px solid #fde68a",padding:"10px 48px",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#d97706" strokeWidth="1.5"/><path d="M8 5v3M8 10v1" stroke="#d97706" strokeWidth="1.5" strokeLinecap="round"/></svg>
         <span style={{fontSize:13,fontWeight:700,color:"#92400e"}}>Ceci est une démonstration avec des données fictives — pas un vrai accès client.</span>
-        <a href="https://meet.brevo.com/nathan-van-meer-1" style={{fontSize:12,fontWeight:800,color:"#d97706",textDecoration:"underline"}}>Demander un vrai accès →</a>
+        <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" style={{fontSize:12,fontWeight:800,color:"#d97706",textDecoration:"underline"}}>Demander un vrai accès →</a>
       </div>
 
       {/* HERO */}
@@ -568,7 +568,7 @@ export default function DemoPage() {
       <section style={{background:C.primary,padding:"56px 48px",textAlign:"center"}}>
         <h2 style={{fontSize:32,fontWeight:900,color:"#fff",marginBottom:10,lineHeight:1.1}}>Prêt à avoir cette visibilité sur votre activité ?</h2>
         <p style={{fontSize:15,fontWeight:600,color:"rgba(255,255,255,.7)",marginBottom:28}}>Mise en place en 48h · Analyse gratuite · Sans engagement</p>
-        <a href="https://meet.brevo.com/nathan-van-meer-1" style={{background:C.green,color:C.text,padding:"16px 44px",borderRadius:100,fontSize:16,fontWeight:900,textDecoration:"none",display:"inline-block",boxShadow:"0 4px 24px rgba(33,196,93,.3)"}}>
+        <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" style={{background:C.green,color:C.text,padding:"16px 44px",borderRadius:100,fontSize:16,fontWeight:900,textDecoration:"none",display:"inline-block",boxShadow:"0 4px 24px rgba(33,196,93,.3)"}}>
           Demander mon accès gratuit →
         </a>
         <div style={{marginTop:14,fontSize:12,fontWeight:700,color:"rgba(255,255,255,.4)"}}>nathan@nvm-finance.fr · 07 83 65 76 39</div>
