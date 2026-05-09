@@ -144,6 +144,8 @@ export default function SitePage() {
           .stats-row{flex-direction:column!important;gap:16px!important;}
           .footer-grid{grid-template-columns:1fr 1fr!important;}
           .nav-links{display:none!important;}
+          .nav-bar{padding:8px 16px 12px!important;}
+          .nav-btns a{font-size:12px!important;padding:8px 12px!important;}
           .nav-bar{padding:8px 20px 12px!important;}
           .hero-section{padding:48px 20px 0!important;}
           .section-pad{padding:56px 20px!important;}
