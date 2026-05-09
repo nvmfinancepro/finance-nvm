@@ -98,6 +98,27 @@ export default function ServicesPage() {
     <div style={{fontFamily:"'Nunito',sans-serif",background:"#f8fffe",color:C.text,minHeight:"100vh"}}>
       <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
       <style>{`
+        @media(max-width:768px){
+          .nav-links{display:none!important;}
+          .nav-bar{padding:8px 16px 12px!important;}
+          .offre-grid{grid-template-columns:1fr!important;}
+          .suppl-grid{grid-template-columns:1fr!important;}
+          .feat-grid{grid-template-columns:1fr!important;}
+          .check-grid{grid-template-columns:1fr!important;gap:32px!important;}
+          .footer-grid{grid-template-columns:1fr 1fr!important;}
+          .section-pad{padding:48px 20px!important;}
+          .hero-pad{padding:40px 20px!important;}
+          .nav-btns a{white-space:nowrap!important;}
+          .tab-sidebar{width:130px!important;min-width:130px!important;}
+          .demo-hero{padding:24px 16px 0!important;}
+          .legal-content{padding:32px 20px!important;}
+          h1{font-size:clamp(24px,7vw,40px)!important;}
+          h2{font-size:clamp(20px,5vw,34px)!important;}
+        }
+        @media(max-width:480px){
+          .footer-grid{grid-template-columns:1fr!important;}
+          .stats-row{flex-direction:column!important;}
+        }
         .nav-link:hover{color:#005653!important;background:#f0faf8;}
         .cta-main:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,86,83,.35)!important;}
         .offre-card:hover{transform:translateY(-4px);box-shadow:0 16px 48px rgba(0,86,83,.12)!important;}
@@ -133,7 +154,7 @@ export default function ServicesPage() {
 
       {/* 4 OFFRES */}
       <section style={{padding:"64px 48px",maxWidth:1200,margin:"0 auto"}}>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:20}}>
+        <div className="offre-grid" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:20}}>
           {offres.map((o,i)=>(
             <div key={i} className="offre-card" style={{background:"#fff",borderRadius:20,border:o.best?`2px solid ${C.primary}`:`1px solid ${C.border}`,boxShadow:o.best?"0 8px 40px rgba(0,86,83,.15)":"0 2px 12px rgba(0,86,83,.05)",display:"flex",flexDirection:"column",overflow:"hidden",transition:"all .3s"}}>
               {o.best && <div style={{background:C.primary,color:"#fff",fontSize:10,fontWeight:800,textAlign:"center",padding:"7px",letterSpacing:"0.1em",textTransform:"uppercase"}}>Le plus populaire</div>}
@@ -174,7 +195,7 @@ export default function ServicesPage() {
           <h2 style={{fontSize:28,fontWeight:900,color:C.text,marginBottom:8}}>Options supplémentaires</h2>
           <p style={{fontSize:15,fontWeight:600,color:C.mid}}>Ces modules s'ajoutent à votre offre principale.</p>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:20,maxWidth:800,margin:"0 auto"}}>
+        <div className="suppl-grid" style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:20,maxWidth:800,margin:"0 auto"}}>
           {supplements.map((s,i)=>(
             <div key={i} style={{background:"#fff",borderRadius:20,border:`1px solid ${C.border}`,padding:"28px 24px",display:"flex",flexDirection:"column"}}>
               <div style={{fontSize:10,fontWeight:800,color:C.primary,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{s.tag}</div>

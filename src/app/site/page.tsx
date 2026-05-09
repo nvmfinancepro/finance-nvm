@@ -301,7 +301,7 @@ export default function SitePage() {
             </h2>
             <p style={{fontSize:16,fontWeight:600,color:C.mid,maxWidth:480,margin:"0 auto",lineHeight:1.65}}>Là où d'autres outils s'arrêtent aux données, NVM Finance va jusqu'à l'action.</p>
           </div>
-          <div className="feat-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:20}}>
+          <div className="feat-grid" className="feat-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:20}}>
             {[
               {ic:<><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="10" width="3" height="8" rx="1" stroke="#005653" strokeWidth="1.5"/><rect x="8" y="6" width="3" height="12" rx="1" stroke="#005653" strokeWidth="1.5"/><rect x="14" y="2" width="3" height="16" rx="1" stroke="#005653" strokeWidth="1.5"/><path d="M2 8 L8 4 L14 1" stroke="#21C45D" strokeWidth="1.5" strokeLinecap="round"/></svg></>,h:"Vision financière 360°",p:"CA, marge, EBE, trésorerie, TVA, IS, prévisionnel — tout calculé automatiquement depuis vos imports."},
               {ic:<><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2C7 2 5 5 5 8v4l-2 2v1h14v-1l-2-2V8c0-3-2-6-5-6z" stroke="#005653" strokeWidth="1.5" strokeLinecap="round"/><path d="M8 17a2 2 0 004 0" stroke="#005653" strokeWidth="1.5"/><circle cx="14" cy="4" r="3" fill="#005653"/></svg></>,h:"Alertes avant les problèmes",p:"Trésorerie critique, marge en chute, IS à anticiper — identifiés et signalés avant que ça devienne urgent."},
@@ -393,7 +393,7 @@ export default function SitePage() {
       {/* FOOTER */}
       <footer style={{background:"#002e2c",padding:"48px 48px 24px"}}>
         <div style={{maxWidth:1100,margin:"0 auto"}}>
-          <div className="footer-grid" style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr",gap:40,paddingBottom:40,borderBottom:"1px solid rgba(255,255,255,.1)"}}>
+          <div className="footer-grid" className="footer-grid" style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr",gap:40,paddingBottom:40,borderBottom:"1px solid rgba(255,255,255,.1)"}}>
             <div>
               <Logo width={80} white={true}/>
               <p style={{fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",lineHeight:1.7,marginTop:16,maxWidth:280}}>

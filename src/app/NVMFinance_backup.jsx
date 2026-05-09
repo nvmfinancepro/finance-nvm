@@ -189,6 +189,27 @@ const NEXUS_IMPORTS = [
 // GLOBAL CSS
 const GlobalCSS = () => (
  <style>{`
+        @media(max-width:768px){
+          .nav-links{display:none!important;}
+          .nav-bar{padding:8px 16px 12px!important;}
+          .offre-grid{grid-template-columns:1fr!important;}
+          .suppl-grid{grid-template-columns:1fr!important;}
+          .feat-grid{grid-template-columns:1fr!important;}
+          .check-grid{grid-template-columns:1fr!important;gap:32px!important;}
+          .footer-grid{grid-template-columns:1fr 1fr!important;}
+          .section-pad{padding:48px 20px!important;}
+          .hero-pad{padding:40px 20px!important;}
+          .nav-btns a{white-space:nowrap!important;}
+          .tab-sidebar{width:130px!important;min-width:130px!important;}
+          .demo-hero{padding:24px 16px 0!important;}
+          .legal-content{padding:32px 20px!important;}
+          h1{font-size:clamp(24px,7vw,40px)!important;}
+          h2{font-size:clamp(20px,5vw,34px)!important;}
+        }
+        @media(max-width:480px){
+          .footer-grid{grid-template-columns:1fr!important;}
+          .stats-row{flex-direction:column!important;}
+        }
  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
  *{box-sizing:border-box;margin:0;padding:0;}
  body{font-family:'Nunito',sans-serif;}

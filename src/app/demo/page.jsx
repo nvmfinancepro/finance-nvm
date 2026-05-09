@@ -461,7 +461,28 @@ export default function DemoPage() {
   return (
     <div style={{fontFamily:"'Nunito',sans-serif", background:"#fff", minHeight:"100vh", color:C.text}}>
       <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
-      <style>{`@keyframes fadeSlide{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:translateX(0)}} .tab-content{animation:fadeSlide .3s ease}`}</style>
+      <style>{`
+        @media(max-width:768px){
+          .nav-links{display:none!important;}
+          .nav-bar{padding:8px 16px 12px!important;}
+          .offre-grid{grid-template-columns:1fr!important;}
+          .suppl-grid{grid-template-columns:1fr!important;}
+          .feat-grid{grid-template-columns:1fr!important;}
+          .check-grid{grid-template-columns:1fr!important;gap:32px!important;}
+          .footer-grid{grid-template-columns:1fr 1fr!important;}
+          .section-pad{padding:48px 20px!important;}
+          .hero-pad{padding:40px 20px!important;}
+          .nav-btns a{white-space:nowrap!important;}
+          .tab-sidebar{width:130px!important;min-width:130px!important;}
+          .demo-hero{padding:24px 16px 0!important;}
+          .legal-content{padding:32px 20px!important;}
+          h1{font-size:clamp(24px,7vw,40px)!important;}
+          h2{font-size:clamp(20px,5vw,34px)!important;}
+        }
+        @media(max-width:480px){
+          .footer-grid{grid-template-columns:1fr!important;}
+          .stats-row{flex-direction:column!important;}
+        }@keyframes fadeSlide{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:translateX(0)}} .tab-content{animation:fadeSlide .3s ease}`}</style>
 
       {/* NAV SITE */}
       <header style={{background:"rgba(255,255,255,.97)",backdropFilter:"blur(12px)",borderBottom:`1px solid ${C.border}`,position:"sticky",top:0,zIndex:100}}>
@@ -532,7 +553,7 @@ export default function DemoPage() {
           </div>
           <div style={{display:"flex",height:440}}>
             {/* SIDEBAR cliquable */}
-            <div style={{width:175,minWidth:175,background:C.primary,display:"flex",flexDirection:"column",overflowY:"auto"}}>
+            <div className="tab-sidebar" style={{width:175,minWidth:175,background:C.primary,display:"flex",flexDirection:"column",overflowY:"auto"}}>
               <div style={{padding:"13px 14px 10px",fontSize:12,fontWeight:900,color:"#fff",borderBottom:"1px solid rgba(255,255,255,.08)"}}>NVM Finance</div>
               {SIDEBAR.map((g,gi)=>(
                 <div key={gi}>

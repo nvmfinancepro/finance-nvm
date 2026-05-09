@@ -67,7 +67,7 @@ export default function Page() {
           <h1 style={{fontSize:36,fontWeight:900,color:"#fff"}}>Conditions Générales de Vente</h1>
         </div>
       </div>
-      <div style={{maxWidth:800,margin:"0 auto",padding:"56px 48px"}}>
+      <div className="legal-content" style={{maxWidth:800,margin:"0 auto",padding:"56px 48px"}}>
         
         <div style={{marginBottom:40}}>
           <h2 style={{fontSize:20,fontWeight:800,color:C.primary,marginBottom:16,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>Objet</h2>
@@ -100,7 +100,7 @@ export default function Page() {
       </div>
       <footer style={{background:"#002e2c",padding:"48px 48px 24px"}}>
         <div style={{maxWidth:1100,margin:"0 auto"}}>
-          <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr",gap:40,paddingBottom:40,borderBottom:"1px solid rgba(255,255,255,.1)"}}>
+          <div className="footer-grid" style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr",gap:40,paddingBottom:40,borderBottom:"1px solid rgba(255,255,255,.1)"}}>
             <div>
               <Logo width={80} white={true}/>
               <p style={{fontSize:13,color:"rgba(255,255,255,.5)",lineHeight:1.7,marginTop:16,maxWidth:280}}>Pilotage financier sur-mesure pour les entreprises qui veulent décider avec les bons chiffres.</p>
