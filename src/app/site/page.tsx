@@ -146,7 +146,7 @@ export default function SitePage() {
         </div>
         {/* Barre nav + CTA */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 48px 14px",borderTop:`1px solid ${C.border}`,marginTop:4}}>
-          <div style={{display:"flex",gap:4,alignItems:"center"}}>
+          <div className="nav-links" style={{display:"flex",gap:4,alignItems:"center"}}>
             {[{h:"/site",l:"Accueil"},{h:"/site/services",l:"Nos offres"}].map((lk,i)=>(
               <a key={i} href={lk.h} className="nav-link" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8,transition:"all .2s"}}>{lk.l}</a>
             ))}
