@@ -126,6 +126,9 @@ export default function SitePage() {
     <div style={{fontFamily:"'Nunito',sans-serif", background:"#fff", color:C.text, minHeight:"100vh", overflowX:"hidden"}}>
       <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
       <style>{`
+        @media(max-width:768px){
+          .nav-links{display:none!important;}
+        }
         *{box-sizing:border-box;}
         @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
         @keyframes float2{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
