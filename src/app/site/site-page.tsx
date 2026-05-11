@@ -137,8 +137,10 @@ export default function SitePage() {
         .cta-outline:hover{background:#ecfdf5!important;}
         .pillar:hover{background:rgba(255,255,255,.06)!important;}
         /* ---- RESPONSIVE MOBILE ---- */
+        .drawer{display:none!important;}
         @media(max-width:768px){
           .desktop-nav{display:none!important;}
+          .drawer{display:flex!important;flex-direction:column!important;}
           .desktop-nav-bar{display:none!important;}
           .mobile-nav-bar{display:flex!important;}
           .hero-grid{grid-template-columns:1fr!important;gap:32px!important;}
@@ -205,7 +207,7 @@ export default function SitePage() {
         {/* Backdrop */}
         {menuOpen && <div onClick={()=>setMenuOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.3)",zIndex:199,backdropFilter:"blur(2px)"}}/>}
         {/* Tiroir droite */}
-        <div style={{position:"fixed",top:0,right:0,bottom:0,width:"75%",maxWidth:300,background:"#fff",zIndex:200,transform:menuOpen?"translateX(0)":"translateX(100%)",transition:"transform .3s ease",boxShadow:"-8px 0 32px rgba(0,0,0,.1)",display:"flex",flexDirection:"column",padding:"24px 0"}}>
+        <div className="drawer" style={{position:"fixed",top:0,right:0,bottom:0,width:"75%",maxWidth:300,background:"#fff",zIndex:200,transform:menuOpen?"translateX(0)":"translateX(100%)",transition:"transform .3s ease",boxShadow:"-8px 0 32px rgba(0,0,0,.1)",display:"flex",flexDirection:"column",padding:"24px 0"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0 24px 20px",borderBottom:`1px solid ${C.border}`,marginBottom:8}}>
             <LogoSVG width={70} showLabel={true} fillColor="#005552" brightGreen="#21C45D" labelColor="#005653"/>
             <button onClick={()=>setMenuOpen(false)} style={{fontSize:20,cursor:"pointer",color:"#6aaca8",background:"none",border:"none",padding:4}}>✕</button>
@@ -230,7 +232,7 @@ export default function SitePage() {
         <div style={{position:"absolute",inset:0,backgroundImage:`linear-gradient(${C.border} 1px,transparent 1px),linear-gradient(90deg,${C.border} 1px,transparent 1px)`,backgroundSize:"48px 48px",opacity:.35,pointerEvents:"none"}}/>
         <div style={{position:"absolute",top:-100,right:-100,width:500,height:500,borderRadius:"50%",background:"radial-gradient(circle,rgba(33,196,93,.07) 0%,transparent 70%)",pointerEvents:"none"}}/>
 
-        <div className="hero-grid" className="hero-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:72,alignItems:"center",maxWidth:1200,margin:"0 auto",position:"relative"}}>
+        <div className="hero-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:72,alignItems:"center",maxWidth:1200,margin:"0 auto",position:"relative"}}>
           <div>
             <h1 style={{...a(.1),fontSize:"clamp(38px,4.5vw,58px)",fontWeight:900,lineHeight:1.1,color:C.text,marginBottom:24}}>
               Prenez les bonnes<br/>décisions. Avec les<br/><em style={{color:C.primary,fontStyle:"normal",borderBottom:`3px solid ${C.green}`}}>bons chiffres.</em>
@@ -412,7 +414,7 @@ export default function SitePage() {
           Prêt à transformer vos données<br/>en décisions rentables ?
         </h2>
         <p style={{fontSize:16,fontWeight:600,color:C.mid,marginBottom:40}}>Analyse financière gratuite · Sans engagement · Mise en place en 48h</p>
-        <div className="cta-box" className="cta-box" style={{display:"inline-flex",flexDirection:"column",alignItems:"center",gap:16,background:"#fff",border:`1.5px solid ${C.border}`,borderRadius:24,padding:"40px 56px",boxShadow:"0 16px 64px rgba(0,86,83,.08)"}}>
+        <div className="cta-box" style={{display:"inline-flex",flexDirection:"column",alignItems:"center",gap:16,background:"#fff",border:`1.5px solid ${C.border}`,borderRadius:24,padding:"40px 56px",boxShadow:"0 16px 64px rgba(0,86,83,.08)"}}>
           <a href="https://meet.brevo.com/nathan-van-meer-1" className="cta-main" style={{background:C.primary,color:"#fff",padding:"18px 48px",borderRadius:100,fontSize:17,fontWeight:900,textDecoration:"none",boxShadow:"0 4px 24px rgba(0,86,83,.25)",transition:"all .2s"}}>
             Demander mon analyse gratuite
           </a>
@@ -427,7 +429,7 @@ export default function SitePage() {
       {/* FOOTER */}
       <footer style={{background:"#002e2c",padding:"48px 48px 24px"}}>
         <div style={{maxWidth:1100,margin:"0 auto"}}>
-          <div className="footer-grid" className="footer-grid" style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr",gap:40,paddingBottom:40,borderBottom:"1px solid rgba(255,255,255,.1)"}}>
+          <div className="footer-grid" style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr",gap:40,paddingBottom:40,borderBottom:"1px solid rgba(255,255,255,.1)"}}>
             <div>
               <Logo width={80} white={true}/>
               <p style={{fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",lineHeight:1.7,marginTop:16,maxWidth:280}}>
