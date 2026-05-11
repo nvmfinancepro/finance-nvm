@@ -126,9 +126,6 @@ export default function SitePage() {
     <div style={{fontFamily:"'Nunito',sans-serif", background:"#fff", color:C.text, minHeight:"100vh", overflowX:"hidden"}}>
       <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
       <style>{`
-        @media(max-width:768px){
-          .nav-links{display:none!important;}
-        }
         *{box-sizing:border-box;}
         @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
         @keyframes float2{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
@@ -139,6 +136,39 @@ export default function SitePage() {
         .cta-main:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,86,83,.35)!important;}
         .cta-outline:hover{background:#ecfdf5!important;}
         .pillar:hover{background:rgba(255,255,255,.06)!important;}
+        @media(max-width:768px){
+          .hero-grid{grid-template-columns:1fr!important;gap:40px!important;}
+          .feat-grid{grid-template-columns:1fr!important;}
+          .pillar-grid{grid-template-columns:1fr!important;}
+          .check-grid{grid-template-columns:1fr!important;gap:32px!important;}
+          .stats-row{flex-direction:column!important;gap:16px!important;}
+          .footer-grid{grid-template-columns:1fr 1fr!important;}
+          .nav-links{display:none!important;}
+          .nav-bar{padding:8px 16px 12px!important;}
+          .nav-btns a{font-size:12px!important;padding:8px 12px!important;}
+          .nav-bar{padding:8px 20px 12px!important;}
+          .hero-section{padding:48px 20px 0!important;}
+          .section-pad{padding:56px 20px!important;}
+          .cta-section{padding:56px 20px!important;}
+          .cta-box{padding:32px 24px!important;}
+          .avis-grid{grid-template-columns:1fr!important;}
+          .hamburger{display:flex!important;}
+          .nav-btns{gap:6px!important;}
+          .nav-btn-text{display:none!important;}
+        }
+        @media(max-width:480px){
+          .footer-grid{grid-template-columns:1fr!important;}
+          .cta-btns{flex-direction:column!important;width:100%!important;}
+          .cta-btns a{width:100%!important;text-align:center!important;}
+        }
+        .hamburger{display:none;}
+        @media(max-width:768px){
+          .hero-grid{display:flex!important;flex-direction:column!important;}
+          .hero-left{order:1;}
+          .hero-right-card{order:3!important;padding:0!important;}
+          .cta-btns{order:2;}
+          .hero-stats{order:2;}
+        }
       `}</style>
 
       {/* HEADER */}
@@ -149,24 +179,24 @@ export default function SitePage() {
         </div>
         {/* Barre nav + CTA */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 48px 14px",borderTop:`1px solid ${C.border}`,marginTop:4}}>
-          <div className="nav-links" style={{display:"flex",gap:4,alignItems:"center"}}>
+          <div style={{display:"flex",gap:4,alignItems:"center"}}>
             {[{h:"/site",l:"Accueil"},{h:"/site/services",l:"Nos offres"}].map((lk,i)=>(
               <a key={i} href={lk.h} className="nav-link" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8,transition:"all .2s"}}>{lk.l}</a>
             ))}
           </div>
           <div style={{display:"flex",gap:10,alignItems:"center"}}>
-            <a href="https://nvm-finance.vercel.app" target="_blank" rel="noopener noreferrer" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Espace client</a>
-            <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" style={{background:C.primary,color:"#fff",padding:"9px 22px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 16px rgba(0,86,83,.2)"}}>Prendre RDV</a>
+            <a href="https://nvm-finance.vercel.app" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Espace client</a>
+            <a href="https://meet.brevo.com/nathan-van-meer-1" style={{background:C.primary,color:"#fff",padding:"9px 22px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 16px rgba(0,86,83,.2)"}}>Prendre RDV</a>
           </div>
         </div>
       </header>
 
       {/* HERO */}
-      <section style={{background:"linear-gradient(155deg,#f0faf8 0%,#fff 45%,#ecfdf5 100%)",padding:"88px 48px 0",position:"relative",overflow:"hidden"}}>
+      <section className="hero-section" style={{background:"linear-gradient(155deg,#f0faf8 0%,#fff 45%,#ecfdf5 100%)",padding:"88px 48px 0",position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",inset:0,backgroundImage:`linear-gradient(${C.border} 1px,transparent 1px),linear-gradient(90deg,${C.border} 1px,transparent 1px)`,backgroundSize:"48px 48px",opacity:.35,pointerEvents:"none"}}/>
         <div style={{position:"absolute",top:-100,right:-100,width:500,height:500,borderRadius:"50%",background:"radial-gradient(circle,rgba(33,196,93,.07) 0%,transparent 70%)",pointerEvents:"none"}}/>
 
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:72,alignItems:"center",maxWidth:1200,margin:"0 auto",position:"relative"}}>
+        <div className="hero-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:72,alignItems:"center",maxWidth:1200,margin:"0 auto",position:"relative"}}>
           <div>
             <h1 style={{...a(.1),fontSize:"clamp(38px,4.5vw,58px)",fontWeight:900,lineHeight:1.1,color:C.text,marginBottom:24}}>
               Prenez les bonnes<br/>décisions. Avec les<br/><em style={{color:C.primary,fontStyle:"normal",borderBottom:`3px solid ${C.green}`}}>bons chiffres.</em>
@@ -175,11 +205,11 @@ export default function SitePage() {
               NVM Finance transforme vos données comptables en un tableau de bord vivant, analysé par des experts financiers.
             </p>
             <p style={{...a(.22),fontSize:14,fontWeight:800,color:C.primary,marginBottom:36}}>Mise en place en 48h · Sans engagement.</p>
-            <div style={{...a(.3),display:"flex",gap:12,flexWrap:"wrap",marginBottom:40}}>
-              <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" className="cta-main" style={{background:C.primary,color:"#fff",padding:"15px 32px",borderRadius:100,fontSize:15,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 24px rgba(0,86,83,.25)",transition:"all .2s"}}>Demander une analyse gratuite</a>
+            <div className="cta-btns" style={{...a(.3),display:"flex",gap:12,flexWrap:"wrap",marginBottom:40}}>
+              <a href="https://meet.brevo.com/nathan-van-meer-1" className="cta-main" style={{background:C.primary,color:"#fff",padding:"15px 32px",borderRadius:100,fontSize:15,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 24px rgba(0,86,83,.25)",transition:"all .2s"}}>Demander une analyse gratuite</a>
               <a href="/demo" className="cta-outline" style={{background:"#fff",color:C.primary,padding:"15px 32px",borderRadius:100,fontSize:15,fontWeight:800,textDecoration:"none",border:`2px solid ${C.light}`,transition:"all .2s"}}>Voir la démo →</a>
             </div>
-            <div style={{...a(.4),display:"flex",gap:0,paddingTop:28,borderTop:`1px solid ${C.border}`}}>
+            <div className="stats-row" style={{...a(.4),display:"flex",gap:0,paddingTop:28,borderTop:`1px solid ${C.border}`}}>
               {[{n:"+40%",l:"Gain de rentabilité moyen constaté"},{n:"−3h",l:"Gagnées par semaine sur la gestion financière"},{n:"360°",l:"Visibilité sur toute votre activité"}].map((t,i)=>(
                 <div key={i} style={{flex:1,paddingRight:24,borderRight:i<2?`1px solid ${C.border}`:"none",marginRight:i<2?24:0}}>
                   <div style={{fontSize:28,fontWeight:900,color:C.primary}}>{t.n}</div>
@@ -190,7 +220,7 @@ export default function SitePage() {
           </div>
 
           {/* RIGHT */}
-          <div style={{...a(.35),position:"relative",paddingBottom:32,paddingRight:24}}>
+          <div className="hero-right-card" style={{...a(.35),position:"relative",paddingBottom:32,paddingRight:24}}>
             <div style={{background:"#fff",borderRadius:24,boxShadow:"0 32px 80px rgba(0,86,83,.14),0 0 0 1px rgba(0,86,83,.06)",padding:"28px",animation:"float 7s ease-in-out infinite"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:22}}>
                 <div>
@@ -248,7 +278,7 @@ export default function SitePage() {
       </section>
 
       {/* 3 PILIERS */}
-      <section style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",background:C.primary}}>
+      <section className="pillar-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",background:C.primary}}>
         {[
           {ic:<IconChart/>,t:"Pilotage précis",p:"CA, marge, EBE, trésorerie — une vision financière structurée et exploitable en temps réel chaque mois."},
           {ic:<IconShield/>,t:"Anticipation des risques",p:"Notre système détecte les dérives avant qu'elles impactent votre activité. Alertes automatiques et analyse experte."},
@@ -263,7 +293,7 @@ export default function SitePage() {
       </section>
 
       {/* FEATURES */}
-      <section style={{padding:"96px 48px",background:"#fff"}}>
+      <section className="section-pad" style={{padding:"96px 48px",background:"#fff"}}>
         <div style={{maxWidth:1100,margin:"0 auto"}}>
           <div style={{textAlign:"center",marginBottom:56}}>
             <h2 style={{fontSize:"clamp(28px,3.5vw,44px)",fontWeight:900,color:C.text,marginBottom:12,lineHeight:1.12}}>
@@ -271,7 +301,7 @@ export default function SitePage() {
             </h2>
             <p style={{fontSize:16,fontWeight:600,color:C.mid,maxWidth:480,margin:"0 auto",lineHeight:1.65}}>Là où d'autres outils s'arrêtent aux données, NVM Finance va jusqu'à l'action.</p>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:20}}>
+          <div className="feat-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:20}}>
             {[
               {ic:<><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="10" width="3" height="8" rx="1" stroke="#005653" strokeWidth="1.5"/><rect x="8" y="6" width="3" height="12" rx="1" stroke="#005653" strokeWidth="1.5"/><rect x="14" y="2" width="3" height="16" rx="1" stroke="#005653" strokeWidth="1.5"/><path d="M2 8 L8 4 L14 1" stroke="#21C45D" strokeWidth="1.5" strokeLinecap="round"/></svg></>,h:"Vision financière 360°",p:"CA, marge, EBE, trésorerie, TVA, IS, prévisionnel — tout calculé automatiquement depuis vos imports."},
               {ic:<><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2C7 2 5 5 5 8v4l-2 2v1h14v-1l-2-2V8c0-3-2-6-5-6z" stroke="#005653" strokeWidth="1.5" strokeLinecap="round"/><path d="M8 17a2 2 0 004 0" stroke="#005653" strokeWidth="1.5"/><circle cx="14" cy="4" r="3" fill="#005653"/></svg></>,h:"Alertes avant les problèmes",p:"Trésorerie critique, marge en chute, IS à anticiper — identifiés et signalés avant que ça devienne urgent."},
@@ -291,12 +321,12 @@ export default function SitePage() {
       </section>
 
       {/* CHECKLIST */}
-      <section style={{background:"linear-gradient(135deg,#003d3a 0%,#005653 100%)",padding:"96px 48px",position:"relative",overflow:"hidden"}}>
-        <div style={{maxWidth:880,margin:"0 auto",display:"grid",gridTemplateColumns:"1fr 1fr",gap:64,alignItems:"center",position:"relative"}}>
+      <section className="section-pad" style={{background:"linear-gradient(135deg,#003d3a 0%,#005653 100%)",padding:"96px 48px",position:"relative",overflow:"hidden"}}>
+        <div className="check-grid" style={{maxWidth:880,margin:"0 auto",display:"grid",gridTemplateColumns:"1fr 1fr",gap:64,alignItems:"center",position:"relative"}}>
           <div>
             <h2 style={{fontSize:"clamp(28px,3.2vw,40px)",fontWeight:900,color:"#fff",lineHeight:1.15,marginBottom:16}}>Ce que vous gagnez dès le premier mois.</h2>
             <p style={{fontSize:15,fontWeight:600,color:"rgba(255,255,255,.6)",lineHeight:1.75,marginBottom:32}}>Une clarté financière que peu d'entreprises ont — sans embaucher un DAF.</p>
-            <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" style={{background:C.green,color:C.text,padding:"14px 32px",borderRadius:100,fontSize:14,fontWeight:900,textDecoration:"none",display:"inline-block",boxShadow:"0 4px 20px rgba(33,196,93,.3)"}}>Démarrer maintenant →</a>
+            <a href="https://meet.brevo.com/nathan-van-meer-1" style={{background:C.green,color:C.text,padding:"14px 32px",borderRadius:100,fontSize:14,fontWeight:900,textDecoration:"none",display:"inline-block",boxShadow:"0 4px 20px rgba(33,196,93,.3)"}}>Démarrer maintenant →</a>
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
             {["Vision exacte de votre rentabilité chaque mois","Risques identifiés avant qu'ils deviennent des problèmes","Recommandations concrètes adaptées à votre activité","Prévisionnel fiable pour décider avec confiance","Moins de temps sur les chiffres, plus sur votre métier","Sérénité : vous savez exactement où vous en êtes"].map((t,i)=>(
@@ -313,13 +343,13 @@ export default function SitePage() {
 
 
       {/* AVIS CLIENTS */}
-      <section style={{padding:"80px 48px",background:"#f8fffe"}}>
+      <section className="section-pad" style={{padding:"80px 48px",background:"#f8fffe"}}>
         <div style={{maxWidth:1100,margin:"0 auto"}}>
           <div style={{textAlign:"center",marginBottom:48}}>
             <h2 style={{fontSize:"clamp(24px,3vw,38px)",fontWeight:900,color:C.text,marginBottom:10}}>Ce que disent nos clients</h2>
             <p style={{fontSize:15,fontWeight:600,color:C.mid}}>Des dirigeants qui ont repris le contrôle de leurs finances.</p>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:24}}>
+          <div className="avis-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:24}}>
             {[
               {name:"Sophie M.",role:"Dirigeante, cabinet RH",avis:"Avant NVM Finance, je regardais mes chiffres une fois par an avec mon comptable. Maintenant je sais exactement où j'en suis chaque mois. C'est rassurant.",stars:5},
               {name:"Thomas B.",role:"Gérant, agence digitale",avis:"L'alerte trésorerie m'a sauvé en juin. J'aurais pas vu venir le creux sans le tableau de bord. Mise en place rapide, équipe réactive.",stars:5},
@@ -343,13 +373,13 @@ export default function SitePage() {
       </section>
 
       {/* CTA */}
-      <section style={{padding:"96px 48px",textAlign:"center",background:`linear-gradient(180deg,#fff 0%,${C.bg} 100%)`}}>
+      <section className="cta-section" style={{padding:"96px 48px",textAlign:"center",background:`linear-gradient(180deg,#fff 0%,${C.bg} 100%)`}}>
         <h2 style={{fontSize:"clamp(28px,3.5vw,46px)",fontWeight:900,color:C.text,marginBottom:12,lineHeight:1.1}}>
           Prêt à transformer vos données<br/>en décisions rentables ?
         </h2>
         <p style={{fontSize:16,fontWeight:600,color:C.mid,marginBottom:40}}>Analyse financière gratuite · Sans engagement · Mise en place en 48h</p>
-        <div style={{display:"inline-flex",flexDirection:"column",alignItems:"center",gap:16,background:"#fff",border:`1.5px solid ${C.border}`,borderRadius:24,padding:"40px 56px",boxShadow:"0 16px 64px rgba(0,86,83,.08)"}}>
-          <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" className="cta-main" style={{background:C.primary,color:"#fff",padding:"18px 48px",borderRadius:100,fontSize:17,fontWeight:900,textDecoration:"none",boxShadow:"0 4px 24px rgba(0,86,83,.25)",transition:"all .2s"}}>
+        <div className="cta-box" style={{display:"inline-flex",flexDirection:"column",alignItems:"center",gap:16,background:"#fff",border:`1.5px solid ${C.border}`,borderRadius:24,padding:"40px 56px",boxShadow:"0 16px 64px rgba(0,86,83,.08)"}}>
+          <a href="https://meet.brevo.com/nathan-van-meer-1" className="cta-main" style={{background:C.primary,color:"#fff",padding:"18px 48px",borderRadius:100,fontSize:17,fontWeight:900,textDecoration:"none",boxShadow:"0 4px 24px rgba(0,86,83,.25)",transition:"all .2s"}}>
             Demander mon analyse gratuite
           </a>
           <div style={{display:"flex",gap:20,alignItems:"center"}}>
@@ -363,7 +393,7 @@ export default function SitePage() {
       {/* FOOTER */}
       <footer style={{background:"#002e2c",padding:"48px 48px 24px"}}>
         <div style={{maxWidth:1100,margin:"0 auto"}}>
-          <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr",gap:40,paddingBottom:40,borderBottom:"1px solid rgba(255,255,255,.1)"}}>
+          <div className="footer-grid" style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr",gap:40,paddingBottom:40,borderBottom:"1px solid rgba(255,255,255,.1)"}}>
             <div>
               <Logo width={80} white={true}/>
               <p style={{fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",lineHeight:1.7,marginTop:16,maxWidth:280}}>
@@ -382,7 +412,7 @@ export default function SitePage() {
             </div>
             <div>
               <div style={{fontSize:11,fontWeight:800,color:"rgba(255,255,255,.3)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Contact</div>
-              <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" style={{display:"block",fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Prendre RDV</a>
+              <a href="https://meet.brevo.com/nathan-van-meer-1" style={{display:"block",fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Prendre RDV</a>
               <a href="mailto:nathan@nvm-finance.fr" style={{display:"block",fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Nous écrire</a>
             </div>
             <div>
