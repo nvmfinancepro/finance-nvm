@@ -95,6 +95,7 @@ export default function SitePage() {
   const [loaded, setLoaded] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [heroVisible, setHeroVisible] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const ca = useCountUp(35400, 2000, heroVisible);
   const mg = useCountUp(949, 1800, heroVisible);
@@ -132,42 +133,45 @@ export default function SitePage() {
         @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
         .kpi-card:hover{transform:translateY(-3px)!important;box-shadow:0 12px 40px rgba(0,86,83,.12)!important;}
         .feat-card:hover{transform:translateY(-4px);box-shadow:0 20px 48px rgba(0,86,83,.1);border-color:#a7d4d0!important;}
-        .nav-link:hover{color:#005653!important;background:#f0faf8;}
         .cta-main:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,86,83,.35)!important;}
         .cta-outline:hover{background:#ecfdf5!important;}
         .pillar:hover{background:rgba(255,255,255,.06)!important;}
+        /* ---- RESPONSIVE MOBILE ---- */
         @media(max-width:768px){
-          .hero-grid{grid-template-columns:1fr!important;gap:40px!important;}
-          .feat-grid{grid-template-columns:1fr!important;}
-          .pillar-grid{grid-template-columns:1fr!important;}
-          .check-grid{grid-template-columns:1fr!important;gap:32px!important;}
-          .stats-row{flex-direction:column!important;gap:16px!important;}
-          .footer-grid{grid-template-columns:1fr 1fr!important;}
-          .nav-links{display:none!important;}
-          .nav-bar{padding:8px 16px 12px!important;}
-          .nav-btns a{font-size:12px!important;padding:8px 12px!important;}
-          .nav-bar{padding:8px 20px 12px!important;}
+          .desktop-nav{display:none!important;}
+          .desktop-nav-bar{display:none!important;}
+          .mobile-nav-bar{display:flex!important;}
+          .hero-grid{grid-template-columns:1fr!important;gap:32px!important;}
           .hero-section{padding:48px 20px 0!important;}
+          .pillar-grid{grid-template-columns:1fr!important;}
+          .feat-grid{grid-template-columns:1fr 1fr!important;gap:12px!important;}
+          .check-grid{grid-template-columns:1fr!important;gap:32px!important;}
+          .avis-grid{grid-template-columns:1fr!important;}
+          .footer-grid{grid-template-columns:1fr 1fr!important;gap:24px!important;}
           .section-pad{padding:56px 20px!important;}
           .cta-section{padding:56px 20px!important;}
-          .cta-box{padding:32px 24px!important;}
-          .avis-grid{grid-template-columns:1fr!important;}
-          .hamburger{display:flex!important;}
-          .nav-btns{gap:6px!important;}
-          .nav-btn-text{display:none!important;}
+          .cta-box{padding:28px 20px!important;width:100%!important;}
+          .nav-header{padding:12px 20px 10px!important;}
+          .nav-bar{padding:8px 20px 12px!important;justify-content:flex-end!important;}
+          .stats-row>div{flex:none!important;width:100%!important;padding:0!important;border:none!important;margin:0!important;}
+          .stats-row{flex-direction:column!important;gap:12px!important;padding-top:20px!important;}
+          .hero-cta{flex-direction:column!important;}
+          .hero-cta a{width:100%!important;text-align:center!important;box-sizing:border-box!important;}
         }
         @media(max-width:480px){
+          .feat-grid{grid-template-columns:1fr!important;}
           .footer-grid{grid-template-columns:1fr!important;}
-          .cta-btns{flex-direction:column!important;width:100%!important;}
-          .cta-btns a{width:100%!important;text-align:center!important;}
         }
-        .hamburger{display:none;}
+        .hamburger{display:none;cursor:pointer;flex-direction:column;gap:5px;padding:8px;}
+        .hamburger span{display:block;width:22px;height:2px;background:#005653;border-radius:2px;transition:all .3s;}
+        .mobile-menu{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.98);z-index:200;flex-direction:column;align-items:center;justify-content:center;gap:24px;}
+        .mobile-menu.open{display:flex!important;}
+        .mobile-menu a{font-size:22px;font-weight:800;color:#005653;text-decoration:none;}
+        .mobile-menu .close-btn{position:absolute;top:24px;right:24px;font-size:28px;cursor:pointer;color:#6aaca8;background:none;border:none;}
         @media(max-width:768px){
-          .hero-grid{display:flex!important;flex-direction:column!important;}
-          .hero-left{order:1;}
-          .hero-right-card{order:3!important;padding:0!important;}
-          .cta-btns{order:2;}
-          .hero-stats{order:2;}
+          .hamburger{display:flex!important;}
+          .desktop-nav{display:none!important;}
+          .mobile-btns{display:none!important;}
         }
       `}</style>
 
@@ -178,15 +182,45 @@ export default function SitePage() {
           <Logo width={90}/>
         </div>
         {/* Barre nav + CTA */}
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 48px 14px",borderTop:`1px solid ${C.border}`,marginTop:4}}>
+        <div className="desktop-nav-bar" style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 48px 14px",borderTop:`1px solid ${C.border}`,marginTop:4}}>
           <div style={{display:"flex",gap:4,alignItems:"center"}}>
             {[{h:"/site",l:"Accueil"},{h:"/site/services",l:"Nos offres"}].map((lk,i)=>(
               <a key={i} href={lk.h} className="nav-link" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8,transition:"all .2s"}}>{lk.l}</a>
             ))}
           </div>
           <div style={{display:"flex",gap:10,alignItems:"center"}}>
-            <a href="https://nvm-finance.vercel.app" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Espace client</a>
-            <a href="https://meet.brevo.com/nathan-van-meer-1" style={{background:C.primary,color:"#fff",padding:"9px 22px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 16px rgba(0,86,83,.2)"}}>Prendre RDV</a>
+            <a href="https://nvm-finance.vercel.app" target="_blank" rel="noopener noreferrer" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Espace client</a>
+            <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" style={{background:C.primary,color:"#fff",padding:"9px 22px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 16px rgba(0,86,83,.2)"}}>Prendre RDV</a>
+          </div>
+        </div>
+        {/* HAMBURGER MOBILE */}
+        <div className="mobile-nav-bar" style={{display:"none",justifyContent:"flex-end",padding:"8px 20px 12px",borderTop:`1px solid ${C.border}`}}>
+          <button onClick={()=>setMenuOpen(true)} style={{background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",gap:5,padding:8}}>
+            <span style={{display:"block",width:22,height:2,background:C.primary,borderRadius:2}}/>
+            <span style={{display:"block",width:22,height:2,background:C.primary,borderRadius:2}}/>
+            <span style={{display:"block",width:22,height:2,background:C.primary,borderRadius:2}}/>
+          </button>
+        </div>
+        {/* MENU MOBILE OVERLAY */}
+        {/* Backdrop */}
+        {menuOpen && <div onClick={()=>setMenuOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.3)",zIndex:199,backdropFilter:"blur(2px)"}}/>}
+        {/* Tiroir droite */}
+        <div style={{position:"fixed",top:0,right:0,bottom:0,width:"75%",maxWidth:300,background:"#fff",zIndex:200,transform:menuOpen?"translateX(0)":"translateX(100%)",transition:"transform .3s ease",boxShadow:"-8px 0 32px rgba(0,0,0,.1)",display:"flex",flexDirection:"column",padding:"24px 0"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0 24px 20px",borderBottom:`1px solid ${C.border}`,marginBottom:8}}>
+            <LogoSVG width={70} showLabel={true} fillColor="#005552" brightGreen="#21C45D" labelColor="#005653"/>
+            <button onClick={()=>setMenuOpen(false)} style={{fontSize:20,cursor:"pointer",color:"#6aaca8",background:"none",border:"none",padding:4}}>✕</button>
+          </div>
+          {[{h:"/site",l:"Accueil"},{h:"/site/services",l:"Nos offres"},{h:"/demo",l:"Voir la démo"},{h:"https://nvm-finance.vercel.app",l:"Espace client",ext:true}].map((lk,i)=>(
+            <a key={i} href={lk.h} target={lk.ext?"_blank":undefined} rel={lk.ext?"noopener noreferrer":undefined} onClick={()=>setMenuOpen(false)}
+              style={{display:"block",padding:"16px 24px",fontSize:15,fontWeight:700,color:C.text,textDecoration:"none",borderBottom:`1px solid ${C.border}`}}>
+              {lk.l}
+            </a>
+          ))}
+          <div style={{padding:"20px 24px",marginTop:"auto"}}>
+            <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" onClick={()=>setMenuOpen(false)}
+              style={{display:"block",background:C.primary,color:"#fff",padding:"14px",borderRadius:100,fontSize:14,fontWeight:900,textDecoration:"none",textAlign:"center"}}>
+              Prendre RDV
+            </a>
           </div>
         </div>
       </header>
@@ -196,7 +230,7 @@ export default function SitePage() {
         <div style={{position:"absolute",inset:0,backgroundImage:`linear-gradient(${C.border} 1px,transparent 1px),linear-gradient(90deg,${C.border} 1px,transparent 1px)`,backgroundSize:"48px 48px",opacity:.35,pointerEvents:"none"}}/>
         <div style={{position:"absolute",top:-100,right:-100,width:500,height:500,borderRadius:"50%",background:"radial-gradient(circle,rgba(33,196,93,.07) 0%,transparent 70%)",pointerEvents:"none"}}/>
 
-        <div className="hero-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:72,alignItems:"center",maxWidth:1200,margin:"0 auto",position:"relative"}}>
+        <div className="hero-grid" className="hero-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:72,alignItems:"center",maxWidth:1200,margin:"0 auto",position:"relative"}}>
           <div>
             <h1 style={{...a(.1),fontSize:"clamp(38px,4.5vw,58px)",fontWeight:900,lineHeight:1.1,color:C.text,marginBottom:24}}>
               Prenez les bonnes<br/>décisions. Avec les<br/><em style={{color:C.primary,fontStyle:"normal",borderBottom:`3px solid ${C.green}`}}>bons chiffres.</em>
@@ -378,7 +412,7 @@ export default function SitePage() {
           Prêt à transformer vos données<br/>en décisions rentables ?
         </h2>
         <p style={{fontSize:16,fontWeight:600,color:C.mid,marginBottom:40}}>Analyse financière gratuite · Sans engagement · Mise en place en 48h</p>
-        <div className="cta-box" style={{display:"inline-flex",flexDirection:"column",alignItems:"center",gap:16,background:"#fff",border:`1.5px solid ${C.border}`,borderRadius:24,padding:"40px 56px",boxShadow:"0 16px 64px rgba(0,86,83,.08)"}}>
+        <div className="cta-box" className="cta-box" style={{display:"inline-flex",flexDirection:"column",alignItems:"center",gap:16,background:"#fff",border:`1.5px solid ${C.border}`,borderRadius:24,padding:"40px 56px",boxShadow:"0 16px 64px rgba(0,86,83,.08)"}}>
           <a href="https://meet.brevo.com/nathan-van-meer-1" className="cta-main" style={{background:C.primary,color:"#fff",padding:"18px 48px",borderRadius:100,fontSize:17,fontWeight:900,textDecoration:"none",boxShadow:"0 4px 24px rgba(0,86,83,.25)",transition:"all .2s"}}>
             Demander mon analyse gratuite
           </a>
@@ -393,7 +427,7 @@ export default function SitePage() {
       {/* FOOTER */}
       <footer style={{background:"#002e2c",padding:"48px 48px 24px"}}>
         <div style={{maxWidth:1100,margin:"0 auto"}}>
-          <div className="footer-grid" style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr",gap:40,paddingBottom:40,borderBottom:"1px solid rgba(255,255,255,.1)"}}>
+          <div className="footer-grid" className="footer-grid" style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr",gap:40,paddingBottom:40,borderBottom:"1px solid rgba(255,255,255,.1)"}}>
             <div>
               <Logo width={80} white={true}/>
               <p style={{fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",lineHeight:1.7,marginTop:16,maxWidth:280}}>
