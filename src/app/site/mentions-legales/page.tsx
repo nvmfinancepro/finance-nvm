@@ -40,6 +40,7 @@ const Logo = ({ width=120, white=false }: {width?: number, white?: boolean}) => 
 };
 export default function Page() {
   const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener("scroll", onScroll);
@@ -50,7 +51,7 @@ export default function Page() {
       <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
       <header style={{background:scrolled?"rgba(255,255,255,.97)":"rgba(255,255,255,.85)",backdropFilter:"blur(20px)",borderBottom:`1px solid ${C.border}`,position:"sticky",top:0,zIndex:100,transition:"all .3s"}}>
         <div style={{display:"flex",justifyContent:"center",paddingTop:18,paddingBottom:12}}><Logo width={80}/></div>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 48px 14px",borderTop:`1px solid ${C.border}`}}>
+        <div className="desktop-nav-bar" style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 48px 14px",borderTop:`1px solid ${C.border}`}}>
           <div style={{display:"flex",gap:4}}>
             <a href="/site" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Accueil</a>
             <a href="/site/services" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Nos offres</a>
@@ -58,6 +59,33 @@ export default function Page() {
           <div style={{display:"flex",gap:10,alignItems:"center"}}>
             <a href="https://nvm-finance.vercel.app" target="_blank" rel="noopener noreferrer" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Espace client</a>
             <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" style={{background:C.primary,color:"#fff",padding:"9px 22px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none"}}>Prendre RDV</a>
+          </div>
+        </div>
+      
+        <div className="mobile-nav-bar" style={{display:"none",justifyContent:"flex-end",padding:"8px 20px 12px",borderTop:`1px solid ${C.border}`}}>
+          <button onClick={()=>setMenuOpen(true)} style={{background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",gap:5,padding:8}}>
+            <span style={{display:"block",width:22,height:2,background:C.primary,borderRadius:2}}/>
+            <span style={{display:"block",width:22,height:2,background:C.primary,borderRadius:2}}/>
+            <span style={{display:"block",width:22,height:2,background:C.primary,borderRadius:2}}/>
+          </button>
+        </div>
+        {menuOpen && <div onClick={()=>setMenuOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.3)",zIndex:199}}/>}
+        <div className="drawer" style={{position:"fixed",top:0,right:0,bottom:0,width:"75%",maxWidth:300,background:"#fff",zIndex:200,transform:menuOpen?"translateX(0)":"translateX(100%)",transition:"transform .3s ease",boxShadow:"-8px 0 32px rgba(0,0,0,.1)",display:"flex",flexDirection:"column",padding:"24px 0"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0 24px 20px",borderBottom:`1px solid ${C.border}`,marginBottom:8}}>
+            <Logo width={70}/>
+            <button onClick={()=>setMenuOpen(false)} style={{fontSize:20,cursor:"pointer",color:"#6aaca8",background:"none",border:"none",padding:4}}>✕</button>
+          </div>
+          {[{h:"/site",l:"Accueil"},{h:"/site/services",l:"Nos offres"},{h:"/demo",l:"Voir la démo"},{h:"https://nvm-finance.vercel.app",l:"Espace client",ext:true}].map((lk,i)=>(
+            <a key={i} href={lk.h} target={lk.ext?"_blank":undefined} rel={lk.ext?"noopener noreferrer":undefined} onClick={()=>setMenuOpen(false)}
+              style={{display:"block",padding:"16px 24px",fontSize:15,fontWeight:700,color:"#002e2c",textDecoration:"none",borderBottom:"1px solid #c8e8e5"}}>
+              {lk.l}
+            </a>
+          ))}
+          <div style={{padding:"20px 24px",marginTop:"auto"}}>
+            <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" onClick={()=>setMenuOpen(false)}
+              style={{display:"block",background:"#005653",color:"#fff",padding:"14px",borderRadius:100,fontSize:14,fontWeight:900,textDecoration:"none",textAlign:"center"}}>
+              Prendre RDV
+            </a>
           </div>
         </div>
       </header>

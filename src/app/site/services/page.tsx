@@ -51,6 +51,7 @@ const Check = () => (
 
 export default function ServicesPage() {
   const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener("scroll", onScroll);
@@ -98,6 +99,20 @@ export default function ServicesPage() {
     <div style={{fontFamily:"'Nunito',sans-serif",background:"#f8fffe",color:C.text,minHeight:"100vh"}}>
       <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
       <style>{`
+        .drawer{display:none!important;}
+        .mobile-nav-bar{display:none;}
+        @media(max-width:768px){
+          .desktop-nav-bar{display:none!important;}
+          .mobile-nav-bar{display:flex!important;}
+          .drawer{display:flex!important;flex-direction:column!important;}
+          .offre-grid{grid-template-columns:1fr!important;}
+          .suppl-grid{grid-template-columns:1fr!important;}
+          .footer-grid{grid-template-columns:1fr 1fr!important;gap:24px!important;}
+          .section-pad{padding:48px 20px!important;}
+          .hero-pad{padding:40px 20px!important;}
+          .legal-content{padding:32px 20px!important;}
+        }
+        @media(max-width:480px){.footer-grid{grid-template-columns:1fr!important;}}
         @media(max-width:768px){
           .nav-links{display:none!important;}
           .nav-bar{padding:8px 16px 12px!important;}
