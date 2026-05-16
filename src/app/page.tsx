@@ -121,6 +121,7 @@ export default function SitePage() {
   const [demoVisible, setDemoVisible] = useState(false);
   const [scanStep, setScanStep] = useState(-1);
   const [alertsVisible, setAlertsVisible] = useState(0);
+  const [tresorKey, setTresorKey] = useState(0);
   const demoRef = useRef<HTMLDivElement>(null);
 
   const ca = useCountUp(35400, 2000, heroVisible);
@@ -132,23 +133,49 @@ export default function SitePage() {
     setTimeout(() => { setLoaded(true); setHeroVisible(true); }, 200);
     const onScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener("scroll", onScroll);
-    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setDemoVisible(true); obs.disconnect(); } }, { threshold: 0.25 });
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setDemoVisible(true); obs.disconnect(); } }, { threshold: 0.1 });
     if (demoRef.current) obs.observe(demoRef.current);
     return () => { window.removeEventListener("scroll", onScroll); obs.disconnect(); };
   }, []);
 
   useEffect(() => {
     if (!demoVisible) return;
+    let dead = false;
+    const ts: ReturnType<typeof setTimeout>[] = [];
+
     if (demoTab === 0) {
-      setScanStep(-1);
-      const ts = [700,1500,2300,3100].map((d,i) => setTimeout(() => setScanStep(i), d));
-      return () => ts.forEach(clearTimeout);
+      const run = () => {
+        if (dead) return;
+        setScanStep(-1);
+        [700,1500,2300,3100].forEach((d,i) => ts.push(setTimeout(() => { if (!dead) setScanStep(i); }, d)));
+        // pause 3s après la fin de l'animation puis relance
+        ts.push(setTimeout(() => run(), 3100 + 3000));
+      };
+      run();
     }
+
+    if (demoTab === 1) {
+      let first = true;
+      const run = () => {
+        if (dead) return;
+        if (!first) setTresorKey(k => k + 1); // force remontage pour relancer l'animation CSS
+        first = false;
+        ts.push(setTimeout(() => run(), 2500 + 3000)); // 2.5s anim + 3s pause
+      };
+      run();
+    }
+
     if (demoTab === 2) {
-      setAlertsVisible(0);
-      const ts = [200,650,1100].map((d,i) => setTimeout(() => setAlertsVisible(i+1), d));
-      return () => ts.forEach(clearTimeout);
+      const run = () => {
+        if (dead) return;
+        setAlertsVisible(0);
+        [200,650,1100].forEach((d,i) => ts.push(setTimeout(() => { if (!dead) setAlertsVisible(i+1); }, d)));
+        ts.push(setTimeout(() => run(), 1100 + 3000));
+      };
+      run();
     }
+
+    return () => { dead = true; ts.forEach(clearTimeout); };
   }, [demoTab, demoVisible]);
 
   const a = (d: number=0) => ({ opacity:loaded?1:0, transform:loaded?"translateY(0)":"translateY(24px)", transition:`opacity .7s ease ${d}s, transform .7s ease ${d}s` });
@@ -479,7 +506,7 @@ export default function SitePage() {
                     {[100,66,33].map(pct=>(
                       <div key={pct} style={{position:"absolute",top:`${(100-pct)*0.86}px`,left:0,right:0,borderTop:"1px dashed rgba(0,86,83,.08)",zIndex:0}}/>
                     ))}
-                    <div style={{display:"flex",alignItems:"flex-end",gap:"3%",height:86,position:"relative",zIndex:1}}>
+                    <div key={tresorKey} style={{display:"flex",alignItems:"flex-end",gap:"3%",height:86,position:"relative",zIndex:1}}>
                       {TRESOR_DATA.map((d,i)=>(
                         <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:0,position:"relative"}}>
                           {d.low&&(
