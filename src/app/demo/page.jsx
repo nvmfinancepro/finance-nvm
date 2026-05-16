@@ -21,582 +21,622 @@ const LogoSVG = ({ width=160, showLabel=false, labelColor="#005653", fillColor="
       <path d="M0 0 C0.78375 0.04125 1.5675 0.0825 2.375 0.125 C3.65399583 4.57202779 3.00983213 8.27025262 2.046875 12.69140625 C1.89720276 13.4073143 1.74753052 14.12322235 1.59332275 14.86082458 C1.27524811 16.36878081 0.95220928 17.87569746 0.62451172 19.3815918 C0.12651219 21.68051923 -0.34982147 23.98321005 -0.82421875 26.28710938 C-1.13672713 27.75548426 -1.45048743 29.22359338 -1.765625 30.69140625 C-1.90639465 31.37691055 -2.04716431 32.06241486 -2.19219971 32.76869202 C-3.03126195 36.54497386 -4.02035397 39.23498255 -6.625 42.125 C-8.275 41.795 -9.925 41.465 -11.625 41.125 C-11.09420184 32.41789025 -9.54145309 24.07645722 -7.6875 15.5625 C-7.42259766 14.29341797 -7.15769531 13.02433594 -6.88476562 11.71679688 C-6.62501953 10.50958984 -6.36527344 9.30238281 -6.09765625 8.05859375 C-5.86312744 6.96603271 -5.62859863 5.87347168 -5.38696289 4.74780273 C-4.37570981 1.26690178 -3.70430757 0.1763956 0 0 Z " fill={fillColor} transform="translate(523.625,633.875)"/>
       <path d="M0 0 C2.4375 0.9375 2.4375 0.9375 3.9375 3.25 C4.4375 5.9375 4.4375 5.9375 3.0625 8.25 C2.52625 8.806875 1.99 9.36375 1.4375 9.9375 C-4.4375 9.0625 -4.4375 9.0625 -5.5625 7.9375 C-5.8125 5 -5.8125 5 -5.5625 1.9375 C-2.5625 -0.0625 -2.5625 -0.0625 0 0 Z " fill={fillColor} transform="translate(526.5625,619.0625)"/>
     </svg>
-    {showLabel && <div style={{fontSize:Math.max(9,Math.round(width*0.12)),fontWeight:900,color:labelColor,letterSpacing:"0.14em",textTransform:"uppercase",textAlign:"center",lineHeight:1}}>Nv<span style={{color:brightGreen}}>M</span> Finance</div>}
+    {showLabel && <div style={{fontSize:Math.max(9,Math.round(width*0.12)),fontWeight:900,color:labelColor,letterSpacing:"0.14em",textTransform:"uppercase",textAlign:"center",lineHeight:1}}>N<span style={{color:brightGreen}}>V</span>M Finance</div>}
   </div>
 );
 
-const MONTHS = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
-const _NOW = new Date();
-const CUR_M = _NOW.getMonth(); // 0-11
-const CUR_Y = _NOW.getFullYear();
-const SECTORS = ["E-Commerce","Prestation de services","Fabrication & Vente","Restauration","Hôtellerie","Immobilier","Distribution","Conseil","BTP","Santé"];
-const fmt = (n) => { if(n===null||n===undefined||isNaN(n)) return "—"; const abs=Math.abs(n); const s=abs>=1e6?(abs/1e6).toFixed(2).replace(".",",")+" M€":new Intl.NumberFormat("fr-FR").format(Math.round(abs))+" €"; return n<0?"–"+s:s; };
-const pct = (n) => (n==null||isNaN(n))?"—":`${Number(n).toFixed(1)} %`;
 
-// CSV TEMPLATES PAR SECTEUR
+const DURATIONS = [3500, 4500, 3800, 2600, 13500, 9000];
 
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+@keyframes fu   { from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none} }
+@keyframes fi   { from{opacity:0}to{opacity:1} }
+@keyframes sl   { from{opacity:0;transform:translateX(-32px)}to{opacity:1;transform:none} }
+@keyframes sc   { from{opacity:0;transform:scale(.82)}to{opacity:1;transform:scale(1)} }
+@keyframes scD  { from{opacity:0;transform:scale(.88) translateY(22px)}to{opacity:1;transform:none} }
+@keyframes spin { to{transform:rotate(360deg)} }
+@keyframes blink{ 0%,49%{opacity:1}50%,100%{opacity:0} }
+@keyframes notif{ from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none} }
+@keyframes badge-pop { from{opacity:0;transform:scale(.5)} to{opacity:1;transform:scale(1)} }
+@keyframes al-in  { from{opacity:0;transform:translateX(40px)} to{opacity:1;transform:none} }
+@keyframes bar-up   { from{transform:scaleY(0)} to{transform:scaleY(1)} }
+@keyframes draw-line{ from{stroke-dashoffset:1} to{stroke-dashoffset:0} }
+@keyframes fade-in  { from{opacity:0} to{opacity:1} }
+.badge-pop { animation:badge-pop .35s cubic-bezier(.175,.885,.32,1.275) both; }
+.al-in { opacity:0;animation:al-in .45s cubic-bezier(.25,.46,.45,.94) forwards; }
+.scn { position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:72px 16px 48px;overflow:hidden; }
+.s-on  { opacity:1;transition:opacity .4s ease; }
+.s-off { opacity:0;pointer-events:none;transition:opacity .4s ease; }
+.fu    { opacity:0;animation:fu   .55s cubic-bezier(.25,.46,.45,.94) forwards; }
+.fi    { opacity:0;animation:fi   .45s ease forwards; }
+.sl    { opacity:0;animation:sl   .5s  cubic-bezier(.25,.46,.45,.94) forwards; }
+.sc    { opacity:0;animation:sc   .5s  cubic-bezier(.175,.885,.32,1.275) forwards; }
+.scD   { opacity:0;animation:scD  .6s  cubic-bezier(.175,.885,.32,1.275) forwards; }
+.notif { opacity:0;animation:notif .5s  cubic-bezier(.25,.46,.45,.94) forwards; }
+`;
 
-// Textes accrocheurs par onglet
-const TAB_HOOKS = {
-  "Tableau de bord": {title:"Tout votre business en un coup d'œil.", sub:"CA, marge, EBE, trésorerie — mis à jour chaque mois. Fini les surprises."},
-  "Mes alertes": {title:"Soyez alerté avant que ça devienne urgent.", sub:"Notre système détecte les dérives en amont. Vous agissez, pas vous réagissez."},
-  "Mes ventes": {title:"Vos ventes analysées ligne par ligne.", sub:"CA HT, panier moyen, évolution mensuelle — votre performance commerciale au détail."},
-  "Mes coûts d'achat": {title:"Maîtrisez ce que vous dépensez pour vendre.", sub:"Coûts d'achat, ratio CA, évolution — optimisez votre marge à la source."},
-  "Mes charges": {title:"Vos charges fixes et variables sous contrôle.", sub:"Loyer, abonnements, sous-traitance — chaque euro décortiqué pour trouver des leviers."},
-  "Ma masse salariale": {title:"Le coût réel de votre équipe, sans surprise.", sub:"Brut, net, cotisations — la vraie charge mensuelle de votre masse salariale."},
-  "Mes créances clients": {title:"Sachez qui vous doit de l'argent, et depuis quand.", sub:"Relances facilitées, retards identifiés — préservez votre trésorerie."},
-  "Mes dettes fournisseurs": {title:"Anticipez vos paiements fournisseurs.", sub:"Échéances claires, montants dus — gérez vos sorties de trésorerie sereinement."},
-  "Mon résultat": {title:"Votre résultat réel, pas estimé.", sub:"Du CA au résultat net — chaque ligne calculée pour que vous sachiez où vous en êtes vraiment."},
-  "Mon impôt (IS)": {title:"Provisionnez votre IS sans stress.", sub:"Estimation mensuelle de votre impôt sur les sociétés — plus de mauvaises surprises en fin d'année."},
-  "Ma TVA": {title:"TVA collectée, déductible, à verser — en clair.", sub:"Décalage M+1 expliqué, historique 12 mois, impact trésorerie calculé automatiquement."},
-  "Ma trésorerie": {title:"Votre cash en temps réel, et ce qui arrive.", sub:"Solde actuel, flux mensuels, projection — ne soyez plus jamais pris au dépourvu."},
-  "Mes emprunts": {title:"Suivez vos emprunts sans vous perdre.", sub:"Capital restant dû, mensualités, taux — votre dette bancaire sous contrôle."},
-  "Mes investissements": {title:"Amortissez intelligemment vos actifs.", sub:"Valeur nette, dotation mensuelle, durée restante — votre patrimoine professionnel suivi."},
-  "Prévisionnel": {title:"Décidez avec confiance grâce aux projections.", sub:"N+1 et N+2 calculés sur vos données réelles — anticipez, planifiez, recrutez en sécurité."},
-};
-
-const SIDEBAR = [
-  {sec:"Vue générale", items:["Tableau de bord","Mes alertes"]},
-  {sec:"Mon activité", items:["Mes ventes","Mes coûts d'achat","Mes charges","Ma masse salariale","Mes créances clients","Mes dettes fournisseurs"]},
-  {sec:"Mes finances", items:["Mon résultat","Mon impôt (IS)","Ma TVA","Ma trésorerie","Mes emprunts","Mes investissements"]},
-  {sec:"Analyse", items:["Prévisionnel"]},
-];
-
-const TABS = SIDEBAR.flatMap(s => s.items);
-const mo = ["M","J","J","A","S","O","N","D","J","F","M","A"];
-
-function LineChart({data, color=C.primary, id="lc"}) {
-  const max=Math.max(...data), min=Math.min(...data);
-  const w=380, h=60;
-  const pts=data.map((v,i)=>[i*(w/11), h-((v-min)/(max-min||1))*52]);
-  const path="M"+pts.map(p=>p.join(",")).join(" L");
-  const area=`M0,${h} L${pts.map(p=>p.join(",")).join(" L")} L${w},${h} Z`;
+/* ── Nav ─────────────────────────────────────────────────── */
+function Nav({ open, setOpen }) {
+  const NAV = [
+    {h:"/",l:"Accueil"},
+    {h:"/services",l:"Nos offres"},
+    {h:"/demo",l:"Voir la démo"},
+    {h:"https://nvm-finance.vercel.app",l:"Espace client",ext:true},
+  ];
   return (
-    <svg viewBox={`0 0 ${w} ${h+10}`} width="100%" style={{display:"block"}}>
-      <defs><linearGradient id={id} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity="0.12"/><stop offset="100%" stopColor={color} stopOpacity="0"/></linearGradient></defs>
-      <path d={area} fill={`url(#${id})`}/>
-      <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
-      {pts.map(([x,y],i)=><circle key={i} cx={x} cy={y} r={i===11?4:2} fill={i===11?color:"#fff"} stroke={color} strokeWidth={i===11?0:1.5}/>)}
-      {mo.map((m,i)=><text key={i} x={i*(w/11)} y={h+9} textAnchor="middle" fontSize="7" fill={i===11?C.text:"#6aaca8"} fontFamily="Nunito" fontWeight={i===11?800:600}>{m}</text>)}
-    </svg>
-  );
-}
-
-function BarChart({data, color=C.primary, id="bc"}) {
-  const max=Math.max(...data);
-  return (
-    <svg viewBox="0 0 380 70" width="100%" style={{display:"block"}}>
-      {data.map((v,i)=>{
-        const bw=380/12-3, bx=i*(380/12)+1.5, bh=(v/max)*54;
-        return <g key={i}>
-          <rect x={bx} y={60-bh} width={bw} height={bh} rx="2" fill={i===11?color:color+"55"}/>
-          <text x={bx+bw/2} y={69} textAnchor="middle" fontSize="7" fill={i===11?C.text:"#6aaca8"} fontFamily="Nunito" fontWeight={i===11?800:600}>{mo[i]}</text>
-        </g>;
-      })}
-    </svg>
-  );
-}
-
-function KpiCard({label, value, delta, ok=true}) {
-  return (
-    <div style={{background:"#fff",borderRadius:10,padding:"12px 14px",border:`0.5px solid ${C.border}`}}>
-      <div style={{fontSize:8,fontWeight:700,color:"#6aaca8",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:4}}>{label}</div>
-      <div style={{fontSize:16,fontWeight:900,color:C.text}}>{value}</div>
-      {delta && <div style={{fontSize:8.5,fontWeight:700,color:ok?"#059669":C.red,marginTop:2}}>{delta}</div>}
-    </div>
-  );
-}
-
-function TabContent({tab}) {
-  const bars=[48,55,42,60,52,68,63,70,66,78,72,100];
-  const treso=[42,48,39,55,49,62,58,66,61,72,68,94];
-
-  const Row = ({l,v1,v2,v3,bold,green}) => (
-    <div style={{padding:"5px 12px",borderBottom:`0.5px solid #f0f9f8`,display:"flex",justifyContent:"space-between",background:bold?"#f0faf8":"#fff"}}>
-      <span style={{fontSize:10,fontWeight:bold?800:600,color:bold?C.text:"#6aaca8"}}>{l}</span>
-      <span style={{fontSize:10,fontWeight:800,color:green?C.green:v1?.startsWith("−")?C.red:C.primary}}>{v1}</span>
-    </div>
-  );
-
-  const Table = ({headers, rows}) => (
-    <div style={{background:"#fff",borderRadius:10,border:`0.5px solid ${C.border}`,overflow:"hidden"}}>
-      <div style={{display:"grid",gridTemplateColumns:`repeat(${headers.length},1fr)`,padding:"6px 12px",background:C.bg,gap:8}}>
-        {headers.map((h,i)=><span key={i} style={{fontSize:7,fontWeight:800,color:"#6aaca8",textTransform:"uppercase"}}>{h}</span>)}
+    <>
+      <div style={{position:"fixed",top:0,left:0,right:0,zIndex:200,height:64,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",background:"linear-gradient(to bottom,rgba(0,0,0,.35) 0%,transparent 100%)"}}>
+        <LogoSVG width={92} showLabel labelColor="#fff" fillColor="#fff" brightGreen="#21C45D" />
+        <button onClick={()=>setOpen(true)} style={{background:"rgba(255,255,255,.14)",backdropFilter:"blur(8px)",border:"1px solid rgba(255,255,255,.18)",borderRadius:10,width:40,height:40,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:5,cursor:"pointer"}}>
+          {[0,1,2].map(i=><span key={i} style={{width:18,height:2,background:"white",borderRadius:2,display:"block"}} />)}
+        </button>
       </div>
-      {rows.map((r,i)=>(
-        <div key={i} style={{display:"grid",gridTemplateColumns:`repeat(${r.length},1fr)`,padding:"6px 12px",gap:8,background:i%2===0?"#fff":"#f8fffe",borderTop:`0.5px solid #f0f9f8`}}>
-          {r.map((c,j)=><span key={j} style={{fontSize:10,fontWeight:j===0?600:700,color:j===0?C.text:typeof c==="string"&&c.startsWith("−")?C.red:C.primary}}>{c}</span>)}
+      <div onClick={()=>setOpen(false)} style={{position:"fixed",inset:0,zIndex:300,background:"rgba(0,0,0,.45)",opacity:open?1:0,pointerEvents:open?"auto":"none",transition:"opacity .3s"}} />
+      <div style={{position:"fixed",top:0,right:0,bottom:0,zIndex:301,width:"75%",maxWidth:300,background:"white",boxShadow:"-8px 0 32px rgba(0,0,0,.15)",transform:open?"translateX(0)":"translateX(100%)",transition:"transform .35s cubic-bezier(.25,.46,.45,.94)",display:"flex",flexDirection:"column",padding:"24px 0"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0 24px 20px",borderBottom:"1px solid #c8e8e5",marginBottom:8}}>
+          <LogoSVG width={70} showLabel fillColor="#005552" brightGreen="#21C45D" labelColor="#005653"/>
+          <button onClick={()=>setOpen(false)} style={{fontSize:20,cursor:"pointer",color:"#6aaca8",background:"none",border:"none",padding:4}}>✕</button>
+        </div>
+        {NAV.map((lk,i)=>(
+          <a key={i} href={lk.h} target={lk.ext?"_blank":undefined} rel={lk.ext?"noopener noreferrer":undefined}
+            onClick={()=>setOpen(false)}
+            style={{display:"block",padding:"16px 24px",fontSize:15,fontWeight:700,color:"#002e2c",textDecoration:"none",borderBottom:"1px solid #c8e8e5"}}>
+            {lk.l}
+          </a>
+        ))}
+        <div style={{padding:"20px 24px",marginTop:"auto"}}>
+          <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" onClick={()=>setOpen(false)}
+            style={{display:"block",background:"#005653",color:"#fff",padding:"14px",borderRadius:100,fontSize:14,fontWeight:900,textDecoration:"none",textAlign:"center"}}>
+            Prendre RDV
+          </a>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ── Scene wrapper ───────────────────────────────────────── */
+function Scn({ show, bg, children }) {
+  return (
+    <div className={`scn ${show?"s-on":"s-off"}`} style={{background:bg}}>
+      {show && children}
+    </div>
+  );
+}
+
+/* ── Count-up hook ───────────────────────────────────────── */
+function useCount(target, active, dur=1200) {
+  const [v, setV] = useState(0);
+  useEffect(()=>{
+    if (!active){ setV(0); return; }
+    const t0 = Date.now();
+    let r;
+    const tick = () => {
+      const p = Math.min((Date.now()-t0)/dur, 1);
+      setV(Math.round(target*(1-Math.pow(1-p,3))));
+      if (p<1) r = requestAnimationFrame(tick);
+    };
+    r = requestAnimationFrame(tick);
+    return ()=>cancelAnimationFrame(r);
+  },[active,target,dur]);
+  return v;
+}
+
+/* ── S0 · Brand ──────────────────────────────────────────── */
+function S0({ show }) {
+  return (
+    <Scn show={show} bg="#002e2c">
+      <div className="sc" style={{animationDelay:".12s",marginBottom:28}}>
+        <LogoSVG width={130} showLabel labelColor="#fff" fillColor="#fff" brightGreen="#21C45D" />
+      </div>
+      <p className="fu" style={{animationDelay:".5s",color:"rgba(255,255,255,.4)",fontSize:12,letterSpacing:"0.18em",textTransform:"uppercase",fontWeight:700,margin:"0 0 18px",textAlign:"center"}}>
+        Logiciel de pilotage financier
+      </p>
+      <h1 className="fu" style={{animationDelay:".8s",color:"#fff",fontSize:"clamp(30px,6.5vw,68px)",fontWeight:900,margin:0,textAlign:"center",lineHeight:1.05,letterSpacing:"-0.02em"}}>
+        La finance d'entreprise
+      </h1>
+      <h1 className="fu" style={{animationDelay:"1.05s",color:"#21C45D",fontSize:"clamp(30px,6.5vw,68px)",fontWeight:900,margin:"4px 0 0",textAlign:"center",lineHeight:1.05,letterSpacing:"-0.02em"}}>
+        enfin claire.
+      </h1>
+    </Scn>
+  );
+}
+
+/* ── S1 · Pain ───────────────────────────────────────────── */
+function S1({ show }) {
+  const pains = [
+    "Trop de chiffres · aucune clarté",
+    "Décisions prises à l'aveugle",
+    "La trésorerie qui vous surprend",
+  ];
+  return (
+    <Scn show={show} bg="#001a18">
+      <p className="fu" style={{animationDelay:"0s",color:"#a7d4d0",fontSize:12,letterSpacing:"0.16em",textTransform:"uppercase",fontWeight:700,marginBottom:28,textAlign:"center"}}>
+        Le quotidien de nombreux dirigeants
+      </p>
+      {pains.map((p,i)=>(
+        <div key={i} className="sl" style={{animationDelay:`${.16+i*.26}s`,display:"flex",alignItems:"center",gap:14,marginBottom:18,width:"min(480px,90vw)"}}>
+          <span style={{width:9,height:9,borderRadius:"50%",background:"#dc2626",flexShrink:0}} />
+          <span style={{color:"rgba(255,255,255,.9)",fontSize:"clamp(17px,3.2vw,24px)",fontWeight:700,lineHeight:1.3}}>{p}</span>
         </div>
       ))}
-    </div>
+      <div style={{height:22}} />
+      <h2 className="fu" style={{animationDelay:"1.1s",color:"#21C45D",fontSize:"clamp(20px,3.8vw,40px)",fontWeight:900,margin:0,textAlign:"center",letterSpacing:"-0.01em"}}>
+        Il existe une meilleure approche.
+      </h2>
+    </Scn>
   );
+}
 
-  const Card = ({title, sub, children}) => (
-    <div style={{background:"#fff",borderRadius:12,border:`0.5px solid ${C.border}`,marginBottom:10,overflow:"hidden"}}>
-      {title && <div style={{padding:"10px 14px",borderBottom:`0.5px solid ${C.border}`}}>
-        <div style={{fontSize:11,fontWeight:800,color:C.text}}>{title}</div>
-        {sub && <div style={{fontSize:9,fontWeight:600,color:"#6aaca8"}}>{sub}</div>}
-      </div>}
-      <div style={{padding:"10px 14px"}}>{children}</div>
-    </div>
-  );
+/* ── S2 · Login ──────────────────────────────────────────── */
+const ESTR = "direction@ma-boutique.fr";
 
-  switch(tab) {
-    case "Tableau de bord": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="CA mensuel" value="35 400 €" delta="↑ +18% vs mars"/>
-          <KpiCard label="Marge brute" value="94.9%" delta="↑ +2.1 pts"/>
-          <KpiCard label="EBE" value="18 750 €" delta="↑ +24%"/>
-          <KpiCard label="Trésorerie" value="94 200 €" delta="↑ +12%"/>
+function S2({ show }) {
+  const [step, setStep] = useState(-1);
+  useEffect(()=>{
+    if (!show){ setStep(-1); return; }
+    const ts = [];
+    for (let i=0; i<=ESTR.length; i++) ts.push(setTimeout(()=>setStep(i), 350+i*58));
+    const base = 350+ESTR.length*58;
+    ts.push(setTimeout(()=>setStep(ESTR.length+1), base+480));
+    ts.push(setTimeout(()=>setStep(ESTR.length+2), base+1250));
+    ts.push(setTimeout(()=>setStep(ESTR.length+3), base+2050));
+    return ()=>ts.forEach(clearTimeout);
+  },[show]);
+
+  const typed   = step>=0 ? ESTR.slice(0,Math.min(step,ESTR.length)) : "";
+  const cursor  = step>=0 && step<ESTR.length;
+  const hasPass = step>ESTR.length;
+  const loading = step===ESTR.length+2;
+  const success = step>ESTR.length+2;
+
+  return (
+    <Scn show={show} bg="linear-gradient(135deg,#003d3a 0%,#005653 55%,#00706c 100%)">
+      <div className="sc" style={{animationDelay:".15s",background:"#fff",borderRadius:22,padding:"clamp(26px,5vw,42px)",width:"min(420px,90vw)",boxShadow:"0 28px 60px rgba(0,0,0,.28)"}}>
+        <div style={{display:"flex",justifyContent:"center",marginBottom:24}}>
+          <LogoSVG width={160} showLabel />
         </div>
-        <Card title="CA mensuel — 12 mois glissants" sub="Évolution de votre chiffre d'affaires">
-          <LineChart data={bars} id="ca"/>
-        </Card>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-          <Card title="Répartition charges" sub="En cours">
-            <div style={{display:"flex",flexDirection:"column",gap:6}}>
-              {[{l:"Salaires",v:"9 089 €",p:52},{l:"Charges fixes",v:"2 250 €",p:13},{l:"Variables",v:"3 150 €",p:18},{l:"Amortis.",v:"222 €",p:1}].map((r,i)=>(
-                <div key={i}>
-                  <div style={{display:"flex",justifyContent:"space-between",fontSize:9,fontWeight:600,color:C.mid,marginBottom:2}}><span>{r.l}</span><span style={{fontWeight:800,color:C.text}}>{r.v}</span></div>
-                  <div style={{height:4,background:"#e8f5f4",borderRadius:2}}><div style={{height:"100%",width:`${r.p}%`,background:C.primary,borderRadius:2}}/></div>
-                </div>
-              ))}
-            </div>
-          </Card>
-          <Card title="Alertes actives" sub="3 à surveiller">
-            {[{c:C.red,t:"Trésorerie critique",s:"Seuil atteint en juin"},{c:C.orange,t:"Marge en baisse",s:"−4.2 pts vs mars"},{c:"#2563eb",t:"IS à anticiper",s:"3 758 € ce trimestre"}].map((a,i)=>(
-              <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                <div style={{width:7,height:7,borderRadius:"50%",background:a.c,flexShrink:0}}/>
-                <div><div style={{fontSize:10,fontWeight:800,color:C.text}}>{a.t}</div><div style={{fontSize:8,color:"#6aaca8"}}>{a.s}</div></div>
-              </div>
-            ))}
-          </Card>
+        <p style={{textAlign:"center",fontSize:11,letterSpacing:"0.16em",textTransform:"uppercase",color:"#9ca3af",margin:"0 0 22px",fontWeight:700}}>
+          Espace de connexion sécurisé
+        </p>
+        <label style={{display:"block",fontSize:11,fontWeight:800,color:"#6b7280",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:5}}>Adresse e-mail</label>
+        <div style={{border:"1px solid",borderColor:cursor?"#005653":"#e5e7eb",borderRadius:8,padding:"9px 12px",fontSize:14,minHeight:40,display:"flex",alignItems:"center",marginBottom:14,transition:"border-color .2s"}}>
+          <span style={{color:"#002e2c"}}>{typed}</span>
+          {cursor && <span style={{animation:"blink .9s step-start infinite",borderLeft:"2px solid #005653",height:16,marginLeft:1,display:"inline-block"}} />}
         </div>
+        <label style={{display:"block",fontSize:11,fontWeight:800,color:"#6b7280",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:5}}>Mot de passe</label>
+        <div style={{border:"1px solid #e5e7eb",borderRadius:8,padding:"9px 12px",fontSize:14,minHeight:40,display:"flex",alignItems:"center",marginBottom:20,letterSpacing:"0.15em",color:"#002e2c"}}>
+          {hasPass ? "••••••••" : ""}
+        </div>
+        <button style={{width:"100%",padding:"13px",background:success?"#21C45D":"#005653",color:"#fff",border:"none",borderRadius:12,fontSize:14,fontWeight:800,cursor:"pointer",transition:"background .4s",display:"flex",alignItems:"center",justifyContent:"center",gap:8,minHeight:46}}>
+          {success
+            ? <><svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>Connecté</>
+            : loading
+            ? <span style={{width:16,height:16,border:"2px solid rgba(255,255,255,.3)",borderTopColor:"#fff",borderRadius:"50%",display:"inline-block",animation:"spin .7s linear infinite"}} />
+            : "Se connecter →"}
+        </button>
       </div>
-    );
+    </Scn>
+  );
+}
 
-    case "Mes alertes": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="Alertes critiques" value="1" delta="Trésorerie" ok={false}/>
-          <KpiCard label="Alertes moyennes" value="2" delta="Marge + IS" ok={false}/>
-          <KpiCard label="Tout va bien" value="12 ✓" delta="Indicateurs stables"/>
-        </div>
+/* ── S3 · Dashboard Bienvenue ────────────────────────────── */
+function S3({ show }) {
+  const treso  = useCount(94300, show, 1300);
+  const autoJr = useCount(47,    show, 1100);
+  const prev   = useCount(82,    show, 950);
+  const bars   = [45,65,55,80,60,92,75];
+
+  return (
+    <Scn show={show} bg="#ecfdf5">
+      <h1 className="sc" style={{animationDelay:".1s",color:"#002e2c",fontSize:"clamp(44px,10vw,96px)",fontWeight:900,margin:"0 0 22px",letterSpacing:"-0.04em",lineHeight:.95,textAlign:"center"}}>
+        Bienvenue
+      </h1>
+      <div style={{display:"flex",gap:10,flexWrap:"wrap",justifyContent:"center",maxWidth:640,width:"100%",marginBottom:14}}>
         {[
-          {bg:"#fef2f2",bc:"#fecaca",c:C.red,t:"Trésorerie critique",s:"Solde estimé sous le seuil d'alerte en juin 2026. Prenez des mesures dès maintenant.",action:"Voir ma trésorerie →"},
-          {bg:"#fffbeb",bc:"#fde68a",c:C.orange,t:"Marge brute en baisse",s:"Marge brute −4.2 pts vs mars 2026. Vos coûts d'achat ont augmenté de 8%.",action:"Analyser mes coûts →"},
-          {bg:"#eff6ff",bc:"#bfdbfe",c:"#2563eb",t:"IS à anticiper",s:"Provision IS estimée à 3 758 € ce trimestre. Provisionnez dès maintenant.",action:"Voir mon IS →"},
-        ].map((a,i)=>(
-          <div key={i} style={{padding:"14px 16px",borderRadius:12,background:a.bg,border:`1px solid ${a.bc}`,marginBottom:10}}>
-            <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:4}}>{a.t}</div>
-            <div style={{fontSize:11,fontWeight:600,color:"#6aaca8",marginBottom:8}}>{a.s}</div>
-            <span style={{fontSize:10,fontWeight:800,color:a.c,cursor:"pointer"}}>{a.action}</span>
+          {lbl:"Trésorerie",val:`${treso.toLocaleString("fr-FR")} €`,acc:"#005653",d:".32s"},
+          {lbl:"Autonomie",val:`${autoJr} jours`,acc:"#21C45D",d:".5s"},
+          {lbl:"Prévisionnel M+1",val:`+${(prev/10).toFixed(1)} %`,acc:"#d97706",d:".68s"},
+        ].map((c,i)=>(
+          <div key={i} className="fu" style={{animationDelay:c.d,background:"#fff",borderRadius:14,padding:"14px 18px",flex:"1 1 160px",boxShadow:"0 2px 14px rgba(0,86,83,.07)",borderTop:`3px solid ${c.acc}`}}>
+            <p style={{fontSize:10,fontWeight:700,color:"#6b7280",textTransform:"uppercase",letterSpacing:"0.1em",margin:"0 0 6px"}}>{c.lbl}</p>
+            <p style={{fontSize:"clamp(18px,2.8vw,26px)",fontWeight:900,color:"#002e2c",margin:0}}>{c.val}</p>
           </div>
         ))}
       </div>
-    );
-
-    case "Mes ventes": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="CA HT" value="35 000 €" delta="↑ +18% vs mars"/>
-          <KpiCard label="Nb ventes" value="12 lignes" delta="↑ +3 vs mars"/>
-          <KpiCard label="Panier moyen" value="2 917 €" delta="↑ +8%"/>
+      <div style={{display:"flex",gap:10,justifyContent:"center",maxWidth:640,width:"100%"}}>
+        <div className="fu" style={{animationDelay:".88s",background:"#fff",borderRadius:14,padding:"12px 14px",flex:"2 1 200px",boxShadow:"0 2px 12px rgba(0,86,83,.06)"}}>
+          <p style={{fontSize:10,fontWeight:700,color:"#2d6b68",textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 5px"}}>Trésorerie · 7 mois</p>
+          <svg viewBox="0 0 200 52" style={{width:"100%",height:42,overflow:"visible"}}>
+            <defs><linearGradient id="lg3" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#005653" stopOpacity=".14"/><stop offset="100%" stopColor="#005653" stopOpacity="0"/></linearGradient></defs>
+            <path d="M0,46 L33,36 L66,41 L100,22 L133,26 L166,12 L200,4 L200,52 L0,52 Z" fill="url(#lg3)" style={{opacity:show?1:0,transition:"opacity .3s 1s"}} />
+            <path d="M0,46 L33,36 L66,41 L100,22 L133,26 L166,12 L200,4" pathLength="1" stroke="#005653" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"
+              style={{strokeDasharray:1,strokeDashoffset:show?0:1,transition:"stroke-dashoffset 1.2s cubic-bezier(.25,.46,.45,.94) .95s"}} />
+            <circle cx="200" cy="4" r="3.5" fill="#005653" style={{opacity:show?1:0,transition:"opacity .2s 2.2s"}} />
+          </svg>
         </div>
-        <Card title="Évolution CA — 12 mois" sub="Chiffre d'affaires mensuel HT">
-          <LineChart data={bars} id="v1"/>
-        </Card>
-        <Table headers={["Produit / Service","CA HT","Marge"]} rows={[["Prestation conseil","12 000 €","99%"],["Formation en ligne","8 500 €","99%"],["Audit financier","7 200 €","99%"],["Accompagnement","5 400 €","99%"]]}/>
-      </div>
-    );
-
-    case "Mes coûts d'achat": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="Total achats HT" value="1 800 €" delta="↓ −5% vs mars"/>
-          <KpiCard label="Ratio CA" value="5.1%" delta="Stable"/>
-          <KpiCard label="Marge brute" value="94.9%" delta="↑ +0.3 pts"/>
-        </div>
-        <Card title="Évolution achats — 12 mois">
-          <BarChart data={[22,25,18,28,20,24,21,26,23,27,24,18]} color="#6aaca8" id="ac"/>
-        </Card>
-        <Table headers={["Fournisseur","Catégorie","Montant HT"]} rows={[["Fournisseur A","Matières premières","800 €"],["Fournisseur B","Consommables","620 €"],["Fournisseur C","Packaging","380 €"]]}/>
-      </div>
-    );
-
-    case "Mes charges": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="Charges fixes" value="2 250 €" delta="Loyer, abonnements"/>
-          <KpiCard label="Charges variables" value="3 150 €" delta="9% du CA"/>
-          <KpiCard label="Total charges" value="5 400 €" delta="↑ +3% vs mars" ok={false}/>
-        </div>
-        <Card title="Répartition charges" sub="Fixes vs variables">
-          <BarChart data={[44,46,40,48,42,52,48,54,50,58,52,54]} color={C.primary} id="ch"/>
-        </Card>
-        <Table headers={["Charge","Type","Montant"]} rows={[["Loyer bureau","Fixe","1 200 €"],["Logiciels SaaS","Fixe","650 €"],["Assurances","Fixe","400 €"],["Sous-traitance","Variable","2 200 €"],["Déplacements","Variable","950 €"]]}/>
-      </div>
-    );
-
-    case "Ma masse salariale": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="Salaires bruts" value="9 089 €" delta="3 employés"/>
-          <KpiCard label="Nets versés" value="6 817 €" delta="Ce mois"/>
-          <KpiCard label="Cotisations" value="4 178 €" delta="Sal. + pat." ok={false}/>
-          <KpiCard label="Coût total" value="13 267 €" delta="Charge réelle" ok={false}/>
-        </div>
-        <Card title="Évolution masse salariale — 12 mois">
-          <BarChart data={[78,80,78,82,80,84,82,86,84,88,86,91]} color={C.primary} id="ms"/>
-        </Card>
-        <Table headers={["Employé","Brut","Net","Cotisations"]} rows={[["Employé A","4 200 €","3 150 €","1 932 €"],["Employé B","3 189 €","2 392 €","1 467 €"],["Employé C","1 700 €","1 275 €","782 €"]]}/>
-      </div>
-    );
-
-    case "Mes créances clients": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="Total créances" value="18 500 €" delta="5 factures" ok={false}/>
-          <KpiCard label="Dans les délais" value="12 000 €" delta="≤ 30 jours"/>
-          <KpiCard label="En retard" value="6 500 €" delta="⚠ +30 jours" ok={false}/>
-        </div>
-        <Card title="Délais de paiement" sub="Répartition par ancienneté">
-          <BarChart data={[0,0,0,12000,0,0,0,0,0,0,6500,0]} color={C.primary} id="cc"/>
-        </Card>
-        <Table headers={["Client","Facture","Montant","Délai"]} rows={[["Client A","#042","5 200 €","12 j ✓"],["Client B","#039","6 800 €","38 j ⚠"],["Client C","#044","3 500 €","5 j ✓"],["Client D","#037","3 000 €","45 j ⚠"]]}/>
-      </div>
-    );
-
-    case "Mes dettes fournisseurs": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="Total dettes" value="8 200 €" delta="3 fournisseurs" ok={false}/>
-          <KpiCard label="À payer ce mois" value="4 500 €" delta="Échéance Mai"/>
-          <KpiCard label="Délai moyen" value="28 jours" delta="Dans les normes"/>
-        </div>
-        <Card title="Échéances fournisseurs" sub="Calendrier des paiements à venir">
-          <BarChart data={[0,0,0,0,0,0,0,0,4500,0,3700,0]} color={C.orange} id="df"/>
-        </Card>
-        <Table headers={["Fournisseur","Montant","Échéance"]} rows={[["Fournisseur A","3 200 €","15 prochain mois"],["Fournisseur B","2 800 €","22 prochain mois"],["Fournisseur C","2 200 €","30 prochain mois"]]}/>
-      </div>
-    );
-
-    case "Mon résultat": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="CA HT" value="35 000 €" delta="↑ +18%"/>
-          <KpiCard label="Marge brute" value="94.9%" delta="33 200 €"/>
-          <KpiCard label="EBE" value="18 750 €" delta="53.6% du CA"/>
-          <KpiCard label="Résultat net" value="16 528 €" delta="↑ +24%"/>
-        </div>
-        <Card title="Compte de résultat simplifié" sub="En cours">
-          {[{l:"CA HT",v:"35 000 €",b:false},{l:"− Coûts d'achat",v:"−1 800 €",b:false,r:true},{l:"= Marge brute",v:"33 200 €",b:true},{l:"− Charges",v:"−5 400 €",b:false,r:true},{l:"− Masse salariale",v:"−9 089 €",b:false,r:true},{l:"= EBE",v:"18 750 €",b:true},{l:"− Amortissements",v:"−222 €",b:false,r:true},{l:"= Résultat avant IS",v:"18 528 €",b:true},{l:"− IS (15%)",v:"−2 000 €",b:false,r:true},{l:"= Résultat net",v:"16 528 €",b:true,g:true}].map((r,i)=>(
-            <div key={i} style={{padding:"5px 12px",borderBottom:"0.5px solid #f0f9f8",display:"flex",justifyContent:"space-between",background:r.b?"#f0faf8":"#fff"}}>
-              <span style={{fontSize:10,fontWeight:r.b?800:600,color:r.b?C.text:"#6aaca8"}}>{r.l}</span>
-              <span style={{fontSize:10,fontWeight:800,color:r.g?C.green:r.r?C.red:C.primary}}>{r.v}</span>
-            </div>
-          ))}
-        </Card>
-      </div>
-    );
-
-    case "Mon impôt (IS)": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="Résultat avant IS" value="18 528 €" delta="Base de calcul"/>
-          <KpiCard label="Taux IS applicable" value="15%" delta="PME taux réduit"/>
-          <KpiCard label="IS estimé ce mois" value="2 779 €" delta="Provision mensuelle" ok={false}/>
-        </div>
-        <Card title="Provision IS cumulée — 2026" sub="Montant à provisionner chaque mois">
-          <BarChart data={[18,20,22,25,28,30,32,34,36,38,40,28]} color={C.orange} id="is"/>
-        </Card>
-        <Card title="Simulation annuelle">
-          {[{l:"Résultat fiscal estimé 2026",v:"198 336 €"},{l:"IS taux réduit 15% (jusqu'à 42 500 €)",v:"6 375 €"},{l:"IS taux normal 25% (au-delà)",v:"38 959 €"},{l:"IS total estimé",v:"45 334 €",b:true}].map((r,i)=>(
-            <div key={i} style={{padding:"5px 12px",borderBottom:"0.5px solid #f0f9f8",display:"flex",justifyContent:"space-between",background:r.b?"#f0faf8":"#fff"}}>
-              <span style={{fontSize:10,fontWeight:r.b?800:600,color:r.b?C.text:"#6aaca8"}}>{r.l}</span>
-              <span style={{fontSize:10,fontWeight:800,color:r.b?C.orange:C.primary}}>{r.v}</span>
-            </div>
-          ))}
-        </Card>
-      </div>
-    );
-
-    case "Ma TVA": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="TVA collectée — Avr" value="7 000 €" delta="Sur ventes"/>
-          <KpiCard label="TVA déductible — Avr" value="1 465 €" delta="Sur charges"/>
-          <KpiCard label="À verser en Mai" value="5 535 €" delta="Avant le 24 Mai" ok={false}/>
-        </div>
-        <div style={{background:"#fff",borderRadius:10,border:`0.5px solid ${C.border}`,padding:"10px 14px",marginBottom:10,display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:8,alignItems:"center"}}>
-          <div style={{textAlign:"center"}}>
-            <div style={{fontSize:9,fontWeight:800,color:"#6aaca8",textTransform:"uppercase"}}>Opérations</div>
-            <div style={{fontSize:14,fontWeight:900,color:C.text}}>Période en cours</div>
-          </div>
-          <div style={{fontSize:18,color:"#6aaca8"}}>→</div>
-          <div style={{textAlign:"center",background:"#fef2f2",borderRadius:8,padding:"8px"}}>
-            <div style={{fontSize:9,fontWeight:800,color:C.red,textTransform:"uppercase"}}>Versement</div>
-            <div style={{fontSize:14,fontWeight:900,color:C.red}}>Mai 2026</div>
-            <div style={{fontSize:8,color:C.red}}>avant le 24 Mai</div>
-          </div>
-        </div>
-        <Card title="TVA — 12 mois glissants">
-          <BarChart data={[44,48,40,58,46,62,57,65,60,72,66,70]} color={C.primary} id="tva"/>
-        </Card>
-      </div>
-    );
-
-    case "Ma trésorerie": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="Solde actuel" value="94 200 €" delta="↑ +8 400 €"/>
-          <KpiCard label="Flux mensuel" value="+8 400 €" delta="↑ vs mars"/>
-          <KpiCard label="Point le plus bas" value="39 000 €" delta="Mois N-9"/>
-          <KpiCard label="Projection Juin" value="78 900 €" delta="⚠ Surveiller" ok={false}/>
-        </div>
-        <Card title="Évolution trésorerie — 12 mois" sub="Solde mensuel estimé">
-          <LineChart data={treso} id="tr" color={C.primary}/>
-        </Card>
-        <Card title="Flux ce mois" sub="Entrées et sorties principales">
-          {[{l:"Recettes clients",v:"+35 000 €",ok:true},{l:"Salaires nets",v:"−6 817 €",ok:false},{l:"Charges fixes",v:"−2 250 €",ok:false},{l:"TVA versée",v:"−5 305 €",ok:false},{l:"Rembt emprunt",v:"−592 €",ok:false},{l:"Flux net",v:"+8 400 €",ok:true,b:true}].map((r,i)=>(
-            <div key={i} style={{padding:"5px 12px",borderBottom:"0.5px solid #f0f9f8",display:"flex",justifyContent:"space-between",background:r.b?"#f0faf8":"#fff"}}>
-              <span style={{fontSize:10,fontWeight:r.b?800:600,color:r.b?C.text:"#6aaca8"}}>{r.l}</span>
-              <span style={{fontSize:10,fontWeight:800,color:r.ok?C.green:C.red}}>{r.v}</span>
-            </div>
-          ))}
-        </Card>
-      </div>
-    );
-
-    case "Mes emprunts": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="Capital restant dû" value="42 800 €" delta="1 emprunt actif" ok={false}/>
-          <KpiCard label="Mensualité" value="−592 €" delta="Prélevée auto" ok={false}/>
-          <KpiCard label="Taux" value="2.8%" delta="72 mois restants"/>
-        </div>
-        <Card title="Tableau d'amortissement" sub="Emprunt BNP — Jan 2020">
-          {[{l:"Capital initial",v:"50 000 €"},{l:"Capital remboursé",v:"7 200 €"},{l:"Capital restant dû",v:"42 800 €",b:true},{l:"Intérêts payés",v:"1 840 €"},{l:"Mensualité",v:"592 €/mois",b:true},{l:"Durée restante",v:"72 mois"}].map((r,i)=>(
-            <div key={i} style={{padding:"5px 12px",borderBottom:"0.5px solid #f0f9f8",display:"flex",justifyContent:"space-between",background:r.b?"#f0faf8":"#fff"}}>
-              <span style={{fontSize:10,fontWeight:r.b?800:600,color:r.b?C.text:"#6aaca8"}}>{r.l}</span>
-              <span style={{fontSize:10,fontWeight:800,color:C.primary}}>{r.v}</span>
-            </div>
-          ))}
-        </Card>
-      </div>
-    );
-
-    case "Mes investissements": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="Total investi" value="8 000 €" delta="3 actifs"/>
-          <KpiCard label="Amortissement/mois" value="222 €" delta="Charge comptable"/>
-          <KpiCard label="Valeur nette" value="5 336 €" delta="Valeur résiduelle"/>
-        </div>
-        <Table headers={["Actif","Valeur","Amort./mois","Fin"]} rows={[["MacBook Pro M3","2 800 €","78 €","Dans 2 ans"],["Logiciel compta","1 200 €","33 €","Dans 2 ans"],["Matériel bureau","4 000 €","111 €","Dans 3 ans"]]}/>
-      </div>
-    );
-
-    case "Prévisionnel": return (
-      <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:10}}>
-          <KpiCard label="CA prévu N+1" value="438 K €" delta="↑ +42% vs 2025"/>
-          <KpiCard label="EBE prévu" value="234 K €" delta="↑ +51%"/>
-          <KpiCard label="Résultat net" value="193 K €" delta="↑ +48%"/>
-          <KpiCard label="Tréso estimée" value="102 K €" delta="↑ +8%"/>
-        </div>
-        <Card title="Prévisionnel N+1 vs réel N" sub="Comparaison automatique sur vos données">
-          <div style={{overflowX:"auto"}}>
-            <table style={{width:"100%",borderCollapse:"collapse"}}>
-              <thead><tr style={{background:C.bg}}>
-                {["Indicateur","N-2","N-1 réel","Tendance","N+1 prévu"].map((h,i)=><th key={i} style={{padding:"5px 10px",fontSize:7,fontWeight:800,color:"#6aaca8",textTransform:"uppercase",textAlign:"left"}}>{h}</th>)}
-              </tr></thead>
-              <tbody>
-                {[["CA HT","228 K€","312 K€","+37%","438 K€"],["Marge brute","226 K€","310 K€","+37%","437 K€"],["Charges totales","51 K€","62 K€","+22%","76 K€"],["EBE","106 K€","155 K€","+46%","234 K€"],["Résultat net","88 K€","130 K€","+48%","193 K€"]].map((r,i)=>(
-                  <tr key={i} style={{background:i%2===0?"#fff":"#f8fffe"}}>
-                    {r.map((c,j)=><td key={j} style={{padding:"5px 10px",fontSize:10,fontWeight:j===0||j===4?800:600,color:j===3?"#059669":j===4?C.primary:j===0?C.text:"#6aaca8"}}>{c}</td>)}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      </div>
-    );
-
-    default: return null;
-  }
-}
-
-export default function DemoPage() {
-  const [tabIdx, setTabIdx] = useState(0);
-  const [progress, setProgress] = useState(0);
-  const [loaded, setLoaded] = useState(false);
-  const [paused, setPaused] = useState(false);
-  const DURATION = 5000;
-
-  useEffect(() => { setTimeout(()=>setLoaded(true), 100); }, []);
-
-  useEffect(() => {
-    if (paused) return;
-    const start = Date.now();
-    const id = setInterval(() => {
-      const pct = ((Date.now()-start)/DURATION)*100;
-      if (pct >= 100) {
-        setTabIdx(t => (t+1) % TABS.length);
-        setProgress(0);
-      } else {
-        setProgress(pct);
-      }
-    }, 40);
-    return () => clearInterval(id);
-  }, [tabIdx, paused]);
-
-  const goTo = (i) => { setTabIdx(i); setProgress(0); setPaused(true); setTimeout(()=>setPaused(false), 8000); };
-
-  const hook = TAB_HOOKS[TABS[tabIdx]];
-  const a = (d=0) => ({opacity:loaded?1:0, transform:loaded?"translateY(0)":"translateY(16px)", transition:`all .6s ease ${d}s`});
-
-  return (
-    <div style={{fontFamily:"'Nunito',sans-serif", background:"#fff", minHeight:"100vh", color:C.text}}>
-      <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
-      <style>{`
-        @media(max-width:768px){
-          .nav-links{display:none!important;}
-          .nav-bar{padding:8px 16px 12px!important;}
-          .offre-grid{grid-template-columns:1fr!important;}
-          .suppl-grid{grid-template-columns:1fr!important;}
-          .feat-grid{grid-template-columns:1fr!important;}
-          .check-grid{grid-template-columns:1fr!important;gap:32px!important;}
-          .footer-grid{grid-template-columns:1fr 1fr!important;}
-          .section-pad{padding:48px 20px!important;}
-          .hero-pad{padding:40px 20px!important;}
-          .nav-btns a{white-space:nowrap!important;}
-          .tab-sidebar{width:130px!important;min-width:130px!important;}
-          .demo-hero{padding:24px 16px 0!important;}
-          .legal-content{padding:32px 20px!important;}
-          h1{font-size:clamp(24px,7vw,40px)!important;}
-          h2{font-size:clamp(20px,5vw,34px)!important;}
-        }
-        @media(max-width:480px){
-          .footer-grid{grid-template-columns:1fr!important;}
-          .stats-row{flex-direction:column!important;}
-        }@keyframes fadeSlide{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:translateX(0)}} .tab-content{animation:fadeSlide .3s ease}`}</style>
-
-      {/* NAV SITE */}
-      <header style={{background:"rgba(255,255,255,.97)",backdropFilter:"blur(12px)",borderBottom:`1px solid ${C.border}`,position:"sticky",top:0,zIndex:100}}>
-        <div style={{display:"flex",justifyContent:"center",paddingTop:18,paddingBottom:12}}>
-          <LogoSVG width={80} showLabel={true} labelColor="#005653" fillColor="#005552" brightGreen="#21C45D"/>
-        </div>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 48px 14px",borderTop:`1px solid ${C.border}`}}>
-          <div style={{display:"flex",gap:4,alignItems:"center"}}>
-            {[{h:"/site",l:"Accueil"},{h:"/site/services",l:"Nos offres"}].map((lk,i)=>(
-              <a key={i} href={lk.h} style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>
-                {lk.l}
-              </a>
+        <div className="fu" style={{animationDelay:".98s",background:"#fff",borderRadius:14,padding:"12px 14px",flex:"1 1 130px",boxShadow:"0 2px 12px rgba(0,86,83,.06)",display:"flex",flexDirection:"column"}}>
+          <p style={{fontSize:10,fontWeight:700,color:"#2d6b68",textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 5px"}}>Résultat mensuel</p>
+          <div style={{display:"flex",alignItems:"flex-end",gap:4,height:42,marginTop:"auto"}}>
+            {bars.map((h,i)=>(
+              <div key={i} style={{flex:1,borderRadius:"2px 2px 0 0",background:i===5?"#21C45D":"#bbf7d0",
+                height:show?`${h*0.43}px`:"0px",
+                transition:`height ${.6+i*.07}s cubic-bezier(.25,.46,.45,.94) ${show?(.98+i*.05):0}s`}} />
             ))}
           </div>
-          <div style={{display:"flex",gap:10,alignItems:"center"}}>
-                        <a href="https://nvm-finance.vercel.app" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Espace client</a>
-            <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" style={{background:C.primary,color:"#fff",padding:"9px 22px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 16px rgba(0,86,83,.2)"}}>Prendre RDV</a>
-          </div>
         </div>
-      </header>
+      </div>
+    </Scn>
+  );
+}
 
-      {/* BANDEAU DEMO */}
-      <div style={{background:"#fffbeb",borderBottom:"1px solid #fde68a",padding:"10px 48px",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#d97706" strokeWidth="1.5"/><path d="M8 5v3M8 10v1" stroke="#d97706" strokeWidth="1.5" strokeLinecap="round"/></svg>
-        <span style={{fontSize:13,fontWeight:700,color:"#92400e"}}>Ceci est une démonstration avec des données fictives — pas un vrai accès client.</span>
-        <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" style={{fontSize:12,fontWeight:800,color:"#d97706",textDecoration:"underline"}}>Demander un vrai accès →</a>
+/* ── S4 · Product Tour ───────────────────────────────────── */
+function S4({ show }) {
+  const [sub,     setSub]     = useState(0);
+  const [subVis,  setSubVis]  = useState(true);
+  const [scanKpi, setScanKpi] = useState(-1);
+
+  useEffect(()=>{
+    if (!show){ setSub(0); setSubVis(true); setScanKpi(-1); return; }
+    const ts = [];
+    ts.push(setTimeout(()=>setSubVis(false),                               6200));
+    ts.push(setTimeout(()=>{ setSub(1); setSubVis(true); setScanKpi(-1); }, 6420));
+    ts.push(setTimeout(()=>setSubVis(false),                               10200));
+    ts.push(setTimeout(()=>{ setSub(2); setSubVis(true); setScanKpi(-1); }, 10420));
+    return ()=>ts.forEach(clearTimeout);
+  },[show]);
+
+  useEffect(()=>{
+    if (!show || sub!==0){ setScanKpi(-1); return; }
+    setScanKpi(-1);
+    const ts=[
+      setTimeout(()=>setScanKpi(0),  900),
+      setTimeout(()=>setScanKpi(1), 2500),
+      setTimeout(()=>setScanKpi(2), 4100),
+      setTimeout(()=>setScanKpi(3), 5500),
+    ];
+    return ()=>ts.forEach(clearTimeout);
+  },[show,sub]);
+
+  /* count-ups per sub */
+  const d_treso  = useCount(94300, show && sub===0, 1100);
+  const d_result = useCount(23,    show && sub===0, 900);
+  const t_treso  = useCount(94300, show && sub===1, 1100);
+  const t_auto   = useCount(47,    show && sub===1, 1000);
+  const a_count  = useCount(3,     show && sub===2, 600);
+
+  const STEPS = [
+    { tab:"Tableau de bord", desc:"Pilotez tous vos indicateurs clés en un coup d'oeil" },
+    { tab:"Trésorerie",      desc:"Visualisez vos flux · Anticipez votre avenir financier" },
+    { tab:"Alertes",         desc:"Soyez alerté avant qu'il ne soit trop tard" },
+  ];
+
+  const SIDE = ["Tableau de bord","Trésorerie","Ventes","Charges","Salaires","Résultat","Emprunts","Investissements","Créances","Dettes","Alertes","Prévisionnel","Rapport IA"];
+  const sideActive = [0,1,10];
+  const bars0 = [42,58,48,74,55,88,68];
+  const barsTreso = [62,58,68,82,72,90,85];
+
+  return (
+    <Scn show={show} bg="#001a18">
+
+      {/* Step breadcrumb */}
+      <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:14,height:28}}>
+        {STEPS.map((s,i)=>(
+          <div key={i} style={{display:"flex",alignItems:"center",gap:4}}>
+            <span style={{
+              fontSize:"clamp(8px,1.3vw,10px)",fontWeight:700,whiteSpace:"nowrap",
+              padding:"4px 12px",borderRadius:20,transition:"all .35s ease",
+              color:sub===i?"#21C45D":"rgba(255,255,255,.28)",
+              background:sub===i?"rgba(33,196,93,.12)":"none",
+              border:sub===i?"1px solid rgba(33,196,93,.3)":"1px solid transparent"
+            }}>{s.tab}</span>
+            {i<2 && <span style={{color:"rgba(255,255,255,.18)",fontSize:11,fontWeight:700}}>›</span>}
+          </div>
+        ))}
       </div>
 
-      {/* HERO */}
-      <div style={{background:`linear-gradient(180deg,#f8fffe 0%,${C.bg} 100%)`, padding:"40px 48px 0", textAlign:"center"}}>
-        <div style={{...a(0), marginBottom:8}}>
-          <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#fff",border:`1px solid ${C.light}`,color:C.primary,padding:"4px 16px",borderRadius:100,fontSize:11,fontWeight:800,letterSpacing:"0.06em",textTransform:"uppercase"}}>
-            <span style={{width:6,height:6,borderRadius:"50%",background:C.green,display:"inline-block"}}/>
-            Démo interactive
-          </span>
-        </div>
-        <h1 style={{...a(.1),fontSize:"clamp(26px,3vw,40px)",fontWeight:900,color:C.text,marginBottom:8,lineHeight:1.1}}>
-          Visualisez ce que vous aurez dans votre espace client.
-        </h1>
-        <p style={{...a(.2),fontSize:15,fontWeight:600,color:C.mid,marginBottom:8,maxWidth:560,margin:"0 auto 8px"}}>
-          Cette page vous montre les fonctionnalités et l'interface de l'outil NVM Finance avec des données fictives. Votre vrai espace client sera connecté à vos données réelles.
-        </p>
-        <p style={{...a(.22),fontSize:13,fontWeight:700,color:"#6aaca8",marginBottom:24,maxWidth:500,margin:"0 auto 24px"}}>
-          Cliquez sur les onglets ou laissez défiler automatiquement.
-        </p>
+      {/* App window */}
+      <div className="scD" style={{animationDelay:".22s",width:"min(860px,98vw)",borderRadius:14,overflow:"hidden",boxShadow:"0 40px 100px rgba(0,0,0,.7)",border:"1px solid rgba(255,255,255,.07)"}}>
 
-        {/* Barre de progression + onglet actif */}
-        <div style={{...a(.3),display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:24}}>
-          <div style={{background:"#fff",border:`1px solid ${C.light}`,borderRadius:100,padding:"4px 16px",fontSize:11,fontWeight:800,color:C.primary}}>{TABS[tabIdx]}</div>
-          <div style={{width:100,height:3,background:C.border,borderRadius:2,overflow:"hidden"}}>
-            <div style={{height:"100%",width:`${progress}%`,background:C.primary,transition:"width .04s linear",borderRadius:2}}/>
+        {/* Title bar */}
+        <div style={{background:"#005653",padding:"9px 14px",display:"flex",alignItems:"center",gap:10}}>
+          <div style={{display:"flex",gap:5,flexShrink:0}}>
+            {["#ef4444","#f59e0b","#22c55e"].map(c=><span key={c} style={{width:9,height:9,borderRadius:"50%",background:c,display:"block"}} />)}
           </div>
-          <span style={{fontSize:10,fontWeight:600,color:"#6aaca8"}}>{tabIdx+1}/{TABS.length}</span>
-        </div>
-
-        {/* Message accrocheur */}
-        <div key={tabIdx} style={{...a(0),background:"#fff",border:`1px solid ${C.border}`,borderRadius:16,padding:"16px 24px",maxWidth:600,margin:"0 auto 28px",boxShadow:"0 4px 20px rgba(0,86,83,.06)"}}>
-          <div style={{fontSize:15,fontWeight:900,color:C.text,marginBottom:4}}>{hook.title}</div>
-          <div style={{fontSize:13,fontWeight:600,color:C.mid}}>{hook.sub}</div>
-        </div>
-
-        {/* MOCKUP PRINCIPAL */}
-        <div style={{...a(.4),width:"100%",maxWidth:960,margin:"0 auto",background:"#f0faf8",borderRadius:"16px 16px 0 0",border:`1.5px solid ${C.border}`,borderBottom:"none",boxShadow:"0 -4px 48px rgba(0,86,83,.1)",overflow:"hidden"}}>
-          {/* Barre de fenêtre */}
-          <div style={{background:C.primary,padding:"10px 16px",display:"flex",alignItems:"center",gap:6}}>
-            {["#ff5f57","#febc2e","#28c840"].map((c,i)=><div key={i} style={{width:10,height:10,borderRadius:"50%",background:c}}/>)}
-            <span style={{marginLeft:8,fontSize:9,color:"rgba(255,255,255,.3)",fontWeight:600}}>nvm-finance.vercel.app — Espace client — Audit Finance Test</span>
+          <LogoSVG width={58} showLabel labelColor="#fff" fillColor="#fff" brightGreen="#21C45D" />
+          <div style={{display:"flex",gap:2,marginLeft:"auto"}}>
+            {["Tableau de bord","Ventes","Charges","Alertes"].map((t,i)=>{
+              const active = (i===0&&sub===0)||(i===3&&sub===2);
+              return (
+                <span key={t} style={{
+                  fontSize:"clamp(7px,1.2vw,9px)",fontWeight:700,padding:"3px 7px",borderRadius:5,
+                  color:active?"#fff":"rgba(255,255,255,.45)",
+                  background:active?"rgba(255,255,255,.18)":"none",
+                  whiteSpace:"nowrap",transition:"all .3s"
+                }}>{t}</span>
+              );
+            })}
           </div>
-          <div style={{display:"flex",height:440}}>
-            {/* SIDEBAR cliquable */}
-            <div className="tab-sidebar" style={{width:175,minWidth:175,background:C.primary,display:"flex",flexDirection:"column",overflowY:"auto"}}>
-              <div style={{padding:"13px 14px 10px",fontSize:12,fontWeight:900,color:"#fff",borderBottom:"1px solid rgba(255,255,255,.08)"}}>NVM Finance</div>
-              {SIDEBAR.map((g,gi)=>(
-                <div key={gi}>
-                  <div style={{padding:"7px 14px 2px",fontSize:7.5,fontWeight:800,color:"rgba(255,255,255,.28)",letterSpacing:"0.1em",textTransform:"uppercase",marginTop:gi>0?4:0}}>{g.sec}</div>
-                  {g.items.map((it)=>{
-                    const idx = TABS.indexOf(it);
-                    const isActive = tabIdx === idx;
+        </div>
+
+        {/* Body */}
+        <div style={{background:"#ecfdf5",display:"flex",height:"clamp(240px,52vw,340px)"}}>
+
+          {/* Sidebar */}
+          <div style={{background:"#fff",width:"clamp(90px,16vw,130px)",borderRight:"1px solid #c8e8e5",padding:"8px 0",flexShrink:0,overflow:"hidden"}}>
+            <div style={{padding:"0 8px 5px",borderBottom:"1px solid #e5e7eb"}}>
+              <span style={{fontSize:"clamp(6px,1vw,7.5px)",fontWeight:700,color:"#9ca3af",textTransform:"uppercase",letterSpacing:"0.1em"}}>Menu</span>
+            </div>
+            {SIDE.map((s,i)=>{
+              const on = sideActive[sub]===i;
+              return (
+                <div key={s} style={{
+                  padding:"5px 8px",display:"flex",alignItems:"center",gap:5,
+                  background:on?"#ecfdf5":"none",
+                  borderLeft:on?"2.5px solid #005653":"2.5px solid transparent",
+                  transition:"all .35s ease"
+                }}>
+                  <span style={{width:5,height:5,borderRadius:"50%",background:on?"#005653":"#c8e8e5",flexShrink:0,display:"block",transition:"all .3s"}} />
+                  <span style={{fontSize:"clamp(7px,1.2vw,9px)",fontWeight:on?800:600,color:on?"#005653":"#6b7280",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",transition:"all .3s"}}>{s}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Content area */}
+          <div style={{flex:1,padding:"10px",overflow:"hidden",opacity:subVis?1:0,transition:"opacity .22s ease",display:"flex",flexDirection:"column"}}>
+
+            {/* SUB 0 · Tableau de bord */}
+            {sub===0 && (
+              <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
+                {/* label scan */}
+                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6,height:16}}>
+                  {scanKpi>=0 && scanKpi<3 && (
+                    <span style={{fontSize:"clamp(6px,1vw,8px)",fontWeight:800,color:"#005653",background:"#ecfdf5",padding:"1px 7px",borderRadius:10,letterSpacing:"0.06em",animation:"fu .3s ease both"}}>
+                      Analyse en cours…
+                    </span>
+                  )}
+                  {scanKpi>=3 && (
+                    <span style={{fontSize:"clamp(6px,1vw,8px)",fontWeight:800,color:"#21C45D",background:"rgba(33,196,93,.12)",padding:"1px 7px",borderRadius:10,animation:"badge-pop .35s ease both"}}>
+                      ✓ Analyse complète
+                    </span>
+                  )}
+                </div>
+                <div style={{display:"flex",gap:6,marginBottom:8}}>
+                  {[
+                    {lbl:"Trésorerie",val:`${d_treso.toLocaleString("fr-FR")} €`,acc:"#005653",ok:true, badge:"✓ Saine"},
+                    {lbl:"Résultat",  val:`+${d_result} %`,                       acc:"#21C45D",ok:true, badge:"✓ +23%"},
+                    {lbl:"Alertes",   val:"3 actives",                             acc:"#dc2626",ok:false,badge:"⚠ À traiter"},
+                  ].map((c,i)=>{
+                    const scanning=scanKpi===i, scanned=scanKpi>i;
                     return (
-                      <div key={it} onClick={()=>goTo(idx)} style={{padding:"6px 14px",fontSize:10.5,fontWeight:isActive?800:600,color:isActive?"#fff":"rgba(255,255,255,.45)",background:isActive?"rgba(255,255,255,.1)":"transparent",borderLeft:isActive?`2.5px solid ${C.green}`:"2.5px solid transparent",transition:"all .25s",cursor:"pointer"}}>{it}</div>
+                    <div key={i} className="fu" style={{
+                      animationDelay:`${i*.1}s`,flex:1,
+                      background:scanning?"#f0faf8":"#fff",
+                      borderRadius:8,padding:"7px 9px",
+                      borderLeft:`3px solid ${c.acc}`,minWidth:0,
+                      position:"relative",
+                      transition:"background .3s,box-shadow .3s,opacity .35s",
+                      opacity:scanKpi>=0&&!scanning&&!scanned?.42:1,
+                      boxShadow:scanning?`0 0 0 2px ${c.acc},0 4px 14px ${c.acc}33`:"none",
+                    }}>
+                      <p style={{fontSize:"clamp(6px,1vw,8px)",fontWeight:700,color:"#6b7280",textTransform:"uppercase",margin:"0 0 3px",letterSpacing:"0.05em"}}>{c.lbl}</p>
+                      <p style={{fontSize:"clamp(10px,1.9vw,14px)",fontWeight:900,color:"#002e2c",margin:0,whiteSpace:"nowrap"}}>{c.val}</p>
+                      {scanned&&(
+                        <div className="badge-pop" style={{position:"absolute",top:-9,right:-2,background:c.ok?"#21C45D":"#dc2626",color:"#fff",fontSize:"clamp(5px,.85vw,7px)",fontWeight:900,padding:"2px 6px",borderRadius:10,whiteSpace:"nowrap"}}>
+                          {c.badge}
+                        </div>
+                      )}
+                    </div>
                     );
                   })}
                 </div>
-              ))}
-            </div>
-            {/* CONTENU */}
-            <div style={{flex:1,padding:14,overflowY:"auto",background:"#f8fffe"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                <div>
-                  <div style={{fontSize:14,fontWeight:900,color:C.text}}>{TABS[tabIdx]}</div>
-                  
+                <div style={{display:"flex",gap:6,flex:1,minHeight:0}}>
+                  <div className="fu" style={{animationDelay:".32s",flex:2,background:"#fff",borderRadius:8,padding:"7px 9px",minWidth:0,display:"flex",flexDirection:"column"}}>
+                    <p style={{fontSize:"clamp(6px,1vw,8px)",fontWeight:700,color:"#2d6b68",textTransform:"uppercase",margin:"0 0 4px"}}>Trésorerie · évolution</p>
+                    <svg viewBox="0 0 180 44" style={{width:"100%",flex:1,overflow:"visible"}}>
+                      <defs><linearGradient id="lga" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#005653" stopOpacity=".14"/><stop offset="100%" stopColor="#005653" stopOpacity="0"/></linearGradient></defs>
+                      <path d="M0,38 L30,28 L60,33 L90,16 L120,20 L150,8 L180,3 L180,44 L0,44 Z" fill="url(#lga)" style={{opacity:subVis&&sub===0?1:0,transition:"opacity .3s .55s"}} />
+                      <path d="M0,38 L30,28 L60,33 L90,16 L120,20 L150,8 L180,3" pathLength="1" stroke="#005653" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"
+                        style={{strokeDasharray:1,strokeDashoffset:subVis&&sub===0?0:1,transition:"stroke-dashoffset 1.1s cubic-bezier(.25,.46,.45,.94) .35s"}} />
+                      <circle cx="180" cy="3" r="3" fill="#005653" style={{opacity:subVis&&sub===0?1:0,transition:"opacity .2s 1.5s"}} />
+                    </svg>
+                  </div>
+                  <div className="fu" style={{animationDelay:".42s",flex:1,background:"#fff",borderRadius:8,padding:"7px 9px",display:"flex",flexDirection:"column",minWidth:0}}>
+                    <p style={{fontSize:"clamp(6px,1vw,8px)",fontWeight:700,color:"#2d6b68",textTransform:"uppercase",margin:"0 0 4px"}}>CA mensuel</p>
+                    <div style={{display:"flex",alignItems:"flex-end",gap:2,flex:1,marginTop:"auto"}}>
+                      {bars0.map((h,i)=>(
+                        <div key={i} style={{flex:1,borderRadius:"1px 1px 0 0",
+                          background:i===5?"#21C45D":"#bbf7d0",
+                          height:subVis&&sub===0?`${h*.42}%`:"0%",
+                          transition:`height ${.5+i*.05}s cubic-bezier(.25,.46,.45,.94) ${subVis&&sub===0?(.4+i*.04):0}s`}} />
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <span style={{fontSize:8.5,fontWeight:800,color:C.green,background:"rgba(33,196,93,.1)",padding:"2px 10px",borderRadius:100}}>● En direct</span>
+                <div className="notif" style={{animationDelay:"1.2s",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:7,padding:"6px 9px",display:"flex",alignItems:"center",gap:6,marginTop:7,flexShrink:0}}>
+                  <svg width="10" height="10" viewBox="0 0 20 20" fill="none" style={{flexShrink:0}}><path d="M10 3L2 17h16L10 3z" stroke="#dc2626" strokeWidth="1.8" fill="none" strokeLinejoin="round"/><line x1="10" y1="8" x2="10" y2="12.5" stroke="#dc2626" strokeWidth="1.8" strokeLinecap="round"/><circle cx="10" cy="15" r=".9" fill="#dc2626"/></svg>
+                  <span style={{fontSize:"clamp(7px,1.1vw,9px)",fontWeight:700,color:"#dc2626"}}>Trésorerie critique · 14 jours d'autonomie restants</span>
+                  <span style={{marginLeft:"auto",flexShrink:0,fontSize:"clamp(6px,1vw,8px)",fontWeight:700,color:"#ef4444",background:"#fee2e2",padding:"2px 6px",borderRadius:4}}>Voir</span>
+                </div>
               </div>
-              <div key={tabIdx} className="tab-content">
-                <TabContent tab={TABS[tabIdx]}/>
+            )}
+
+            {/* SUB 1 · Trésorerie */}
+            {sub===1 && (
+              <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:7,paddingBottom:6,borderBottom:"1px solid #c8e8e5",flexShrink:0}}>
+                  <span style={{fontSize:"clamp(8px,1.4vw,11px)",fontWeight:900,color:"#005653",background:"#ecfdf5",padding:"2px 8px",borderRadius:12,letterSpacing:"0.05em"}}>Trésorerie</span>
+                  <span style={{fontSize:"clamp(6px,1vw,8px)",color:"#9ca3af",fontWeight:600}}>Vue détaillée · Flux · Prévisions</span>
+                </div>
+                <div style={{display:"flex",gap:6,marginBottom:7,flexShrink:0}}>
+                  {[
+                    {lbl:"Solde actuel",val:`${t_treso.toLocaleString("fr-FR")} €`,acc:"#005653"},
+                    {lbl:"Autonomie",   val:`${t_auto} jours`,acc:"#21C45D"},
+                    {lbl:"Prévision M+1",val:"+8,2 %",acc:"#d97706"},
+                  ].map((c,i)=>(
+                    <div key={i} className="fu" style={{animationDelay:`${i*.1}s`,flex:1,background:"#fff",borderRadius:8,padding:"7px 9px",borderLeft:`3px solid ${c.acc}`,minWidth:0}}>
+                      <p style={{fontSize:"clamp(6px,1vw,8px)",fontWeight:700,color:"#6b7280",textTransform:"uppercase",margin:"0 0 3px"}}>{c.lbl}</p>
+                      <p style={{fontSize:"clamp(10px,1.9vw,14px)",fontWeight:900,color:"#002e2c",margin:0,whiteSpace:"nowrap"}}>{c.val}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="fu" style={{animationDelay:".3s",background:"#fff",borderRadius:8,padding:"7px 9px",marginBottom:7,flex:1,minHeight:0,display:"flex",flexDirection:"column"}}>
+                  <p style={{fontSize:"clamp(6px,1vw,8px)",fontWeight:700,color:"#2d6b68",textTransform:"uppercase",margin:"0 0 4px",flexShrink:0}}>Trésorerie · évolution 7 mois</p>
+                  <div style={{flex:1,minHeight:0,position:"relative"}}>
+                    <svg viewBox="0 0 280 52" preserveAspectRatio="none" style={{width:"100%",height:"100%",overflow:"visible",display:"block"}}>
+                      <defs>
+                        <linearGradient id="tg" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#005653" stopOpacity="0.22"/>
+                          <stop offset="100%" stopColor="#005653" stopOpacity="0.02"/>
+                        </linearGradient>
+                      </defs>
+                      {/* zone critique */}
+                      <rect x="115" y="0" width="50" height="52" fill="rgba(249,115,22,0.1)" rx="1"/>
+                      {/* area fill */}
+                      <path d="M0,16 L47,22 L93,13 L140,34 L187,22 L233,11 L280,4 L280,52 L0,52 Z" fill="url(#tg)"/>
+                      {/* line draw-on */}
+                      <path d="M0,16 L47,22 L93,13 L140,34 L187,22 L233,11 L280,4" fill="none" stroke="#005653" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" pathLength="1" style={{strokeDasharray:1,strokeDashoffset:0,animation:"draw-line 1s ease .35s both"}}/>
+                      {/* critical point */}
+                      <circle cx="140" cy="34" r="3" fill="#fff" stroke="#d97706" strokeWidth="1.5" style={{animation:"fade-in .4s ease 1.1s both",opacity:0}}/>
+                      <text x="140" y="29" textAnchor="middle" style={{fontSize:5,fill:"#d97706",fontWeight:800,fontFamily:"inherit",animation:"fade-in .4s ease 1.1s both",opacity:0}}>⚠</text>
+                      {/* endpoint pulse */}
+                      <circle cx="280" cy="4" r="5" fill="rgba(0,86,83,.15)" style={{animation:"fade-in .3s ease 1.3s both",opacity:0}}/>
+                      <circle cx="280" cy="4" r="2.5" fill="#005653" style={{animation:"fade-in .3s ease 1.3s both",opacity:0}}/>
+                      {/* month labels */}
+                      {[{x:0,m:"Jan"},{x:47,m:"Fév"},{x:93,m:"Mar"},{x:140,m:"Avr"},{x:187,m:"Mai"},{x:233,m:"Jun"},{x:280,m:"Jul"}].map(({x,m},i)=>(
+                        <text key={i} x={x} y="60" textAnchor="middle" style={{fontSize:5,fill:"#9ca3af",fontWeight:600,fontFamily:"inherit"}}>{m}</text>
+                      ))}
+                    </svg>
+                  </div>
+                  <div style={{marginTop:5,fontSize:"clamp(5px,.85vw,7px)",fontWeight:700,color:"#d97706",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:5,padding:"2px 6px",display:"inline-block",flexShrink:0}}>
+                    ⚠ Avr · Zone critique · solde &lt; seuil
+                  </div>
+                </div>
+                <div className="fu" style={{animationDelay:".65s",display:"flex",gap:6,flexShrink:0}}>
+                  {[
+                    {lbl:"Entrées",val:"+42 800 €",bg:"#ecfdf5",c:"#005653"},
+                    {lbl:"Sorties", val:"−31 200 €",bg:"#fef2f2",c:"#dc2626"},
+                    {lbl:"Net",     val:"+11 600 €",bg:"#f0fdf4",c:"#21C45D"},
+                  ].map((x,i)=>(
+                    <div key={i} style={{flex:1,background:x.bg,borderRadius:8,padding:"6px 8px"}}>
+                      <p style={{fontSize:"clamp(6px,1vw,8px)",fontWeight:700,color:x.c,textTransform:"uppercase",margin:"0 0 2px"}}>{x.lbl}</p>
+                      <p style={{fontSize:"clamp(9px,1.6vw,12px)",fontWeight:900,color:"#002e2c",margin:0,whiteSpace:"nowrap"}}>{x.val}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* SUB 2 · Alertes */}
+            {sub===2 && (
+              <div>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                  <p style={{fontSize:"clamp(8px,1.5vw,11px)",fontWeight:800,color:"#002e2c",margin:0}}>
+                    {a_count} alertes actives ce mois
+                  </p>
+                  <span style={{fontSize:"clamp(7px,1.1vw,9px)",color:"#9ca3af",fontWeight:600}}>Rapport IA disponible</span>
+                </div>
+                {[
+                  {lvl:"Critique",c:"#dc2626",bg:"#fef2f2",br:"#fecaca",msg:"Trésorerie critique · 14 jours d'autonomie restants",d:".05s"},
+                  {lvl:"Attention",c:"#d97706",bg:"#fffbeb",br:"#fde68a",msg:"Masse salariale en hausse · +12% vs mois précédent",d:".3s"},
+                  {lvl:"Info",    c:"#2563eb",bg:"#eff6ff",br:"#bfdbfe",msg:"Résultat en baisse · −3% vs N-1",d:".55s"},
+                ].map((a,i)=>(
+                  <div key={i} className="al-in" style={{animationDelay:a.d,background:a.bg,border:`1.5px solid ${a.br}`,borderRadius:7,padding:"7px 9px",marginBottom:5,display:"flex",alignItems:"center",gap:7}}>
+                    <span style={{width:7,height:7,borderRadius:"50%",background:a.c,display:"block",flexShrink:0}}/>
+                    <span style={{fontSize:"clamp(6px,1vw,8px)",fontWeight:800,color:a.c,background:a.br,padding:"2px 6px",borderRadius:4,whiteSpace:"nowrap",flexShrink:0}}>{a.lvl}</span>
+                    <span style={{fontSize:"clamp(7px,1.1vw,9px)",fontWeight:600,color:"#374151",flex:1}}>{a.msg}</span>
+                    <span style={{fontSize:"clamp(6px,1vw,8px)",fontWeight:700,color:a.c,whiteSpace:"nowrap",flexShrink:0}}>Voir →</span>
+                  </div>
+                ))}
+                <div className="al-in" style={{animationDelay:".8s",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:7,padding:"7px 9px",display:"flex",alignItems:"center",gap:7}}>
+                  <span style={{fontSize:"clamp(6px,1vw,8px)",fontWeight:800,color:"#21C45D",background:"#dcfce7",padding:"2px 6px",borderRadius:4,whiteSpace:"nowrap",flexShrink:0}}>IA</span>
+                  <span style={{fontSize:"clamp(7px,1.1vw,9px)",fontWeight:600,color:"#374151",flex:1}}>Analyse complète de votre exercice · Rapport généré automatiquement</span>
+                  <span style={{fontSize:"clamp(6px,1vw,8px)",fontWeight:700,color:"#21C45D",whiteSpace:"nowrap",flexShrink:0}}>Générer →</span>
+                </div>
+              </div>
+            )}
+
           </div>
         </div>
       </div>
 
-      {/* CTA FINAL */}
-      <section style={{background:C.primary,padding:"56px 48px",textAlign:"center"}}>
-        <h2 style={{fontSize:32,fontWeight:900,color:"#fff",marginBottom:10,lineHeight:1.1}}>Prêt à avoir cette visibilité sur votre activité ?</h2>
-        <p style={{fontSize:15,fontWeight:600,color:"rgba(255,255,255,.7)",marginBottom:28}}>Mise en place en 48h · Analyse gratuite · Sans engagement</p>
-        <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" style={{background:C.green,color:C.text,padding:"16px 44px",borderRadius:100,fontSize:16,fontWeight:900,textDecoration:"none",display:"inline-block",boxShadow:"0 4px 24px rgba(33,196,93,.3)"}}>
-          Demander mon accès gratuit →
-        </a>
-        <div style={{marginTop:14,fontSize:12,fontWeight:700,color:"rgba(255,255,255,.4)"}}>nathan@nvm-finance.fr · 07 83 65 76 39</div>
-      </section>
-      <footer style={{background:"#002e2c",padding:"18px 48px",textAlign:"center"}}>
-        <p style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,.3)"}}>© 2026 NVM Finance — Données de démonstration fictives</p>
-      </footer>
+      {/* Description */}
+      <p style={{
+        textAlign:"center",fontSize:"clamp(12px,1.8vw,15px)",fontWeight:600,margin:"14px 0 0",
+        maxWidth:500,color:"rgba(255,255,255,.58)",
+        opacity:subVis?1:0,transition:"opacity .25s ease"
+      }}>
+        {STEPS[sub].desc}
+      </p>
+
+    </Scn>
+  );
+}
+
+/* ── S5 · CTA ────────────────────────────────────────────── */
+function S5({ show }) {
+  return (
+    <Scn show={show} bg="#002e2c">
+      <div className="sc" style={{animationDelay:".12s",marginBottom:28}}>
+        <LogoSVG width={110} showLabel labelColor="#fff" fillColor="#fff" brightGreen="#21C45D" />
+      </div>
+      <h1 className="fu" style={{animationDelay:".4s",color:"#fff",fontSize:"clamp(28px,5.5vw,58px)",fontWeight:900,textAlign:"center",margin:"0 0 12px",letterSpacing:"-0.02em",lineHeight:1.05}}>
+        Prêt à piloter<br/>votre entreprise ?
+      </h1>
+      <p className="fu" style={{animationDelay:".65s",color:"rgba(255,255,255,.45)",fontSize:"clamp(13px,1.8vw,16px)",textAlign:"center",margin:"0 0 38px",fontWeight:600}}>
+        Mise en place en 48h · Sans engagement
+      </p>
+      <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" className="fu" onClick={e=>e.stopPropagation()} style={{animationDelay:".88s",display:"inline-block",background:"#21C45D",color:"#002e2c",padding:"18px 56px",borderRadius:16,fontWeight:900,fontSize:18,textDecoration:"none",letterSpacing:"0.02em",boxShadow:"0 10px 36px rgba(33,196,93,.38)",position:"relative",zIndex:50,cursor:"pointer"}}>
+        Demandez votre accès
+      </a>
+    </Scn>
+  );
+}
+
+/* ── Main ────────────────────────────────────────────────── */
+export default function DemoPage() {
+  const [phase,   setPhase]   = useState(0);
+  const [menuOpen,setMenuOpen]= useState(false);
+  const [progress,setProgress]= useState(0);
+
+  useEffect(()=>{
+    const dur = DURATIONS[phase];
+    const t0  = Date.now();
+    let raf;
+    const tick = ()=>{
+      const p = Math.min((Date.now()-t0)/dur, 1);
+      setProgress(p);
+      if (p<1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    const timer = setTimeout(()=>setPhase(ph=>(ph+1)%DURATIONS.length), dur);
+    return ()=>{ cancelAnimationFrame(raf); clearTimeout(timer); };
+  },[phase]);
+
+  return (
+    <div style={{fontFamily:"Nunito,sans-serif",background:"#002e2c",minHeight:"100vh",overflow:"hidden",position:"relative"}}>
+      <style>{CSS}</style>
+      <Nav open={menuOpen} setOpen={setMenuOpen} />
+      <S0 show={phase===0} />
+      <S1 show={phase===1} />
+      <S2 show={phase===2} />
+      <S3 show={phase===3} />
+      <S4 show={phase===4} />
+      <S5 show={phase===5} />
+
+      <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:100,height:3,background:"rgba(255,255,255,.1)"}}>
+        <div style={{height:"100%",background:"#21C45D",width:`${progress*100}%`,transition:"width .08s linear"}} />
+      </div>
+      <div style={{position:"fixed",bottom:12,left:"50%",transform:"translateX(-50%)",display:"flex",gap:7,zIndex:101}}>
+        {DURATIONS.map((_,i)=>(
+          <button key={i} onClick={()=>setPhase(i)} style={{
+            width:phase===i?22:6,height:6,borderRadius:3,border:"none",cursor:"pointer",padding:0,
+            background:phase===i?"white":"rgba(255,255,255,.28)",transition:"all .3s ease"
+          }} />
+        ))}
+      </div>
     </div>
   );
 }

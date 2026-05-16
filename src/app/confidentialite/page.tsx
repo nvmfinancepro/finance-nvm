@@ -1,8 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-
 const C = { primary:"#005653", green:"#21C45D", bg:"#ecfdf5", text:"#002e2c", mid:"#2d6b68", light:"#a7d4d0", border:"#c8e8e5" };
-
 const LogoSVG = ({ width=160, showLabel=false, labelColor="#005653", fillColor="#005552", brightGreen="#21C45D" }) => (
   <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:Math.round(width*0.07)}}>
     <svg viewBox="138 71 730 519" xmlns="http://www.w3.org/2000/svg" width={width} style={{display:"block"}}>
@@ -21,7 +19,7 @@ const LogoSVG = ({ width=160, showLabel=false, labelColor="#005653", fillColor="
       <path d="M0 0 C0.78375 0.04125 1.5675 0.0825 2.375 0.125 C3.65399583 4.57202779 3.00983213 8.27025262 2.046875 12.69140625 C1.89720276 13.4073143 1.74753052 14.12322235 1.59332275 14.86082458 C1.27524811 16.36878081 0.95220928 17.87569746 0.62451172 19.3815918 C0.12651219 21.68051923 -0.34982147 23.98321005 -0.82421875 26.28710938 C-1.13672713 27.75548426 -1.45048743 29.22359338 -1.765625 30.69140625 C-1.90639465 31.37691055 -2.04716431 32.06241486 -2.19219971 32.76869202 C-3.03126195 36.54497386 -4.02035397 39.23498255 -6.625 42.125 C-8.275 41.795 -9.925 41.465 -11.625 41.125 C-11.09420184 32.41789025 -9.54145309 24.07645722 -7.6875 15.5625 C-7.42259766 14.29341797 -7.15769531 13.02433594 -6.88476562 11.71679688 C-6.62501953 10.50958984 -6.36527344 9.30238281 -6.09765625 8.05859375 C-5.86312744 6.96603271 -5.62859863 5.87347168 -5.38696289 4.74780273 C-4.37570981 1.26690178 -3.70430757 0.1763956 0 0 Z " fill={fillColor} transform="translate(523.625,633.875)"/>
       <path d="M0 0 C2.4375 0.9375 2.4375 0.9375 3.9375 3.25 C4.4375 5.9375 4.4375 5.9375 3.0625 8.25 C2.52625 8.806875 1.99 9.36375 1.4375 9.9375 C-4.4375 9.0625 -4.4375 9.0625 -5.5625 7.9375 C-5.8125 5 -5.8125 5 -5.5625 1.9375 C-2.5625 -0.0625 -2.5625 -0.0625 0 0 Z " fill={fillColor} transform="translate(526.5625,619.0625)"/>
     </svg>
-    {showLabel && <div style={{fontSize:Math.max(9,Math.round(width*0.12)),fontWeight:900,color:labelColor,letterSpacing:"0.14em",textTransform:"uppercase",textAlign:"center",lineHeight:1}}>N<span style={{color:brightGreen}}>V</span>M Finance</div>}
+    {showLabel && <div style={{fontSize:Math.max(9,Math.round(width*0.12)),fontWeight:900,color:labelColor,letterSpacing:"0.14em",textTransform:"uppercase",textAlign:"center",lineHeight:1}}>Nv<span style={{color:brightGreen}}>M</span> Finance</div>}
   </div>
 );
 
@@ -34,22 +32,13 @@ const fmt = (n: number) => { if(n===null||n===undefined||isNaN(n)) return "—";
 const pct = (n: number) => (n==null||isNaN(n))?"—":`${Number(n).toFixed(1)} %`;
 
 // CSV TEMPLATES PAR SECTEUR
-
 const Logo = ({ width=120, white=false }: {width?: number, white?: boolean}) => {
   const fillColor = white ? "white" : "#005552";
   const brightGreen = white ? "white" : "#21C45D";
   const labelColor = white ? "white" : "#005653";
   return <LogoSVG width={width} showLabel={true} fillColor={fillColor} brightGreen={brightGreen} labelColor={labelColor}/>;
 };
-
-const Check = () => (
-  <svg viewBox="0 0 14 14" fill="none" width="14" height="14" style={{flexShrink:0,marginTop:2}}>
-    <circle cx="7" cy="7" r="7" fill="#ecfdf5"/>
-    <path d="M4 7l2 2 4-4" stroke="#005653" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-export default function ServicesPage() {
+export default function Page() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   useEffect(() => {
@@ -57,86 +46,22 @@ export default function ServicesPage() {
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-
-  const offres = [
-    {
-      tag:"Offre Essentielle", name:"Suivi des marges", best:false,
-      items:["Analyse des marges par produit ou service","Identification de la rentabilité du produit","Suivi de l'évolution des marges dans le temps"],
-      mensuel:"35€ HT", unite:"50€ HT",
-    },
-    {
-      tag:"Offre Gestion", name:"Tableau de bord", best:false,
-      items:["Offre Essentielle incluse","Suivi des produits et des charges","Calcul du résultat mensuel","Tableau de bord structuré avec indicateurs"],
-      mensuel:"250€ HT", unite:"300€ HT",
-    },
-    {
-      tag:"Offre Gestion +", name:"Tableau de bord complet", best:true,
-      items:["Offre Tableau de bord inclus","Suivi de la trésorerie inclus","Tableau de bord de gestion complet","Suivi des investissements","Suivi emprunt bancaire","Suivi IS","Suivi TVA","Suivi créances et dettes"],
-      mensuel:"500€ HT", unite:"1 000€ HT",
-    },
-    {
-      tag:"Offre Ultime", name:"Prévisionnel intégré", best:false,
-      items:["Offre Gestion + inclus","Prévisionnel intégré au tableau de bord","Comparaison résultats prévus vs réels","Projection N+1 et N+2"],
-      mensuel:"600€ HT", unite:"1 500€ HT",
-      note:"*Prévisionnel uniquement",
-    },
-  ];
-
-  const supplements = [
-    {
-      tag:"Supplément", name:"Suivi de la trésorerie",
-      desc:"Cet outil permet d'éviter les tensions de trésorerie en donnant une vision claire, anticipée et fiable des flux financiers.",
-      mensuel:"+125€ HT", unite:undefined as string | undefined,
-    },
-    {
-      tag:"Supplément", name:"Suivi des stocks",
-      desc:"Cet outil permet de suivre les stocks en temps réel et d'en connaître la valeur exacte afin d'optimiser les coûts et améliorer la rentabilité.",
-      mensuel:"+125€ HT", unite:"+200€ HT" as string | undefined,
-    },
-  ];
-
   return (
-    <div style={{fontFamily:"'Nunito',sans-serif",background:"#f8fffe",color:C.text,minHeight:"100vh"}}>
+    <div style={{fontFamily:"'Nunito',sans-serif",background:"#fff",color:C.text,minHeight:"100vh"}}>
       <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
-      <style>{`
-        .drawer{display:none!important;}
-        .mobile-nav-bar{display:none;}
-        @media(max-width:768px){
-          .desktop-nav-bar{display:none!important;}
-          .mobile-nav-bar{display:flex!important;}
-          .drawer{display:flex!important;flex-direction:column!important;}
-          .offre-grid{grid-template-columns:1fr!important;}
-          .suppl-grid{grid-template-columns:1fr 1fr!important;}
-          .footer-grid{grid-template-columns:1fr 1fr!important;gap:24px!important;}
-          .section-pad{padding:48px 20px!important;}
-          .hero-pad{padding:40px 20px!important;}
-          .cta-section{padding:48px 20px!important;}
-        }
-        @media(max-width:480px){
-          .footer-grid{grid-template-columns:1fr!important;}
-          .suppl-grid{grid-template-columns:1fr!important;}
-        }
-        .nav-link:hover{color:#005653!important;background:#f0faf8;}
-        .cta-main:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,86,83,.35)!important;}
-        .offre-card:hover{transform:translateY(-4px);box-shadow:0 16px 48px rgba(0,86,83,.12)!important;}
-      `}</style>
-
-      {/* HEADER */}
       <header style={{background:scrolled?"rgba(255,255,255,.97)":"rgba(255,255,255,.85)",backdropFilter:"blur(20px)",borderBottom:`1px solid ${C.border}`,position:"sticky",top:0,zIndex:100,transition:"all .3s"}}>
-        <div style={{display:"flex",justifyContent:"center",paddingTop:18,paddingBottom:12}}>
-          <Logo width={80}/>
-        </div>
+        <div style={{display:"flex",justifyContent:"center",paddingTop:18,paddingBottom:12}}><Logo width={80}/></div>
         <div className="desktop-nav-bar" style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 48px 14px",borderTop:`1px solid ${C.border}`}}>
-          <div style={{display:"flex",gap:4,alignItems:"center"}}>
-            {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"}].map((lk,i)=>(
-              <a key={i} href={lk.h} className="nav-link" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8,transition:"all .2s"}}>{lk.l}</a>
-            ))}
+          <div style={{display:"flex",gap:4}}>
+            <a href="/" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Accueil</a>
+            <a href="/services" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Nos offres</a>
           </div>
           <div style={{display:"flex",gap:10,alignItems:"center"}}>
-            <a href="https://nvm-finance.vercel.app" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Espace client</a>
-            <a href="https://meet.brevo.com/nathan-van-meer-1" style={{background:C.primary,color:"#fff",padding:"9px 22px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 16px rgba(0,86,83,.2)"}}>Prendre RDV</a>
+            <a href="https://nvm-finance.vercel.app" target="_blank" rel="noopener noreferrer" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Espace client</a>
+            <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" style={{background:C.primary,color:"#fff",padding:"9px 22px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none"}}>Prendre RDV</a>
           </div>
         </div>
+      
         <div className="mobile-nav-bar" style={{display:"none",justifyContent:"flex-end",padding:"8px 20px 12px",borderTop:`1px solid ${C.border}`}}>
           <button onClick={()=>setMenuOpen(true)} style={{background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",gap:5,padding:8}}>
             <span style={{display:"block",width:22,height:2,background:C.primary,borderRadius:2}}/>
@@ -144,113 +69,90 @@ export default function ServicesPage() {
             <span style={{display:"block",width:22,height:2,background:C.primary,borderRadius:2}}/>
           </button>
         </div>
-        {menuOpen && <div onClick={()=>setMenuOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.3)",zIndex:199,backdropFilter:"blur(2px)"}}/>}
+        {menuOpen && <div onClick={()=>setMenuOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.3)",zIndex:199}}/>}
         <div className="drawer" style={{position:"fixed",top:0,right:0,bottom:0,width:"75%",maxWidth:300,background:"#fff",zIndex:200,transform:menuOpen?"translateX(0)":"translateX(100%)",transition:"transform .3s ease",boxShadow:"-8px 0 32px rgba(0,0,0,.1)",display:"flex",flexDirection:"column",padding:"24px 0"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0 24px 20px",borderBottom:`1px solid ${C.border}`,marginBottom:8}}>
-            <LogoSVG width={70} showLabel={true} fillColor="#005552" brightGreen="#21C45D" labelColor="#005653"/>
+            <Logo width={70}/>
             <button onClick={()=>setMenuOpen(false)} style={{fontSize:20,cursor:"pointer",color:"#6aaca8",background:"none",border:"none",padding:4}}>✕</button>
           </div>
           {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"},{h:"/demo",l:"Voir la démo"},{h:"https://nvm-finance.vercel.app",l:"Espace client",ext:true}].map((lk,i)=>(
             <a key={i} href={lk.h} target={lk.ext?"_blank":undefined} rel={lk.ext?"noopener noreferrer":undefined} onClick={()=>setMenuOpen(false)}
-              style={{display:"block",padding:"16px 24px",fontSize:15,fontWeight:700,color:C.text,textDecoration:"none",borderBottom:`1px solid ${C.border}`}}>
+              style={{display:"block",padding:"16px 24px",fontSize:15,fontWeight:700,color:"#002e2c",textDecoration:"none",borderBottom:"1px solid #c8e8e5"}}>
               {lk.l}
             </a>
           ))}
           <div style={{padding:"20px 24px",marginTop:"auto"}}>
             <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" onClick={()=>setMenuOpen(false)}
-              style={{display:"block",background:C.primary,color:"#fff",padding:"14px",borderRadius:100,fontSize:14,fontWeight:900,textDecoration:"none",textAlign:"center"}}>
+              style={{display:"block",background:"#005653",color:"#fff",padding:"14px",borderRadius:100,fontSize:14,fontWeight:900,textDecoration:"none",textAlign:"center"}}>
               Prendre RDV
             </a>
           </div>
         </div>
       </header>
-
-      {/* HERO */}
-      <div className="hero-pad" style={{background:C.primary,padding:"64px 48px",textAlign:"center"}}>
-        <h1 style={{fontSize:"clamp(32px,4vw,52px)",fontWeight:900,color:"#fff",marginBottom:16,lineHeight:1.08}}>
-          Une offre adaptée à chaque étape<br/>de votre croissance.
-        </h1>
-        <p style={{fontSize:17,fontWeight:600,color:"rgba(255,255,255,.7)",maxWidth:520,margin:"0 auto"}}>
-          Commencez simplement et montez en puissance selon vos besoins.
-        </p>
+      <div style={{background:C.primary,padding:"48px 48px 40px"}}>
+        <div style={{maxWidth:800,margin:"0 auto"}}>
+          <a href="/" style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,.5)",textDecoration:"none",display:"inline-block",marginBottom:12}}>← Retour au site</a>
+          <h1 style={{fontSize:36,fontWeight:900,color:"#fff"}}>Politique de confidentialité</h1>
+        </div>
       </div>
-
-      {/* 4 OFFRES */}
-      <section className="section-pad" style={{padding:"64px 48px",maxWidth:1200,margin:"0 auto"}}>
-        <div className="offre-grid" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:20}}>
-          {offres.map((o,i)=>(
-            <div key={i} className="offre-card" style={{background:"#fff",borderRadius:20,border:o.best?`2px solid ${C.primary}`:`1px solid ${C.border}`,boxShadow:o.best?"0 8px 40px rgba(0,86,83,.15)":"0 2px 12px rgba(0,86,83,.05)",display:"flex",flexDirection:"column",overflow:"hidden",transition:"all .3s"}}>
-              {o.best && <div style={{background:C.primary,color:"#fff",fontSize:10,fontWeight:800,textAlign:"center",padding:"7px",letterSpacing:"0.1em",textTransform:"uppercase"}}>Le plus populaire</div>}
-              <div style={{padding:"24px 20px",flex:1}}>
-                <div style={{fontSize:10,fontWeight:800,color:C.primary,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{o.tag}</div>
-                <div style={{fontSize:20,fontWeight:900,color:C.text,marginBottom:20,lineHeight:1.2}}>{o.name}</div>
-                <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:24}}>
-                  {o.items.map((it,j)=>(
-                    <div key={j} style={{display:"flex",alignItems:"flex-start",gap:8}}>
-                      <Check/>
-                      <span style={{fontSize:13,fontWeight:j===0&&it.includes("inclus")?800:600,color:j===0&&it.includes("inclus")?C.primary:C.mid,lineHeight:1.4}}>{it}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div style={{padding:"20px",borderTop:`1px solid ${C.border}`,background:o.best?C.bg:"#f8fffe"}}>
-                <div style={{marginBottom:8}}>
-                  <span style={{fontSize:26,fontWeight:900,color:C.text}}>{o.mensuel}</span>
-                  <span style={{fontSize:13,fontWeight:600,color:C.mid}}> / Mensuel</span>
-                </div>
-                {o.unite && <div>
-                  <span style={{fontSize:20,fontWeight:800,color:C.mid}}>{o.unite}</span>
-                  <span style={{fontSize:12,fontWeight:600,color:C.mid}}> / Unité</span>
-                </div>}
-                {"note" in o && o.note && <div style={{fontSize:10,color:C.mid,marginTop:4}}>{o.note}</div>}
-                <a href="https://meet.brevo.com/nathan-van-meer-1" style={{display:"block",marginTop:16,background:o.best?C.primary:"white",color:o.best?"#fff":C.primary,padding:"11px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",textAlign:"center",border:`2px solid ${C.primary}`,transition:"all .2s"}}>
-                  Démarrer
-                </a>
-              </div>
+      <div className="legal-content" style={{maxWidth:800,margin:"0 auto",padding:"56px 48px"}}>
+        
+        <div style={{marginBottom:40}}>
+          <h2 style={{fontSize:20,fontWeight:800,color:C.primary,marginBottom:16,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>Responsable du traitement</h2>
+          <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Nathan Van Meer — Auto-entrepreneur</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>SIRET : 99486751300016 — Annecy (74000), France</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Email : nathan@nvm-finance.fr</p>
+        </div>
+        <div style={{marginBottom:40}}>
+          <h2 style={{fontSize:20,fontWeight:800,color:C.primary,marginBottom:16,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>Données collectées</h2>
+          <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Nom, prénom, email, téléphone, données financières importées dans l'outil.</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Ces données sont collectées uniquement avec votre consentement.</p>
+        </div>
+        <div style={{marginBottom:40}}>
+          <h2 style={{fontSize:20,fontWeight:800,color:C.primary,marginBottom:16,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>Finalités</h2>
+          <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Fournir et améliorer les services NVM Finance.</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Vous contacter dans le cadre de la relation commerciale.</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Assurer la sécurité et le bon fonctionnement de la plateforme.</p>
+        </div>
+        <div style={{marginBottom:40}}>
+          <h2 style={{fontSize:20,fontWeight:800,color:C.primary,marginBottom:16,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>Conservation</h2>
+          <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Vos données sont conservées pendant la durée de la relation contractuelle, puis 3 ans après.</p>
+        </div>
+        <div style={{marginBottom:40}}>
+          <h2 style={{fontSize:20,fontWeight:800,color:C.primary,marginBottom:16,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>Vos droits (RGPD)</h2>
+          <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Droit d'accès, rectification, effacement, limitation et portabilité.</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Contact : nathan@nvm-finance.fr</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Réclamation possible auprès de la CNIL (www.cnil.fr).</p>
+        </div>
+        <div style={{marginBottom:40}}>
+          <h2 style={{fontSize:20,fontWeight:800,color:C.primary,marginBottom:16,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>Cookies</h2>
+          <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Ce site utilise uniquement des cookies techniques nécessaires à son fonctionnement.</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Aucun cookie publicitaire tiers sans consentement.</p>
+        </div>
+      </div>
+      <footer style={{background:"#002e2c",padding:"48px 48px 24px"}}>
+        <div style={{maxWidth:1100,margin:"0 auto"}}>
+          <div className="footer-grid" style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr",gap:40,paddingBottom:40,borderBottom:"1px solid rgba(255,255,255,.1)"}}>
+            <div>
+              <Logo width={80} white={true}/>
+              <p style={{fontSize:13,color:"rgba(255,255,255,.5)",lineHeight:1.7,marginTop:16,maxWidth:280}}>Pilotage financier sur-mesure pour les entreprises qui veulent décider avec les bons chiffres.</p>
             </div>
-          ))}
-        </div>
-      </section>
-
-      {/* SUPPLÉMENTS */}
-      <section style={{padding:"0 48px 64px",maxWidth:1200,margin:"0 auto"}}>
-        <div style={{textAlign:"center",marginBottom:36}}>
-          <h2 style={{fontSize:28,fontWeight:900,color:C.text,marginBottom:8}}>Options supplémentaires</h2>
-          <p style={{fontSize:15,fontWeight:600,color:C.mid}}>Ces modules s'ajoutent à votre offre principale.</p>
-        </div>
-        <div className="suppl-grid" style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:20,maxWidth:800,margin:"0 auto"}}>
-          {supplements.map((s,i)=>(
-            <div key={i} style={{background:"#fff",borderRadius:20,border:`1px solid ${C.border}`,padding:"28px 24px",display:"flex",flexDirection:"column"}}>
-              <div style={{fontSize:10,fontWeight:800,color:C.primary,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{s.tag}</div>
-              <div style={{fontSize:19,fontWeight:900,color:C.text,marginBottom:12}}>{s.name}</div>
-              <p style={{fontSize:13,fontWeight:600,color:C.mid,lineHeight:1.65,flex:1,marginBottom:20}}>{s.desc}</p>
-              <div style={{borderTop:`1px solid ${C.border}`,paddingTop:16}}>
-                <div style={{marginBottom:s.unite?6:0}}>
-                  <span style={{fontSize:24,fontWeight:900,color:C.primary}}>{s.mensuel}</span>
-                  <span style={{fontSize:13,fontWeight:600,color:C.mid}}> / Mensuel</span>
-                </div>
-                {s.unite && <div>
-                  <span style={{fontSize:18,fontWeight:800,color:C.mid}}>{s.unite}</span>
-                  <span style={{fontSize:12,fontWeight:600,color:C.mid}}> / Unité</span>
-                </div>}
-              </div>
+            <div>
+              <div style={{fontSize:11,fontWeight:800,color:"rgba(255,255,255,.3)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Navigation</div>
+              <a href="/" style={{display:"block",fontSize:13,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Accueil</a>
+              <a href="/services" style={{display:"block",fontSize:13,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Nos offres</a>
+              <a href="/demo" style={{display:"block",fontSize:13,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Voir la démo</a>
             </div>
-          ))}
+            <div>
+              <div style={{fontSize:11,fontWeight:800,color:"rgba(255,255,255,.3)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Contact</div>
+              <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" style={{display:"block",fontSize:13,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Prendre RDV</a>
+              <a href="mailto:nathan@nvm-finance.fr" style={{display:"block",fontSize:13,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Nous écrire</a>
+              <a href="https://nvm-finance.vercel.app" target="_blank" rel="noopener noreferrer" style={{display:"block",fontSize:13,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Espace client</a>
+            </div>
+            <div>
+              <div style={{fontSize:11,fontWeight:800,color:"rgba(255,255,255,.3)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Légal</div>
+              <a href="/mentions-legales" style={{display:"block",fontSize:13,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Mentions légales</a>
+              <a href="/confidentialite" style={{display:"block",fontSize:13,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Confidentialité</a>
+              <a href="/cgv" style={{display:"block",fontSize:13,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>CGV</a>
+            </div>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",paddingTop:24,flexWrap:"wrap",gap:12}}>
+            <p style={{fontSize:11,color:"rgba(255,255,255,.25)"}}>© 2026 NVM Finance — Tous droits réservés</p>
+            <p style={{fontSize:11,color:"rgba(255,255,255,.25)"}}>Auto-entrepreneur · SIRET 99486751300016 · Annecy</p>
+          </div>
         </div>
-      </section>
-
-      {/* CTA */}
-      <section className="hero-pad" style={{background:C.primary,padding:"64px 48px",textAlign:"center"}}>
-        <h2 style={{fontSize:34,fontWeight:900,color:"#fff",marginBottom:12,lineHeight:1.1}}>Pas sûr de quelle offre choisir ?</h2>
-        <p style={{fontSize:16,fontWeight:600,color:"rgba(255,255,255,.7)",marginBottom:32}}>On fait le point ensemble en 20 minutes — gratuitement.</p>
-        <a href="https://meet.brevo.com/nathan-van-meer-1" style={{background:C.green,color:C.text,padding:"16px 44px",borderRadius:100,fontSize:16,fontWeight:900,textDecoration:"none",display:"inline-block",boxShadow:"0 4px 24px rgba(33,196,93,.3)"}}>
-          Prendre RDV gratuitement →
-        </a>
-        <div style={{marginTop:16,fontSize:12,fontWeight:700,color:"rgba(255,255,255,.5)"}}>nathan@nvm-finance.fr · 07 83 65 76 39</div>
-      </section>
-
-      <footer style={{background:"#002e2c",padding:"24px 48px",textAlign:"center"}}>
-        <p style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,.35)"}}>© 2026 NVM Finance — Tous droits réservés</p>
       </footer>
     </div>
   );

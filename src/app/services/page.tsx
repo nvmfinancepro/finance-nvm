@@ -100,14 +100,18 @@ export default function ServicesPage() {
       <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
       <style>{`
         .drawer{display:none!important;}
-        .mobile-nav-bar{display:none;}
+        .mobile-ham{display:none;}
+        .nav-link:hover{color:#005653!important;background:#f0faf8;}
         @media(max-width:768px){
-          .desktop-nav-bar{display:none!important;}
-          .mobile-nav-bar{display:flex!important;}
+          .desktop-links{display:none!important;}
+          .desktop-actions{display:none!important;}
+          .mobile-ham{display:flex!important;}
+          .nav-inner{padding:14px 20px!important;}
           .drawer{display:flex!important;flex-direction:column!important;}
           .offre-grid{grid-template-columns:1fr!important;}
           .suppl-grid{grid-template-columns:1fr 1fr!important;}
           .footer-grid{grid-template-columns:1fr 1fr!important;gap:24px!important;}
+          .footer{padding:32px 20px 20px!important;}
           .section-pad{padding:48px 20px!important;}
           .hero-pad{padding:40px 20px!important;}
           .cta-section{padding:48px 20px!important;}
@@ -122,23 +126,19 @@ export default function ServicesPage() {
       `}</style>
 
       {/* HEADER */}
-      <header style={{background:scrolled?"rgba(255,255,255,.97)":"rgba(255,255,255,.85)",backdropFilter:"blur(20px)",borderBottom:`1px solid ${C.border}`,position:"sticky",top:0,zIndex:100,transition:"all .3s"}}>
-        <div style={{display:"flex",justifyContent:"center",paddingTop:18,paddingBottom:12}}>
+      <header style={{background:"#fff",borderBottom:`1px solid ${C.border}`,position:"sticky",top:0,zIndex:100,transition:"all .3s"}}>
+        <div className="nav-inner" style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 48px"}}>
           <Logo width={80}/>
-        </div>
-        <div className="desktop-nav-bar" style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 48px 14px",borderTop:`1px solid ${C.border}`}}>
-          <div style={{display:"flex",gap:4,alignItems:"center"}}>
-            {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"}].map((lk,i)=>(
+          <div className="desktop-links" style={{display:"flex",gap:4,alignItems:"center"}}>
+            {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"},{h:"/demo",l:"Voir la démo"}].map((lk,i)=>(
               <a key={i} href={lk.h} className="nav-link" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8,transition:"all .2s"}}>{lk.l}</a>
             ))}
           </div>
-          <div style={{display:"flex",gap:10,alignItems:"center"}}>
-            <a href="https://nvm-finance.vercel.app" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Espace client</a>
-            <a href="https://meet.brevo.com/nathan-van-meer-1" style={{background:C.primary,color:"#fff",padding:"9px 22px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 16px rgba(0,86,83,.2)"}}>Prendre RDV</a>
+          <div className="desktop-actions" style={{display:"flex",gap:10,alignItems:"center"}}>
+            <a href="https://nvm-finance.vercel.app" target="_blank" rel="noopener noreferrer" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Espace client</a>
+            <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" style={{background:C.primary,color:"#fff",padding:"9px 22px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 16px rgba(0,86,83,.2)"}}>Prendre RDV</a>
           </div>
-        </div>
-        <div className="mobile-nav-bar" style={{display:"none",justifyContent:"flex-end",padding:"8px 20px 12px",borderTop:`1px solid ${C.border}`}}>
-          <button onClick={()=>setMenuOpen(true)} style={{background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",gap:5,padding:8}}>
+          <button className="mobile-ham" onClick={()=>setMenuOpen(true)} style={{display:"none",flexDirection:"column",gap:5,background:"none",border:"none",cursor:"pointer",padding:8}}>
             <span style={{display:"block",width:22,height:2,background:C.primary,borderRadius:2}}/>
             <span style={{display:"block",width:22,height:2,background:C.primary,borderRadius:2}}/>
             <span style={{display:"block",width:22,height:2,background:C.primary,borderRadius:2}}/>
@@ -249,7 +249,7 @@ export default function ServicesPage() {
         <div style={{marginTop:16,fontSize:12,fontWeight:700,color:"rgba(255,255,255,.5)"}}>nathan@nvm-finance.fr · 07 83 65 76 39</div>
       </section>
 
-      <footer style={{background:"#002e2c",padding:"24px 48px",textAlign:"center"}}>
+      <footer className="footer" style={{background:"#002e2c",padding:"24px 48px",textAlign:"center"}}>
         <p style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,.35)"}}>© 2026 NVM Finance — Tous droits réservés</p>
       </footer>
     </div>

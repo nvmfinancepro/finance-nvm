@@ -21,7 +21,7 @@ const LogoSVG = ({ width=160, showLabel=false, labelColor="#005653", fillColor="
       <path d="M0 0 C0.78375 0.04125 1.5675 0.0825 2.375 0.125 C3.65399583 4.57202779 3.00983213 8.27025262 2.046875 12.69140625 C1.89720276 13.4073143 1.74753052 14.12322235 1.59332275 14.86082458 C1.27524811 16.36878081 0.95220928 17.87569746 0.62451172 19.3815918 C0.12651219 21.68051923 -0.34982147 23.98321005 -0.82421875 26.28710938 C-1.13672713 27.75548426 -1.45048743 29.22359338 -1.765625 30.69140625 C-1.90639465 31.37691055 -2.04716431 32.06241486 -2.19219971 32.76869202 C-3.03126195 36.54497386 -4.02035397 39.23498255 -6.625 42.125 C-8.275 41.795 -9.925 41.465 -11.625 41.125 C-11.09420184 32.41789025 -9.54145309 24.07645722 -7.6875 15.5625 C-7.42259766 14.29341797 -7.15769531 13.02433594 -6.88476562 11.71679688 C-6.62501953 10.50958984 -6.36527344 9.30238281 -6.09765625 8.05859375 C-5.86312744 6.96603271 -5.62859863 5.87347168 -5.38696289 4.74780273 C-4.37570981 1.26690178 -3.70430757 0.1763956 0 0 Z " fill={fillColor} transform="translate(523.625,633.875)"/>
       <path d="M0 0 C2.4375 0.9375 2.4375 0.9375 3.9375 3.25 C4.4375 5.9375 4.4375 5.9375 3.0625 8.25 C2.52625 8.806875 1.99 9.36375 1.4375 9.9375 C-4.4375 9.0625 -4.4375 9.0625 -5.5625 7.9375 C-5.8125 5 -5.8125 5 -5.5625 1.9375 C-2.5625 -0.0625 -2.5625 -0.0625 0 0 Z " fill={fillColor} transform="translate(526.5625,619.0625)"/>
     </svg>
-    {showLabel && <div style={{fontSize:Math.max(9,Math.round(width*0.12)),fontWeight:900,color:labelColor,letterSpacing:"0.14em",textTransform:"uppercase",textAlign:"center",lineHeight:1}}>Nv<span style={{color:brightGreen}}>M</span> Finance</div>}
+    {showLabel && <div style={{fontSize:Math.max(9,Math.round(width*0.12)),fontWeight:900,color:labelColor,letterSpacing:"0.14em",textTransform:"uppercase",textAlign:"center",lineHeight:1}}>N<span style={{color:brightGreen}}>V</span>M Finance</div>}
   </div>
 );
 
@@ -186,7 +186,7 @@ export default function SitePage() {
         {/* Barre nav + CTA */}
         <div className="desktop-nav-bar" style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 48px 14px",borderTop:`1px solid ${C.border}`,marginTop:4}}>
           <div style={{display:"flex",gap:4,alignItems:"center"}}>
-            {[{h:"/site",l:"Accueil"},{h:"/site/services",l:"Nos offres"}].map((lk,i)=>(
+            {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"}].map((lk,i)=>(
               <a key={i} href={lk.h} className="nav-link" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8,transition:"all .2s"}}>{lk.l}</a>
             ))}
           </div>
@@ -212,7 +212,7 @@ export default function SitePage() {
             <LogoSVG width={70} showLabel={true} fillColor="#005552" brightGreen="#21C45D" labelColor="#005653"/>
             <button onClick={()=>setMenuOpen(false)} style={{fontSize:20,cursor:"pointer",color:"#6aaca8",background:"none",border:"none",padding:4}}>✕</button>
           </div>
-          {[{h:"/site",l:"Accueil"},{h:"/site/services",l:"Nos offres"},{h:"/demo",l:"Voir la démo"},{h:"https://nvm-finance.vercel.app",l:"Espace client",ext:true}].map((lk,i)=>(
+          {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"},{h:"/demo",l:"Voir la démo"},{h:"https://nvm-finance.vercel.app",l:"Espace client",ext:true}].map((lk,i)=>(
             <a key={i} href={lk.h} target={lk.ext?"_blank":undefined} rel={lk.ext?"noopener noreferrer":undefined} onClick={()=>setMenuOpen(false)}
               style={{display:"block",padding:"16px 24px",fontSize:15,fontWeight:700,color:C.text,textDecoration:"none",borderBottom:`1px solid ${C.border}`}}>
               {lk.l}
@@ -442,7 +442,7 @@ export default function SitePage() {
             </div>
             <div>
               <div style={{fontSize:11,fontWeight:800,color:"rgba(255,255,255,.3)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Navigation</div>
-              {[{h:"/site",l:"Accueil"},{h:"/site/services",l:"Nos offres"},{h:"/demo",l:"Voir la démo"}].map((lk,i)=>(
+              {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"},{h:"/demo",l:"Voir la démo"}].map((lk,i)=>(
                 <a key={i} href={lk.h} style={{display:"block",fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>{lk.l}</a>
               ))}
             </div>
@@ -453,9 +453,9 @@ export default function SitePage() {
             </div>
             <div>
               <div style={{fontSize:11,fontWeight:800,color:"rgba(255,255,255,.3)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Légal</div>
-              <a href="/site/mentions-legales" style={{display:"block",fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Mentions légales</a>
-              <a href="/site/confidentialite" style={{display:"block",fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Politique de confidentialité</a>
-              <a href="/site/cgv" style={{display:"block",fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>CGV</a>
+              <a href="/mentions-legales" style={{display:"block",fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Mentions légales</a>
+              <a href="/confidentialite" style={{display:"block",fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Politique de confidentialité</a>
+              <a href="/cgv" style={{display:"block",fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>CGV</a>
             </div>
           </div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",paddingTop:24,flexWrap:"wrap",gap:12}}>

@@ -189,6 +189,11 @@ const GlobalCSS = () => (
           .legal-content{padding:32px 20px!important;}
           h1{font-size:clamp(24px,7vw,40px)!important;}
           h2{font-size:clamp(20px,5vw,34px)!important;}
+          .saas-sidebar{position:fixed!important;left:0;top:0;height:100vh!important;z-index:400;transform:translateX(-100%);transition:transform .3s cubic-bezier(.25,.46,.45,.94)!important;}
+          .saas-sidebar.open{transform:translateX(0)!important;}
+          .saas-backdrop{display:block!important;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:399;backdrop-filter:blur(2px);}
+          .saas-topbar-hamburger{display:flex!important;}
+          .saas-close-btn{display:flex!important;}
         }
         @media(max-width:480px){
           .footer-grid{grid-template-columns:1fr!important;}
@@ -570,20 +575,24 @@ function FirstLoginModal({ user, onComplete }) {
 }
 
 // SIDEBAR BASE
-function SidebarBase({ children, role, onLogout }) {
+function SidebarBase({ children, role, onLogout, open, onClose }) {
  return (
- <aside style={{width:220,background:C.primary,display:"flex",flexDirection:"column",height:"100vh",position:"sticky",top:0,flexShrink:0}}>
- <div style={{padding:"16px 16px 12px",borderBottom:"1px solid rgba(255,255,255,0.1)",display:"flex",justifyContent:"center"}}>
-   <LogoSVG width={110} showLabel={true} labelColor="white" fillColor="white" brightGreen="#21C45D"/>
- </div>
- <div style={{padding:"5px 16px 8px",borderBottom:"1px solid rgba(255,255,255,0.08)",textAlign:"center"}}>
- <span style={{fontSize:9,color:"rgba(255,255,255,0.4)",letterSpacing:"0.14em",textTransform:"uppercase"}}>{role}</span>
- </div>
- {children}
- <div style={{padding:"12px 14px",borderTop:"1px solid rgba(255,255,255,0.1)"}}>
- <button onClick={onLogout} style={{width:"100%",padding:"8px",background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:7,color:"rgba(255,255,255,0.6)",fontSize:12,fontWeight:700,cursor:"pointer"}}>⏻ Déconnexion</button>
- </div>
- </aside>
+ <>
+   {open && <div className="saas-backdrop" onClick={onClose}/>}
+   <aside className={"saas-sidebar"+(open?" open":"")} style={{width:220,background:C.primary,display:"flex",flexDirection:"column",height:"100vh",position:"sticky",top:0,flexShrink:0}}>
+   <div style={{padding:"16px 16px 12px",borderBottom:"1px solid rgba(255,255,255,0.1)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+     <LogoSVG width={100} showLabel={true} labelColor="white" fillColor="white" brightGreen="#21C45D"/>
+     <button onClick={onClose} style={{display:"none",background:"rgba(255,255,255,.12)",border:"none",borderRadius:7,width:28,height:28,color:"white",fontSize:16,cursor:"pointer",alignItems:"center",justifyContent:"center",flexShrink:0}} className="saas-close-btn">✕</button>
+   </div>
+   <div style={{padding:"5px 16px 8px",borderBottom:"1px solid rgba(255,255,255,0.08)",textAlign:"center"}}>
+   <span style={{fontSize:9,color:"rgba(255,255,255,0.4)",letterSpacing:"0.14em",textTransform:"uppercase"}}>{role}</span>
+   </div>
+   {children}
+   <div style={{padding:"12px 14px",borderTop:"1px solid rgba(255,255,255,0.1)"}}>
+   <button onClick={onLogout} style={{width:"100%",padding:"8px",background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:7,color:"rgba(255,255,255,0.6)",fontSize:12,fontWeight:700,cursor:"pointer"}}>⏻ Déconnexion</button>
+   </div>
+   </aside>
+ </>
  );
 }
 function NavItem({ icon, label, badge, badgeColor, active, onClick }) {
@@ -595,12 +604,12 @@ function NavItem({ icon, label, badge, badgeColor, active, onClick }) {
  </div>
  );
 }
-function AdminSidebar({ view, setView, onLogout, clientCount, alertCount }) {
+function AdminSidebar({ view, setView, onLogout, clientCount, alertCount, open, onClose }) {
  const pendingResets=RESET_REQUESTS.filter(r=>r.status==="pending").length;
  const nav=[{id:"clients",icon:"",label:"Gestion clients",badge:clientCount},{id:"acces",icon:"",label:"Accès clients",badge:pendingResets,badgeColor:C.orange},{id:"saisie",icon:"",label:"Saisie & Import CSV"},{id:"financier",icon:"",label:"Données financières"},{id:"alertes",icon:"",label:"Alertes",badge:alertCount,badgeColor:C.red},{id:"rapports",icon:"",label:"Rapports IA"}];
- return <SidebarBase role="Espace Administrateur" onLogout={onLogout}><nav style={{flex:1,padding:"10px 8px",overflowY:"auto"}}>{nav.map(item=><NavItem key={item.id} {...item} active={view===item.id} onClick={()=>setView(item.id)}/>)}</nav></SidebarBase>;
+ return <SidebarBase role="Espace Administrateur" onLogout={onLogout} open={open} onClose={onClose}><nav style={{flex:1,padding:"10px 8px",overflowY:"auto"}}>{nav.map(item=><NavItem key={item.id} {...item} active={view===item.id} onClick={()=>{setView(item.id);onClose&&onClose();}}/>)}</nav></SidebarBase>;
 }
-function ClientSidebar({ view, setView, onLogout, clientName, alertCount }) {
+function ClientSidebar({ view, setView, onLogout, clientName, alertCount, open, onClose }) {
  const sections = [
  { label:"VUE GÉNÉRALE", items:[
  {id:"dashboard", icon:"", label:"Tableau de bord"},
@@ -631,7 +640,7 @@ function ClientSidebar({ view, setView, onLogout, clientName, alertCount }) {
  ]},
  ];
  return (
- <SidebarBase role="Espace Client" onLogout={onLogout}>
+ <SidebarBase role="Espace Client" onLogout={onLogout} open={open} onClose={onClose}>
  <div style={{padding:"6px 14px 10px",borderBottom:"1px solid rgba(255,255,255,0.1)",textAlign:"center"}}>
  <div style={{fontSize:12,color:"rgba(255,255,255,0.8)",fontWeight:800}}>{clientName}</div>
  </div>
@@ -639,7 +648,7 @@ function ClientSidebar({ view, setView, onLogout, clientName, alertCount }) {
  {sections.map(sec=>(
  <div key={sec.label} style={{marginBottom:8}}>
  <div style={{fontSize:9,color:"rgba(255,255,255,0.35)",fontWeight:800,letterSpacing:"0.12em",padding:"8px 10px 4px"}}>{sec.label}</div>
- {sec.items.map(item=><NavItem key={item.id} {...item} active={view===item.id} onClick={()=>setView(item.id)}/>)}
+ {sec.items.map(item=><NavItem key={item.id} {...item} active={view===item.id} onClick={()=>{setView(item.id);onClose&&onClose();}}/>)}
  </div>
  ))}
  </nav>
@@ -648,10 +657,17 @@ function ClientSidebar({ view, setView, onLogout, clientName, alertCount }) {
 }
 
 // TOPBAR
-function TopBar({ title, user, extra }) {
+function TopBar({ title, user, extra, onMenuToggle }) {
  return (
  <div style={{background:C.white,borderBottom:`1px solid ${C.border}`,padding:"0 24px",height:54,display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0,position:"sticky",top:0,zIndex:10}}>
- <div style={{fontSize:14,fontWeight:800,color:C.text}}>{title}</div>
+ <div style={{display:"flex",alignItems:"center",gap:12}}>
+   <button className="saas-topbar-hamburger" onClick={onMenuToggle} style={{display:"none",flexDirection:"column",gap:4,background:"none",border:"none",cursor:"pointer",padding:4}}>
+     <span style={{display:"block",width:20,height:2,background:C.primary,borderRadius:2}}/>
+     <span style={{display:"block",width:20,height:2,background:C.primary,borderRadius:2}}/>
+     <span style={{display:"block",width:20,height:2,background:C.primary,borderRadius:2}}/>
+   </button>
+   <div style={{fontSize:14,fontWeight:800,color:C.text}}>{title}</div>
+ </div>
  <div style={{display:"flex",alignItems:"center",gap:12}}>
  {extra}
  <div style={{display:"flex",alignItems:"center",gap:8,padding:"4px 12px",background:C.bg,borderRadius:20,border:`1px solid ${C.border}`}}>
@@ -5511,6 +5527,7 @@ function RapportIA({ clients, moisIdx, moisYear }) {
 export default function App() {
   const [user,setUser]=useState(null);
   const [view,setView]=useState("clients");
+  const [menuOpen,setMenuOpen]=useState(false);
   const [resetMode,setResetMode]=useState(false);
   const [resetPassword,setResetPassword]=useState("");
   const [resetConfirm,setResetConfirm]=useState("");
@@ -5723,11 +5740,12 @@ export default function App() {
     return (
       <div style={{display:"flex",height:"100vh",fontFamily:"'Nunito',sans-serif"}}>
         <GlobalCSS/>
-        <ClientSidebar view={view} setView={setView} onLogout={()=>setPreviewClient(null)} clientName={live.name} alertCount={calcAlertes(live,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length}/>
+        <ClientSidebar view={view} setView={setView} onLogout={()=>setPreviewClient(null)} clientName={live.name} alertCount={calcAlertes(live,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <TopBar
             title={`Apercu client — ${live.name}`}
             user={{name:"Admin",role:"ADMIN"}}
+            onMenuToggle={()=>setMenuOpen(o=>!o)}
             extra={
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <span style={{fontSize:12,color:C.textMid,fontWeight:700}}>Mode apercu</span>
@@ -5802,9 +5820,9 @@ export default function App() {
         <GlobalCSS/>
         {/* Popup première connexion — priorité absolue */}
         {user.firstLogin&&<FirstLoginModal user={user} onComplete={(u)=>setUser(u)}/>}
-        <ClientSidebar view={view} setView={setView} onLogout={handleLogout} clientName={client?.name||user.name} alertCount={client?calcAlertes(client,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length:0}/>
+        <ClientSidebar view={view} setView={setView} onLogout={handleLogout} clientName={client?.name||user.name} alertCount={client?calcAlertes(client,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length:0} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-          <TopBar title={CLIENT_TITLES[view]||"Dashboard"} user={user}/>
+          <TopBar title={CLIENT_TITLES[view]||"Dashboard"} user={user} onMenuToggle={()=>setMenuOpen(o=>!o)}/>
           <div style={{flex:1,overflowY:"auto"}}>
             {client&&<ClientSpace client={client} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear}/>}
           </div>
@@ -5818,9 +5836,9 @@ export default function App() {
       <GlobalCSS/>
       {CredentialsModal}
       {FirstLoginPopup}
-      <AdminSidebar view={view} setView={setView} onLogout={handleLogout} clientCount={clients.length} alertCount={totalAlerts}/>
+      <AdminSidebar view={view} setView={setView} onLogout={handleLogout} clientCount={clients.length} alertCount={totalAlerts} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-        <TopBar title={ADMIN_TITLES[view]||"Admin"} user={user}/>
+        <TopBar title={ADMIN_TITLES[view]||"Admin"} user={user} onMenuToggle={()=>setMenuOpen(o=>!o)}/>
         <div style={{flex:1,overflowY:"auto"}}>
           {view==="clients"&&<AdminClients clients={clients} onViewAsClient={setPreviewClient} onAddClient={handleAddClient} onUpdateClient={updateClient} onDeleteClient={(id)=>{(async()=>{
           // Récupérer l'email du client avant suppression
