@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const C = { primary:"#005653", green:"#21C45D", bg:"#ecfdf5", text:"#002e2c", mid:"#2d6b68", light:"#a7d4d0", border:"#c8e8e5" };
 
@@ -42,7 +42,7 @@ const Logo = ({ width=120, white=false }) => {
   return (
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
       <LogoSVG width={width} showLabel={false} fillColor={fillColor} brightGreen={brightGreen} labelColor={textColor}/>
-      <span style={{fontSize:Math.round(width*0.16),fontWeight:900,color:textColor,letterSpacing:"0.06em",textTransform:"uppercase"}}>NVM Finance</span>
+      <span style={{fontSize:Math.round(width*0.16),fontWeight:900,color:textColor,letterSpacing:"0.06em",textTransform:"uppercase"}}>N<span style={{color:brightGreen}}>V</span>M Finance</span>
     </div>
   );
 };
@@ -118,8 +118,10 @@ export default function SitePage() {
   const [heroVisible, setHeroVisible] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [demoTab, setDemoTab] = useState(0);
+  const [demoVisible, setDemoVisible] = useState(false);
   const [scanStep, setScanStep] = useState(-1);
   const [alertsVisible, setAlertsVisible] = useState(0);
+  const demoRef = useRef<HTMLDivElement>(null);
 
   const ca = useCountUp(35400, 2000, heroVisible);
   const mg = useCountUp(949, 1800, heroVisible);
@@ -130,10 +132,13 @@ export default function SitePage() {
     setTimeout(() => { setLoaded(true); setHeroVisible(true); }, 200);
     const onScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setDemoVisible(true); obs.disconnect(); } }, { threshold: 0.25 });
+    if (demoRef.current) obs.observe(demoRef.current);
+    return () => { window.removeEventListener("scroll", onScroll); obs.disconnect(); };
   }, []);
 
   useEffect(() => {
+    if (!demoVisible) return;
     if (demoTab === 0) {
       setScanStep(-1);
       const ts = [700,1500,2300,3100].map((d,i) => setTimeout(() => setScanStep(i), d));
@@ -144,7 +149,7 @@ export default function SitePage() {
       const ts = [200,650,1100].map((d,i) => setTimeout(() => setAlertsVisible(i+1), d));
       return () => ts.forEach(clearTimeout);
     }
-  }, [demoTab]);
+  }, [demoTab, demoVisible]);
 
   const a = (d: number=0) => ({ opacity:loaded?1:0, transform:loaded?"translateY(0)":"translateY(24px)", transition:`opacity .7s ease ${d}s, transform .7s ease ${d}s` });
 
@@ -172,6 +177,7 @@ export default function SitePage() {
         @keyframes badge-pop{0%{opacity:0;transform:scale(.6) translateY(4px)}100%{opacity:1;transform:scale(1) translateY(0)}}
         @keyframes alert-in{0%{opacity:0;transform:translateY(14px)}100%{opacity:1;transform:translateY(0)}}
         @keyframes bar-grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+        @keyframes chart-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
         .demo-tab{background:none;border:1.5px solid #c8e8e5;border-radius:100px;padding:9px 20px;font-family:inherit;font-size:13px;font-weight:800;color:#6aaca8;cursor:pointer;transition:all .2s;}
         .demo-tab.on{background:#005653;border-color:#005653;color:#fff;box-shadow:0 4px 16px rgba(0,86,83,.25);}
         .demo-tab:hover:not(.on){background:#f0faf8;color:#005653;}
@@ -229,7 +235,7 @@ export default function SitePage() {
             ))}
           </div>
           <div className="desktop-actions" style={{display:"flex",gap:10,alignItems:"center"}}>
-            <a href="https://nvm-finance.vercel.app" target="_blank" rel="noopener noreferrer" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Espace client</a>
+            <a href="/auth/login" target="_blank" rel="noopener noreferrer" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Espace client</a>
             <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" style={{background:C.primary,color:"#fff",padding:"9px 22px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 16px rgba(0,86,83,.2)"}}>Prendre RDV</a>
           </div>
           <button className="mobile-ham" onClick={()=>setMenuOpen(true)} style={{display:"none",flexDirection:"column",gap:5,background:"none",border:"none",cursor:"pointer",padding:8}}>
@@ -244,7 +250,7 @@ export default function SitePage() {
             <LogoSVG width={70} showLabel={true} fillColor="#005552" brightGreen="#21C45D" labelColor="#005653"/>
             <button onClick={()=>setMenuOpen(false)} style={{fontSize:20,cursor:"pointer",color:"#6aaca8",background:"none",border:"none",padding:4}}>✕</button>
           </div>
-          {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"},{h:"/demo",l:"Voir la démo"},{h:"https://nvm-finance.vercel.app",l:"Espace client",ext:true}].map((lk,i)=>(
+          {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"},{h:"/demo",l:"Voir la démo"},{h:"/auth/login",l:"Espace client",ext:true}].map((lk,i)=>(
             <a key={i} href={lk.h} target={lk.ext?"_blank":undefined} rel={lk.ext?"noopener noreferrer":undefined} onClick={()=>setMenuOpen(false)}
               style={{display:"block",padding:"16px 24px",fontSize:15,fontWeight:700,color:C.text,textDecoration:"none",borderBottom:`1px solid ${C.border}`}}>
               {lk.l}
@@ -361,12 +367,12 @@ export default function SitePage() {
       </section>
 
       {/* EN ACTION — section interactive demo */}
-      <section className="section-pad" style={{padding:"80px 48px",background:"#fff"}}>
+      <section ref={demoRef} className="section-pad demo-section-pad" style={{padding:"80px 48px",background:"#fff"}}>
         <div style={{maxWidth:1100,margin:"0 auto"}}>
           <div style={{textAlign:"center",marginBottom:40}}>
             <div style={{fontSize:12,fontWeight:800,color:C.primary,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:10}}>L'outil en action</div>
-            <h2 style={{fontSize:"clamp(26px,3.2vw,40px)",fontWeight:900,color:C.text,lineHeight:1.13,marginBottom:12}}>Ce que voit votre client<br/>chaque mois.</h2>
-            <p style={{fontSize:15,fontWeight:600,color:C.mid,maxWidth:440,margin:"0 auto",lineHeight:1.65}}>Chaque module est différent, pensé pour une lecture immédiate.</p>
+            <h2 style={{fontSize:"clamp(26px,3.2vw,40px)",fontWeight:900,color:C.text,lineHeight:1.13,marginBottom:12}}>Une vraie analyse sur vos chiffres,<br/><em style={{color:C.primary,fontStyle:"normal"}}>faite chaque mois.</em></h2>
+            <p style={{fontSize:15,fontWeight:600,color:C.mid,maxWidth:480,margin:"0 auto",lineHeight:1.65}}>Tableau de bord, trésorerie, alertes — chaque module est pensé pour une lecture immédiate et des décisions éclairées.</p>
           </div>
 
           {/* Tabs */}
@@ -383,13 +389,13 @@ export default function SitePage() {
             {demoTab===0&&(
               <div>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
-                  <div style={{fontSize:14,fontWeight:900,color:C.text}}>Tableau de bord · Mai 2026</div>
+                  <div style={{fontSize:14,fontWeight:900,color:C.text}}>Tableau de bord</div>
                   <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,fontWeight:800,color:C.green,background:"#ecfdf5",padding:"4px 12px",borderRadius:20}}>
                     <span style={{width:6,height:6,borderRadius:"50%",background:C.green,display:"inline-block",animation:"pulse-dot 2s infinite"}}/>Live
                   </div>
                 </div>
                 {/* KPI cards avec effet scan */}
-                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:18}}>
+                <div className="demo-kpi-grid" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:18}}>
                   {DEMO_KPIS.map((k,i)=>{
                     const active=scanStep===i, past=scanStep>i;
                     return (
@@ -406,17 +412,30 @@ export default function SitePage() {
                     );
                   })}
                 </div>
-                {/* Mini bar chart CA */}
+                {/* Graphique ligne lissée CA — même style que le hero */}
                 <div style={{background:"#fff",borderRadius:12,padding:"14px 18px",border:`1px solid ${C.border}`}}>
-                  <div style={{fontSize:10,fontWeight:800,color:"#6aaca8",letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:12}}>Évolution CA — 6 derniers mois</div>
-                  <div style={{display:"flex",alignItems:"flex-end",gap:6,height:72}}>
-                    {[58,65,61,70,75,88].map((pct,i)=>(
-                      <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
-                        <div style={{width:"100%",height:pct*.72+"px",background:i===5?C.primary:`rgba(0,86,83,${.18+i*.12})`,borderRadius:"4px 4px 0 0",transformOrigin:"bottom",animation:`bar-grow .6s ease ${i*.08}s both`}}/>
-                        <div style={{fontSize:9,fontWeight:700,color:"#6aaca8"}}>{["N","D","J","F","M","A"][i]}</div>
-                      </div>
-                    ))}
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                    <div style={{fontSize:10,fontWeight:800,color:"#6aaca8",letterSpacing:"0.08em",textTransform:"uppercase"}}>Évolution CA — 6 mois</div>
+                    <div style={{fontSize:10,fontWeight:800,color:C.green,background:"#ecfdf5",padding:"2px 8px",borderRadius:20}}>+52% sur la période</div>
                   </div>
+                  <svg viewBox="0 0 560 80" width="100%" style={{display:"block",overflow:"visible"}}>
+                    <defs>
+                      <linearGradient id="cag" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#005653" stopOpacity="0.14"/>
+                        <stop offset="100%" stopColor="#005653" stopOpacity="0"/>
+                      </linearGradient>
+                    </defs>
+                    <path d="M0,75 L112,59 L224,68 L336,47 L448,35 L560,5 L560,80 L0,80 Z" fill="url(#cag)"/>
+                    <path d="M0,75 L112,59 L224,68 L336,47 L448,35 L560,5" fill="none" stroke="#005653" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"/>
+                    {([[0,75],[112,59],[224,68],[336,47],[448,35],[560,5]] as [number,number][]).map(([x,y],i)=>(
+                      <circle key={i} cx={x} cy={y} r={i===5?5:2.5} fill={i===5?C.primary:"#fff"} stroke={C.primary} strokeWidth={i===5?0:1.5}/>
+                    ))}
+                    <rect x={496} y={-10} width={68} height={20} rx={6} fill={C.primary}/>
+                    <text x={530} y={4} textAnchor="middle" fontSize="9" fill="white" fontFamily="Nunito,sans-serif" fontWeight="800">38 400 € ↑</text>
+                    {(["Nov","Déc","Jan","Fév","Mar","Avr"] as string[]).map((m,i)=>(
+                      <text key={i} x={i*112} y={92} textAnchor={i===0?"start":i===5?"end":"middle"} fontSize="9" fill={i===5?C.text:"#6aaca8"} fontFamily="Nunito,sans-serif" fontWeight={i===5?800:600}>{m}</text>
+                    ))}
+                  </svg>
                 </div>
                 {scanStep<0&&<div style={{textAlign:"center",marginTop:12,fontSize:11,fontWeight:700,color:"#6aaca8"}}>Analyse en cours…</div>}
               </div>
@@ -433,31 +452,55 @@ export default function SitePage() {
                   </div>
                 </div>
                 {/* KPI résumé */}
-                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:20}}>
+                <div className="demo-tresor-kpi" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:20}}>
                   {[
-                    {l:"Solde actuel",v:"38 200 €",c:C.green,sub:"Confortable"},
-                    {l:"Variation vs M-1",v:"+16 000 €",c:C.green,sub:"Hausse forte"},
-                    {l:"Point bas (mars)",v:"12 000 €",c:"#f59e0b",sub:"⚠ Seuil critique"},
+                    {l:"Solde actuel",v:"38 200 €",c:C.green,sub:"Confortable",bg:"#fff",br:C.border},
+                    {l:"Variation vs M-1",v:"+16 000 €",c:C.green,sub:"Hausse forte",bg:"#fff",br:C.border},
+                    {l:"Point bas (mars)",v:"12 000 €",c:"#d97706",sub:"⚠ Seuil critique",bg:"#fffbeb",br:"#fde68a"},
                   ].map((s,i)=>(
-                    <div key={i} style={{background:i===2?"#fffbeb":"#fff",borderRadius:12,padding:"13px 15px",border:`1.5px solid ${i===2?"#fde68a":C.border}`}}>
+                    <div key={i} style={{background:s.bg,borderRadius:12,padding:"13px 15px",border:`1.5px solid ${s.br}`}}>
                       <div style={{fontSize:9,fontWeight:800,color:"#6aaca8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4}}>{s.l}</div>
                       <div style={{fontSize:18,fontWeight:900,color:s.c}}>{s.v}</div>
                       <div style={{fontSize:11,fontWeight:700,color:s.c,marginTop:2}}>{s.sub}</div>
                     </div>
                   ))}
                 </div>
-                {/* Graphique barres trésorerie */}
-                <div style={{background:"#fff",borderRadius:12,padding:"14px 18px",border:`1px solid ${C.border}`}}>
-                  <div style={{fontSize:10,fontWeight:800,color:"#6aaca8",letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:14}}>Solde fin de mois (k€)</div>
-                  <div style={{display:"flex",alignItems:"flex-end",gap:6,height:90,position:"relative"}}>
-                    {TRESOR_DATA.map((d,i)=>(
-                      <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4,position:"relative"}}>
-                        {d.low&&<div style={{position:"absolute",top:-18,left:"50%",transform:"translateX(-50%)",fontSize:8,fontWeight:900,color:"#b45309",whiteSpace:"nowrap",background:"#fef3c7",padding:"1px 5px",borderRadius:4}}>⚠ Bas</div>}
-                        <div style={{fontSize:8,fontWeight:800,color:d.low?"#b45309":C.mid,marginBottom:2}}>{d.v}</div>
-                        <div style={{width:"100%",height:d.pct*.82+"px",background:d.low?"linear-gradient(to top,#f59e0b,#fde68a)":"linear-gradient(to top,rgba(0,86,83,.9),rgba(0,86,83,.45))",borderRadius:"4px 4px 0 0",border:d.low?"1.5px solid #f59e0b":"none",transformOrigin:"bottom",animation:`bar-grow .5s ease ${i*.07}s both`}}/>
-                        <div style={{fontSize:9,fontWeight:700,color:"#6aaca8"}}>{d.m}</div>
-                      </div>
+                {/* Graphique barres trésorerie — style site */}
+                <div style={{background:"#fff",borderRadius:12,padding:"16px 18px 12px",border:`1px solid ${C.border}`}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+                    <div style={{fontSize:10,fontWeight:800,color:"#6aaca8",letterSpacing:"0.08em",textTransform:"uppercase"}}>Solde fin de mois (k€)</div>
+                    <div style={{display:"flex",gap:12}}>
+                      <div style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:2,background:C.primary}}/><span style={{fontSize:9,fontWeight:700,color:C.mid}}>Sain</span></div>
+                      <div style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:2,background:"#f59e0b"}}/><span style={{fontSize:9,fontWeight:700,color:C.mid}}>Critique</span></div>
+                    </div>
+                  </div>
+                  <div style={{position:"relative"}}>
+                    {/* Lignes de grille */}
+                    {[100,66,33].map(pct=>(
+                      <div key={pct} style={{position:"absolute",top:`${(100-pct)*0.86}px`,left:0,right:0,borderTop:"1px dashed rgba(0,86,83,.08)",zIndex:0}}/>
                     ))}
+                    <div style={{display:"flex",alignItems:"flex-end",gap:"3%",height:86,position:"relative",zIndex:1}}>
+                      {TRESOR_DATA.map((d,i)=>(
+                        <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:0,position:"relative"}}>
+                          {d.low&&(
+                            <div style={{position:"absolute",top:-20,left:"50%",transform:"translateX(-50%)",fontSize:8,fontWeight:900,color:"#b45309",whiteSpace:"nowrap",background:"#fef3c7",padding:"1px 6px",borderRadius:4,border:"1px solid #fde68a"}}>⚠</div>
+                          )}
+                          <div style={{fontSize:"clamp(7px,1vw,9px)",fontWeight:800,color:d.low?"#b45309":C.mid,marginBottom:3,whiteSpace:"nowrap"}}>{d.v}</div>
+                          <div style={{
+                            width:"100%",
+                            height:d.pct*.82+"px",
+                            background:d.low
+                              ?"linear-gradient(to top,#f59e0b,#fde68a)"
+                              :"linear-gradient(to top,rgba(0,86,83,.9),rgba(0,86,83,.45))",
+                            borderRadius:"4px 4px 0 0",
+                            border:d.low?"1.5px solid #f59e0b":"none",
+                            transformOrigin:"bottom",
+                            animation:`bar-grow .5s ease ${i*.07}s both`,
+                          }}/>
+                          <div style={{fontSize:"clamp(7px,1vw,9px)",fontWeight:700,color:d.low?"#d97706":"#6aaca8",marginTop:4}}>{d.m}</div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
                 <div style={{marginTop:14,fontSize:12,fontWeight:700,color:"#b45309",background:"#fffbeb",border:"1.5px solid #fde68a",borderRadius:10,padding:"10px 16px"}}>

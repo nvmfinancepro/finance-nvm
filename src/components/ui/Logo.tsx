@@ -35,7 +35,7 @@ export function LogoSVG({
     </svg>
       {showLabel && (
         <div style={{ fontSize: Math.max(9, Math.round(width * 0.12)), fontWeight: 900, color: labelColor, letterSpacing: "0.12em", textTransform: "uppercase", textAlign: "center" }}>
-          NVM Finance
+          N<span style={{ color: brightGreen }}>V</span>M Finance
         </div>
       )}
     </div>

@@ -135,7 +135,7 @@ export default function ServicesPage() {
             ))}
           </div>
           <div className="desktop-actions" style={{display:"flex",gap:10,alignItems:"center"}}>
-            <a href="https://nvm-finance.vercel.app" target="_blank" rel="noopener noreferrer" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Espace client</a>
+            <a href="/auth/login" target="_blank" rel="noopener noreferrer" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Espace client</a>
             <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" style={{background:C.primary,color:"#fff",padding:"9px 22px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 16px rgba(0,86,83,.2)"}}>Prendre RDV</a>
           </div>
           <button className="mobile-ham" onClick={()=>setMenuOpen(true)} style={{display:"none",flexDirection:"column",gap:5,background:"none",border:"none",cursor:"pointer",padding:8}}>
@@ -150,7 +150,7 @@ export default function ServicesPage() {
             <LogoSVG width={70} showLabel={true} fillColor="#005552" brightGreen="#21C45D" labelColor="#005653"/>
             <button onClick={()=>setMenuOpen(false)} style={{fontSize:20,cursor:"pointer",color:"#6aaca8",background:"none",border:"none",padding:4}}>✕</button>
           </div>
-          {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"},{h:"/demo",l:"Voir la démo"},{h:"https://nvm-finance.vercel.app",l:"Espace client",ext:true}].map((lk,i)=>(
+          {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"},{h:"/demo",l:"Voir la démo"},{h:"/auth/login",l:"Espace client",ext:true}].map((lk,i)=>(
             <a key={i} href={lk.h} target={lk.ext?"_blank":undefined} rel={lk.ext?"noopener noreferrer":undefined} onClick={()=>setMenuOpen(false)}
               style={{display:"block",padding:"16px 24px",fontSize:15,fontWeight:700,color:C.text,textDecoration:"none",borderBottom:`1px solid ${C.border}`}}>
               {lk.l}

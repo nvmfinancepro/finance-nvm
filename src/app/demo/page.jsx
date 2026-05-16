@@ -62,7 +62,7 @@ function Nav({ open, setOpen }) {
     {h:"/",l:"Accueil"},
     {h:"/services",l:"Nos offres"},
     {h:"/demo",l:"Voir la démo"},
-    {h:"https://nvm-finance.vercel.app",l:"Espace client",ext:true},
+    {h:"/auth/login",l:"Espace client",ext:true},
   ];
   return (
     <>
