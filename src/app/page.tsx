@@ -48,19 +48,23 @@ const Logo = ({ width=120, white=false }) => {
 };
 
 
-function useCountUp(target: number, duration: number=1800, start: boolean=false) {
+function useCountUp(target: number, duration: number=1800, start: boolean=false, resetKey: number=0) {
   const [val, setVal] = useState(0);
   useEffect(() => {
     if (!start) return;
+    setVal(0);
     const s = Date.now();
+    let cancelled = false;
     const tick = () => {
+      if (cancelled) return;
       const p = Math.min((Date.now()-s)/duration, 1);
       const ease = 1 - Math.pow(1-p, 3);
       setVal(Math.round(target * ease));
       if (p < 1) requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
-  }, [start, target, duration]);
+    return () => { cancelled = true; };
+  }, [start, target, duration, resetKey]);
   return val;
 }
 
@@ -116,6 +120,7 @@ export default function SitePage() {
   const [loaded, setLoaded] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [heroVisible, setHeroVisible] = useState(false);
+  const [statsKey, setStatsKey] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [demoTab, setDemoTab] = useState(0);
   const [demoVisible, setDemoVisible] = useState(false);
@@ -124,10 +129,10 @@ export default function SitePage() {
   const [tresorKey, setTresorKey] = useState(0);
   const demoRef = useRef<HTMLDivElement>(null);
 
-  const ca = useCountUp(35400, 2000, heroVisible);
-  const mg = useCountUp(949, 1800, heroVisible);
-  const ebe = useCountUp(18750, 2200, heroVisible);
-  const tr = useCountUp(94200, 2400, heroVisible);
+  const ca = useCountUp(35400, 2000, heroVisible, statsKey);
+  const mg = useCountUp(949, 1800, heroVisible, statsKey);
+  const ebe = useCountUp(18750, 2200, heroVisible, statsKey);
+  const tr = useCountUp(94200, 2400, heroVisible, statsKey);
 
   useEffect(() => {
     setTimeout(() => { setLoaded(true); setHeroVisible(true); }, 200);
@@ -135,7 +140,15 @@ export default function SitePage() {
     window.addEventListener("scroll", onScroll);
     const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setDemoVisible(true); obs.disconnect(); } }, { threshold: 0.1 });
     if (demoRef.current) obs.observe(demoRef.current);
-    return () => { window.removeEventListener("scroll", onScroll); obs.disconnect(); };
+    // Boucle chiffres hero : relance toutes les 5.5s (2.4s anim + 3s pause)
+    let dead = false;
+    const loop = () => {
+      if (dead) return;
+      setStatsKey(k => k + 1);
+      setTimeout(loop, 2400 + 3000);
+    };
+    const loopTimer = setTimeout(loop, 2400 + 3000);
+    return () => { dead = true; clearTimeout(loopTimer); window.removeEventListener("scroll", onScroll); obs.disconnect(); };
   }, []);
 
   useEffect(() => {
