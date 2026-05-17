@@ -134,7 +134,7 @@ export default function ServicesPage() {
           </div>
           <div style={{display:"flex",gap:10,alignItems:"center"}}>
             <a href="https://nvm-finance.vercel.app" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Espace client</a>
-            <a href="https://meet.brevo.com/nathan-van-meer-1" style={{background:C.primary,color:"#fff",padding:"9px 22px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 16px rgba(0,86,83,.2)"}}>Prendre RDV</a>
+            <a href="https://calendly.com/nvmfinance-pro/30min" style={{background:C.primary,color:"#fff",padding:"9px 22px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 16px rgba(0,86,83,.2)"}}>Prendre RDV</a>
           </div>
         </div>
         <div className="mobile-nav-bar" style={{display:"none",justifyContent:"flex-end",padding:"8px 20px 12px",borderTop:`1px solid ${C.border}`}}>
@@ -157,7 +157,7 @@ export default function ServicesPage() {
             </a>
           ))}
           <div style={{padding:"20px 24px",marginTop:"auto"}}>
-            <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" onClick={()=>setMenuOpen(false)}
+            <a href="https://calendly.com/nvmfinance-pro/30min" target="_blank" rel="noopener noreferrer" onClick={()=>setMenuOpen(false)}
               style={{display:"block",background:C.primary,color:"#fff",padding:"14px",borderRadius:100,fontSize:14,fontWeight:900,textDecoration:"none",textAlign:"center"}}>
               Prendre RDV
             </a>
@@ -203,7 +203,7 @@ export default function ServicesPage() {
                   <span style={{fontSize:12,fontWeight:600,color:C.mid}}> / Unité</span>
                 </div>}
                 {"note" in o && o.note && <div style={{fontSize:10,color:C.mid,marginTop:4}}>{o.note}</div>}
-                <a href="https://meet.brevo.com/nathan-van-meer-1" style={{display:"block",marginTop:16,background:o.best?C.primary:"white",color:o.best?"#fff":C.primary,padding:"11px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",textAlign:"center",border:`2px solid ${C.primary}`,transition:"all .2s"}}>
+                <a href="https://calendly.com/nvmfinance-pro/30min" style={{display:"block",marginTop:16,background:o.best?C.primary:"white",color:o.best?"#fff":C.primary,padding:"11px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",textAlign:"center",border:`2px solid ${C.primary}`,transition:"all .2s"}}>
                   Démarrer
                 </a>
               </div>
@@ -243,7 +243,7 @@ export default function ServicesPage() {
       <section className="hero-pad" style={{background:C.primary,padding:"64px 48px",textAlign:"center"}}>
         <h2 style={{fontSize:34,fontWeight:900,color:"#fff",marginBottom:12,lineHeight:1.1}}>Pas sûr de quelle offre choisir ?</h2>
         <p style={{fontSize:16,fontWeight:600,color:"rgba(255,255,255,.7)",marginBottom:32}}>On fait le point ensemble en 20 minutes — gratuitement.</p>
-        <a href="https://meet.brevo.com/nathan-van-meer-1" style={{background:C.green,color:C.text,padding:"16px 44px",borderRadius:100,fontSize:16,fontWeight:900,textDecoration:"none",display:"inline-block",boxShadow:"0 4px 24px rgba(33,196,93,.3)"}}>
+        <a href="https://calendly.com/nvmfinance-pro/30min" style={{background:C.green,color:C.text,padding:"16px 44px",borderRadius:100,fontSize:16,fontWeight:900,textDecoration:"none",display:"inline-block",boxShadow:"0 4px 24px rgba(33,196,93,.3)"}}>
           Prendre RDV gratuitement →
         </a>
         <div style={{marginTop:16,fontSize:12,fontWeight:700,color:"rgba(255,255,255,.5)"}}>nathan@nvm-finance.fr · 07 83 65 76 39</div>

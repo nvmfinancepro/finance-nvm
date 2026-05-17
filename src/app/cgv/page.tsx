@@ -58,7 +58,7 @@ export default function Page() {
           </div>
           <div style={{display:"flex",gap:10,alignItems:"center"}}>
             <a href="https://nvm-finance.vercel.app" target="_blank" rel="noopener noreferrer" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Espace client</a>
-            <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" style={{background:C.primary,color:"#fff",padding:"9px 22px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none"}}>Prendre RDV</a>
+            <a href="https://calendly.com/nvmfinance-pro/30min" target="_blank" rel="noopener noreferrer" style={{background:C.primary,color:"#fff",padding:"9px 22px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none"}}>Prendre RDV</a>
           </div>
         </div>
       
@@ -82,7 +82,7 @@ export default function Page() {
             </a>
           ))}
           <div style={{padding:"20px 24px",marginTop:"auto"}}>
-            <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" onClick={()=>setMenuOpen(false)}
+            <a href="https://calendly.com/nvmfinance-pro/30min" target="_blank" rel="noopener noreferrer" onClick={()=>setMenuOpen(false)}
               style={{display:"block",background:"#005653",color:"#fff",padding:"14px",borderRadius:100,fontSize:14,fontWeight:900,textDecoration:"none",textAlign:"center"}}>
               Prendre RDV
             </a>
@@ -141,7 +141,7 @@ export default function Page() {
             </div>
             <div>
               <div style={{fontSize:11,fontWeight:800,color:"rgba(255,255,255,.3)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Contact</div>
-              <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" style={{display:"block",fontSize:13,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Prendre RDV</a>
+              <a href="https://calendly.com/nvmfinance-pro/30min" target="_blank" rel="noopener noreferrer" style={{display:"block",fontSize:13,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Prendre RDV</a>
               <a href="mailto:nathan@nvm-finance.fr" style={{display:"block",fontSize:13,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Nous écrire</a>
               <a href="https://nvm-finance.vercel.app" target="_blank" rel="noopener noreferrer" style={{display:"block",fontSize:13,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Espace client</a>
             </div>

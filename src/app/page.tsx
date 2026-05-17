@@ -276,7 +276,7 @@ export default function SitePage() {
           </div>
           <div className="desktop-actions" style={{display:"flex",gap:10,alignItems:"center"}}>
             <a href="/auth/login" target="_blank" rel="noopener noreferrer" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Espace client</a>
-            <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" style={{background:C.primary,color:"#fff",padding:"9px 22px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 16px rgba(0,86,83,.2)"}}>Prendre RDV</a>
+            <a href="https://calendly.com/nvmfinance-pro/30min" target="_blank" rel="noopener noreferrer" style={{background:C.primary,color:"#fff",padding:"9px 22px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 16px rgba(0,86,83,.2)"}}>Prendre RDV</a>
           </div>
           <button className="mobile-ham" onClick={()=>setMenuOpen(true)} style={{display:"none",flexDirection:"column",gap:5,background:"none",border:"none",cursor:"pointer",padding:8}}>
             <span style={{display:"block",width:22,height:2,background:C.primary,borderRadius:2}}/>
@@ -297,7 +297,7 @@ export default function SitePage() {
             </a>
           ))}
           <div style={{padding:"20px 24px",marginTop:"auto"}}>
-            <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" onClick={()=>setMenuOpen(false)}
+            <a href="https://calendly.com/nvmfinance-pro/30min" target="_blank" rel="noopener noreferrer" onClick={()=>setMenuOpen(false)}
               style={{display:"block",background:C.primary,color:"#fff",padding:"14px",borderRadius:100,fontSize:14,fontWeight:900,textDecoration:"none",textAlign:"center"}}>
               Prendre RDV
             </a>
@@ -320,7 +320,7 @@ export default function SitePage() {
             </p>
             <p style={{...a(.22),fontSize:14,fontWeight:800,color:C.primary,marginBottom:36}}>Mise en place en 48h · Sans engagement.</p>
             <div className="cta-btns" style={{...a(.3),display:"flex",gap:12,flexWrap:"wrap",marginBottom:40}}>
-              <a href="https://meet.brevo.com/nathan-van-meer-1" className="cta-main" style={{background:C.primary,color:"#fff",padding:"15px 32px",borderRadius:100,fontSize:15,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 24px rgba(0,86,83,.25)",transition:"all .2s"}}>Demander une analyse gratuite</a>
+              <a href="https://calendly.com/nvmfinance-pro/30min" className="cta-main" style={{background:C.primary,color:"#fff",padding:"15px 32px",borderRadius:100,fontSize:15,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 24px rgba(0,86,83,.25)",transition:"all .2s"}}>Demander une analyse gratuite</a>
               <a href="/demo" className="cta-outline" style={{background:"#fff",color:C.primary,padding:"15px 32px",borderRadius:100,fontSize:15,fontWeight:800,textDecoration:"none",border:`2px solid ${C.light}`,transition:"all .2s"}}>Voir la démo →</a>
             </div>
             <div className="stats-row" style={{...a(.4),display:"flex",gap:0,paddingTop:28,borderTop:`1px solid ${C.border}`}}>
@@ -618,7 +618,7 @@ export default function SitePage() {
           <div>
             <h2 style={{fontSize:"clamp(28px,3.2vw,40px)",fontWeight:900,color:"#fff",lineHeight:1.15,marginBottom:16}}>Ce que vous gagnez dès le premier mois.</h2>
             <p style={{fontSize:15,fontWeight:600,color:"rgba(255,255,255,.6)",lineHeight:1.75,marginBottom:32}}>Une clarté financière que peu d'entreprises ont — sans embaucher un DAF.</p>
-            <a href="https://meet.brevo.com/nathan-van-meer-1" style={{background:C.green,color:C.text,padding:"14px 32px",borderRadius:100,fontSize:14,fontWeight:900,textDecoration:"none",display:"inline-block",boxShadow:"0 4px 20px rgba(33,196,93,.3)"}}>Démarrer maintenant →</a>
+            <a href="https://calendly.com/nvmfinance-pro/30min" style={{background:C.green,color:C.text,padding:"14px 32px",borderRadius:100,fontSize:14,fontWeight:900,textDecoration:"none",display:"inline-block",boxShadow:"0 4px 20px rgba(33,196,93,.3)"}}>Démarrer maintenant →</a>
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
             {["Vision exacte de votre rentabilité chaque mois","Risques identifiés avant qu'ils deviennent des problèmes","Recommandations concrètes adaptées à votre activité","Prévisionnel fiable pour décider avec confiance","Moins de temps sur les chiffres, plus sur votre métier","Sérénité : vous savez exactement où vous en êtes"].map((t,i)=>(
@@ -671,7 +671,7 @@ export default function SitePage() {
         </h2>
         <p style={{fontSize:16,fontWeight:600,color:C.mid,marginBottom:40}}>Analyse financière gratuite · Sans engagement · Mise en place en 48h</p>
         <div className="cta-box" style={{display:"inline-flex",flexDirection:"column",alignItems:"center",gap:16,background:"#fff",border:`1.5px solid ${C.border}`,borderRadius:24,padding:"40px 56px",boxShadow:"0 16px 64px rgba(0,86,83,.08)"}}>
-          <a href="https://meet.brevo.com/nathan-van-meer-1" className="cta-main" style={{background:C.primary,color:"#fff",padding:"18px 48px",borderRadius:100,fontSize:17,fontWeight:900,textDecoration:"none",boxShadow:"0 4px 24px rgba(0,86,83,.25)",transition:"all .2s"}}>
+          <a href="https://calendly.com/nvmfinance-pro/30min" className="cta-main" style={{background:C.primary,color:"#fff",padding:"18px 48px",borderRadius:100,fontSize:17,fontWeight:900,textDecoration:"none",boxShadow:"0 4px 24px rgba(0,86,83,.25)",transition:"all .2s"}}>
             Demander mon analyse gratuite
           </a>
           <div style={{display:"flex",gap:20,alignItems:"center"}}>
@@ -704,7 +704,7 @@ export default function SitePage() {
             </div>
             <div>
               <div style={{fontSize:11,fontWeight:800,color:"rgba(255,255,255,.3)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Contact</div>
-              <a href="https://meet.brevo.com/nathan-van-meer-1" style={{display:"block",fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Prendre RDV</a>
+              <a href="https://calendly.com/nvmfinance-pro/30min" style={{display:"block",fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Prendre RDV</a>
               <a href="mailto:nathan@nvm-finance.fr" style={{display:"block",fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Nous écrire</a>
             </div>
             <div>

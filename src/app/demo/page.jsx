@@ -86,7 +86,7 @@ function Nav({ open, setOpen }) {
           </a>
         ))}
         <div style={{padding:"20px 24px",marginTop:"auto"}}>
-          <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" onClick={()=>setOpen(false)}
+          <a href="https://calendly.com/nvmfinance-pro/30min" target="_blank" rel="noopener noreferrer" onClick={()=>setOpen(false)}
             style={{display:"block",background:"#005653",color:"#fff",padding:"14px",borderRadius:100,fontSize:14,fontWeight:900,textDecoration:"none",textAlign:"center"}}>
             Prendre RDV
           </a>
@@ -588,7 +588,7 @@ function S5({ show }) {
       <p className="fu" style={{animationDelay:".65s",color:"rgba(255,255,255,.45)",fontSize:"clamp(13px,1.8vw,16px)",textAlign:"center",margin:"0 0 38px",fontWeight:600}}>
         Mise en place en 48h · Sans engagement
       </p>
-      <a href="https://meet.brevo.com/nathan-van-meer-1" target="_blank" rel="noopener noreferrer" className="fu" onClick={e=>e.stopPropagation()} style={{animationDelay:".88s",display:"inline-block",background:"#21C45D",color:"#002e2c",padding:"18px 56px",borderRadius:16,fontWeight:900,fontSize:18,textDecoration:"none",letterSpacing:"0.02em",boxShadow:"0 10px 36px rgba(33,196,93,.38)",position:"relative",zIndex:50,cursor:"pointer"}}>
+      <a href="https://calendly.com/nvmfinance-pro/30min" target="_blank" rel="noopener noreferrer" className="fu" onClick={e=>e.stopPropagation()} style={{animationDelay:".88s",display:"inline-block",background:"#21C45D",color:"#002e2c",padding:"18px 56px",borderRadius:16,fontWeight:900,fontSize:18,textDecoration:"none",letterSpacing:"0.02em",boxShadow:"0 10px 36px rgba(33,196,93,.38)",position:"relative",zIndex:50,cursor:"pointer"}}>
         Demandez votre accès
       </a>
     </Scn>
