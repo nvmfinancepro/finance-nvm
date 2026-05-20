@@ -18,9 +18,18 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     setLoading(true); setErr("");
-    const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
-    if (error) setErr("Identifiants incorrects. Vérifiez votre e-mail et mot de passe.");
-    else router.push("/dashboard");
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+    if (error) {
+      setErr("Identifiants incorrects. Vérifiez votre e-mail et mot de passe.");
+      setLoading(false);
+      return;
+    }
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", data.user.id)
+      .single();
+    router.push(profile?.role === "ADMIN" ? "/admin" : "/client");
     setLoading(false);
   };
 
