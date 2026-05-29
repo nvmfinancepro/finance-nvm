@@ -1,22 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Cette route est côté serveur — la clé API Anthropic ne jamais exposée au client
 export async function POST(req: NextRequest) {
+  if (!process.env.OPENAI_API_KEY) {
+    return NextResponse.json({ error: "OPENAI_API_KEY manquante" }, { status: 500 });
+  }
   const { prompt } = await req.json();
-
   if (!prompt) return NextResponse.json({ error: "Prompt requis" }, { status: 400 });
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
-      "Content-Type":      "application/json",
-      "x-api-key":         process.env.ANTHROPIC_API_KEY!,
-      "anthropic-version": "2023-06-01",
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
-      model:      "claude-sonnet-4-20250514",
-      max_tokens: 1200,
-      messages:   [{ role: "user", content: prompt }],
+      model: "gpt-4o-mini",
+      max_tokens: 1500,
+      messages: [
+        { role: "system", content: "Tu es un analyste financier senior." },
+        { role: "user", content: prompt },
+      ],
     }),
   });
 
@@ -26,6 +29,6 @@ export async function POST(req: NextRequest) {
   }
 
   const data = await response.json();
-  const text = data.content?.map((b: { type: string; text?: string }) => b.text ?? "").join("") ?? "";
+  const text = data.choices?.[0]?.message?.content ?? "";
   return NextResponse.json({ text });
 }

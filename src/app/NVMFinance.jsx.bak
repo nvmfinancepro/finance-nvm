@@ -5146,786 +5146,486 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
 
 
 // ─── PLANNING RH ────────────────────────────────────────────────
-// ─── Planning helpers ─────────────────────────────────────────────────────────
-function plGetMonday(date) {
- const d=new Date(date), day=d.getDay(), diff=day===0?-6:1-day;
- d.setDate(d.getDate()+diff); d.setHours(0,0,0,0); return d;
-}
-
-function PlanningWeekView({ employes, planning, weekStart, TC, empKey, dStr, fmtH, openEditCreneau, openAddCreneau, isAdminPreview, C }) {
- const DAY_I=["D","L","M","M","J","V","S"];
- const days=Array.from({length:7},(_,i)=>{const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);return d;});
- const isWE=d=>d.getDay()===0||d.getDay()===6;
- return (
-  <div style={{padding:"16px 20px",minWidth:720}}>
-   <table style={{width:"100%",borderCollapse:"collapse"}}>
-    <thead>
-     <tr>
-      <th style={{width:130,padding:"8px 12px",textAlign:"left",fontWeight:800,color:C.text,fontSize:12,borderBottom:"2px solid #a7d4d0",background:"white",position:"sticky",left:0,zIndex:2}}>Employé</th>
-      {days.map(d=>(
-       <th key={dStr(d)} style={{padding:"8px 6px",textAlign:"center",fontWeight:700,fontSize:11,borderBottom:"2px solid #a7d4d0",background:isWE(d)?"#f0faf8":"white",minWidth:90}}>
-        <div style={{fontSize:13,fontWeight:800,color:isWE(d)?"#005653":C.text}}>{DAY_I[d.getDay()]} {d.getDate()}</div>
-        <div style={{fontSize:10,color:C.textLight,marginTop:1}}>{d.toLocaleDateString("fr-FR",{month:"short"})}</div>
-       </th>
-      ))}
-     </tr>
-    </thead>
-    <tbody>
-     {employes.length===0&&<tr><td colSpan={8} style={{padding:"60px 0",textAlign:"center",color:C.textLight,fontSize:13}}>Aucun employé — ajoutez l'équipe via la fiche employé</td></tr>}
-     {employes.map(emp=>{
-      const ek=empKey(emp);
-      return (
-       <tr key={emp.id} style={{borderBottom:"1px solid #c8e8e5"}}>
-        <td style={{padding:"8px 12px",fontWeight:800,color:C.text,fontSize:12,background:"white",position:"sticky",left:0,zIndex:1,borderRight:"1px solid #c8e8e5"}}>
-         <div style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{emp.prenom} {emp.nom}</div>
-         {emp.poste&&<div style={{fontSize:10,color:C.textLight,fontWeight:400}}>{emp.poste}</div>}
-        </td>
-        {days.map(d=>{
-         const ds=dStr(d);
-         const c=planning[ek]?.[ds];
-         const tc=c?TC[c.type]||TC.repos:null;
-         const label=c&&c.type!=="repos"&&c.debut&&c.fin?`${fmtH(c.debut)} – ${fmtH(c.fin)}`:tc?TC[c.type]?.label:"";
-         return (
-          <td key={ds} style={{padding:4,background:isWE(d)?"#f8fffe":"transparent"}}>
-           <div onClick={()=>{if(c)openEditCreneau(ek,ds,c);else openAddCreneau(ek,ds);}}
-            style={{minHeight:56,borderRadius:8,background:tc?tc.bg:"transparent",border:tc?"none":"1.5px dashed #c8e8e5",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",padding:"4px 3px",transition:"all .1s",gap:2}}
-            onMouseEnter={e=>{if(!tc){e.currentTarget.style.borderColor="#005653";e.currentTarget.style.background="#f0faf8";}e.currentTarget.style.opacity=".82";}}
-            onMouseLeave={e=>{e.currentTarget.style.borderColor="#c8e8e5";e.currentTarget.style.background=tc?tc.bg:"transparent";e.currentTarget.style.opacity="1";}}>
-            {tc?(
-             <>
-              <div style={{fontSize:10,fontWeight:800,color:tc.text,textAlign:"center",lineHeight:1.2}}>{TC[c.type]?.label}</div>
-              {c.debut&&c.fin&&<div style={{fontSize:8,color:tc.text,opacity:.85,textAlign:"center",lineHeight:1.2}}>{label}</div>}
-             </>
-            ):(
-             <span style={{fontSize:18,color:"#c8e8e5",lineHeight:1,fontWeight:300}}>+</span>
-            )}
-           </div>
-          </td>
-         );
-        })}
-       </tr>
-      );
-     })}
-    </tbody>
-   </table>
-  </div>
- );
-}
-
-function PlanningMonthView({ employes, planning, moisNav, TC, empKey, dStr, openEditCreneau, openAddCreneau, isAdminPreview, C }) {
- const yr=moisNav.getFullYear(), mo=moisNav.getMonth();
- const nDays=new Date(yr,mo+1,0).getDate();
- const firstDow=new Date(yr,mo,1).getDay();
- const offset=(firstDow+6)%7;
- const weeks=[];
- let week=[];
- for(let i=0;i<offset;i++) week.push(null);
- for(let d=1;d<=nDays;d++){
-  week.push(d);
-  if(week.length===7){weeks.push(week);week=[];}
- }
- while(week.length>0&&week.length<7) week.push(null);
- if(week.some(x=>x!==null)) weeks.push(week);
- const ds2=(d)=>`${yr}-${String(mo+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
- const today=new Date();
- const isToday=(d)=>d&&today.getFullYear()===yr&&today.getMonth()===mo&&today.getDate()===d;
- return (
-  <div style={{padding:"16px 20px",minWidth:600}}>
-   <table style={{width:"100%",borderCollapse:"collapse",tableLayout:"fixed"}}>
-    <thead>
-     <tr>
-      {["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"].map((j,i)=>(
-       <th key={j} style={{padding:"8px 4px",textAlign:"center",fontWeight:700,fontSize:11,color:i>=5?"#005653":C.textMid,borderBottom:"2px solid #a7d4d0",background:i>=5?"#f0faf8":"transparent"}}>{j}</th>
-      ))}
-     </tr>
-    </thead>
-    <tbody>
-     {weeks.map((week,wi)=>(
-      <tr key={wi}>
-       {week.map((d,di)=>(
-        <td key={di} style={{verticalAlign:"top",padding:3,background:di>=5?"#f8fffe":"white",border:"1px solid #c8e8e5",height:90,minWidth:80}}>
-         {d!==null&&(
-          <div>
-           <div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:22,height:22,borderRadius:"50%",background:isToday(d)?"#005653":"transparent",marginBottom:3}}>
-            <span style={{fontSize:11,fontWeight:800,color:isToday(d)?"white":C.textMid}}>{d}</span>
-           </div>
-           <div style={{display:"flex",flexDirection:"column",gap:2}}>
-            {employes.map(emp=>{
-             const ek=empKey(emp); const cds=ds2(d); const c=planning[ek]?.[cds];
-             if(!c) return null;
-             const tc=TC[c.type]||TC.repos;
-             return (
-              <div key={emp.id} onClick={()=>{openEditCreneau(ek,cds,c);}} style={{padding:"1px 5px",borderRadius:3,background:tc.bg,cursor:"pointer",fontSize:9,fontWeight:700,color:tc.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
-               {(emp.prenom||"").charAt(0)}. {TC[c.type]?.label}
-              </div>
-             );
-            })}
-           </div>
-          </div>
-         )}
-        </td>
-       ))}
-      </tr>
-     ))}
-    </tbody>
-   </table>
-  </div>
- );
-}
-
-function PlanningListView({ employes, planning, moisNav, TC, empKey, fmtH, C }) {
- const yr=moisNav.getFullYear(), mo=moisNav.getMonth();
- const nDays=new Date(yr,mo+1,0).getDate();
- const rows=[];
- for(let d=1;d<=nDays;d++){
-  const ds=`${yr}-${String(mo+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-  employes.forEach(emp=>{
-   const ek=empKey(emp); const c=planning[ek]?.[ds];
-   if(c){
-    let h=0;
-    if(c.type!=="repos"&&c.debut&&c.fin){const[dh,dm]=c.debut.split(":").map(Number);const[fh,fm]=c.fin.split(":").map(Number);h=(fh*60+fm-dh*60-dm)/60;}
-    rows.push({ds,emp,c,h:Math.round(h*10)/10});
-   }
-  });
- }
- return (
-  <div style={{padding:"16px 20px"}}>
-   <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
-    <thead>
-     <tr style={{background:"#f8fffe"}}>
-      {["Date","Employé","Créneau","Horaires","Heures"].map((h,i)=>(
-       <th key={h} style={{padding:"10px 14px",textAlign:i===4?"right":"left",fontWeight:800,color:C.textMid,fontSize:11,borderBottom:"2px solid #a7d4d0",textTransform:"uppercase",letterSpacing:"0.05em"}}>{h}</th>
-      ))}
-     </tr>
-    </thead>
-    <tbody>
-     {rows.length===0&&<tr><td colSpan={5} style={{padding:"60px 0",textAlign:"center",color:C.textLight,fontSize:13}}>Aucun créneau planifié ce mois</td></tr>}
-     {rows.map((row,i)=>{
-      const tc=TC[row.c.type]||TC.repos;
-      const dateLabel=new Date(row.ds+"T12:00").toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
-      return (
-       <tr key={i} style={{borderBottom:"1px solid #c8e8e5"}}>
-        <td style={{padding:"10px 14px",color:C.text,fontSize:12}}>{dateLabel}</td>
-        <td style={{padding:"10px 14px",fontWeight:700,color:C.text,fontSize:12}}>{row.emp.prenom} {row.emp.nom}</td>
-        <td style={{padding:"10px 14px"}}><span style={{padding:"3px 10px",borderRadius:20,background:tc.bg,color:tc.text,fontSize:11,fontWeight:700}}>{TC[row.c.type]?.label||row.c.type}</span></td>
-        <td style={{padding:"10px 14px",color:C.textMid,fontSize:12,fontFamily:"monospace"}}>{row.c.debut&&row.c.fin?`${row.c.debut} – ${row.c.fin}`:"—"}</td>
-        <td style={{padding:"10px 14px",textAlign:"right",fontWeight:700,color:C.text,fontSize:12}}>{row.h>0?`${row.h}h`:"—"}</td>
-       </tr>
-      );
-     })}
-    </tbody>
-   </table>
-  </div>
- );
-}
-
 function PlanningView({ client, isAdminPreview=false }) {
- const [vue,setVue]=useState("semaine");
+ const [tab,setTab]=useState("equipe");
+ // equipe
  const [employes,setEmployes]=useState([]);
+ const [loadingP,setLoadingP]=useState(true);
+ const [showEmpForm,setShowEmpForm]=useState(false);
+ const [empForm,setEmpForm]=useState({prenom:"",nom:"",poste:"",heures_semaine:35});
+ const [editEmpId,setEditEmpId]=useState(null);
+ // regles
+ const [regles,setRegles]=useState({ouverture:"09:00",fermeture:"19:00",jours_ouverture:[0,1,2,3,4],couverture_min:2,premiere_arrivee:"08:00",derniere_depart:"19:00",renforts:[]});
+ const [saveReglesMsg,setSaveReglesMsg]=useState("");
+ // planning
+ const [moisP,setMoisP]=useState(()=>`${CUR_Y}-${String(CUR_M+1).padStart(2,"0")}`);
+ const [notes,setNotes]=useState("");
+ const [saveNotesMsg,setSaveNotesMsg]=useState("");
  const [planning,setPlanning]=useState({});
- const [loading,setLoading]=useState(true);
- const [weekStart,setWeekStart]=useState(()=>plGetMonday(new Date()));
- const [moisNav,setMoisNav]=useState(()=>{const n=new Date();return new Date(n.getFullYear(),n.getMonth(),1);});
+ const [generating,setGenerating]=useState(false);
+ const [genMsg,setGenMsg]=useState("");
+ const [editCell,setEditCell]=useState(null);
+ const [cellForm,setCellForm]=useState({type:"travail",debut:"09:00",fin:"18:00"});
 
- // panels
- const [panelType,setPanelType]=useState(null);
- const [panelData,setPanelData]=useState(null);
-
- // edit form
- const [editForm,setEditForm]=useState({type:"matin",debut:"08:00",fin:"14:00",note:"",iaRaison:""});
- // add form
- const [addForm,setAddForm]=useState({empKey:"",dateStr:"",type:"matin",debut:"08:00",fin:"14:00",note:""});
- // fiche form
- const [ficheForm,setFicheForm]=useState({});
- const [ficheSaving,setFicheSaving]=useState(false);
- const [addEmpForm,setAddEmpForm]=useState({prenom:"",nom:"",poste:"",heures_semaine:35});
- const [addEmpSaving,setAddEmpSaving]=useState(false);
- const [addEmpError,setAddEmpError]=useState("");
-
- // IA
- const [iaNotes,setIaNotes]=useState("");
- const [iaOpts,setIaOpts]=useState({contrats:true,hs:true,reconduit:true,conges:true});
- const [iaGenerating,setIaGenerating]=useState(false);
- const [iaPropositions,setIaPropositions]=useState([]);
- const [iaLastNote,setIaLastNote]=useState("");
- const [iaError,setIaError]=useState("");
-
- // helpers
- const empKey=e=>`${(e.prenom||"").toUpperCase()} ${e.nom.toUpperCase()}`.trim();
- const dStr=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
- const fmtH=t=>{if(!t)return "";const[h,m]=t.split(":").map(Number);return m===0?`${h}h`:`${h}h${String(m).padStart(2,"0")}`;};
- const moisStr=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
- const TC={
-  matin:      {bg:"#005653",text:"#fff",label:"Matin"},
-  "apres-midi":{bg:"#7C3AED",text:"#fff",label:"Après-midi"},
-  journee:    {bg:"#2563EB",text:"#fff",label:"Journée"},
-  repos:      {bg:"#E5E7EB",text:"#6B7280",label:"Repos"},
- };
- const TYPES=["matin","apres-midi","journee","repos"];
- const DEF_DEBUT={matin:"08:00","apres-midi":"13:00",journee:"09:00",repos:""};
- const DEF_FIN  ={matin:"14:00","apres-midi":"19:00",journee:"18:00",repos:""};
- const AVATAR_COLORS=["#005653","#7C3AED","#2563EB","#059669","#D97706","#0891B2","#DC2626","#6D28D9"];
- const avatarColor=i=>AVATAR_COLORS[i%AVATAR_COLORS.length];
- const initiales=e=>((e.prenom||"").charAt(0)+(e.nom||"").charAt(0)).toUpperCase()||"?";
-
- const SI={padding:"8px 12px",borderRadius:8,border:"1.5px solid #d1d5db",fontSize:13,fontFamily:"'Nunito',sans-serif",outline:"none",background:"white",color:C.text,boxSizing:"border-box"};
- const INP={...SI,width:"100%"};
- const LBL={fontSize:11,color:"#6b7280",fontWeight:700,display:"block",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.07em"};
-
- // ── Load ──────────────────────────────────────────────────────
  useEffect(()=>{
   (async()=>{
-   setLoading(true);
+   setLoadingP(true);
    try {
-    // Collect all months touched by the current view (cross-month week support)
-    const monthSet=new Set();
-    if(vue==="semaine"){
-     for(let i=0;i<7;i++){const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);monthSet.add(moisStr(d));}
-    } else {
-     monthSet.add(moisStr(moisNav));
-    }
-    const months=Array.from(monthSet);
-    const[eR,...pRs]=await Promise.all([
+    const [eR,rR,pR]=await Promise.all([
      supabase.from("employes").select("*").eq("client_id",client.id).order("nom"),
-     ...months.map(m=>supabase.from("plannings").select("*").eq("client_id",client.id).eq("mois",m).maybeSingle())
+     supabase.from("planning_regles").select("*").eq("client_id",client.id).maybeSingle(),
+     supabase.from("plannings").select("*").eq("client_id",client.id).eq("mois",moisP).maybeSingle()
     ]);
     setEmployes(eR.data||[]);
-    // Merge planning data from all months
-    const merged={};
-    pRs.forEach(pR=>{
-     const p=pR.data?.data?.planning||{};
-     Object.entries(p).forEach(([ek,dates])=>{merged[ek]={...(merged[ek]||{}),...dates};});
-    });
-    setPlanning(merged);
+    if(rR.data){
+     const ho=rR.data.horaire_ouverture||{};
+     setRegles({
+      ouverture:ho.ouverture||ho.debut||"09:00",
+      fermeture:ho.fermeture||ho.fin||"19:00",
+      jours_ouverture:ho.jours_ouverture||[0,1,2,3,4],
+      couverture_min:rR.data.couverture_min||2,
+      premiere_arrivee:ho.premiere_arrivee||"08:00",
+      derniere_depart:ho.derniere_depart||"19:00",
+      renforts:rR.data.creneaux_speciaux||[]
+     });
+    }
+    if(pR.data?.data){const d=pR.data.data;setNotes(d.notes||"");setPlanning(d.planning||{});}
+    else{setNotes("");setPlanning({});}
    } catch(e){console.error("Planning load:",e);}
-   setLoading(false);
+   setLoadingP(false);
   })();
- },[client.id,vue,weekStart,moisNav]);
+ },[client.id,moisP]);
 
- // ── Save — split by month, never overwrite other months ───────
- const savePlanningDB=async(newP)=>{
-  setPlanning(newP);
-  const byMonth={};
-  Object.entries(newP).forEach(([ek,dates])=>{
-   Object.entries(dates).forEach(([ds,creneau])=>{
-    const m=ds.slice(0,7);
-    if(!byMonth[m])byMonth[m]={};
-    if(!byMonth[m][ek])byMonth[m][ek]={};
-    byMonth[m][ek][ds]=creneau;
-   });
-  });
-  await Promise.all(Object.entries(byMonth).map(([mois,p])=>
-   supabase.from("plannings").upsert({client_id:client.id,mois,data:{planning:p}},{onConflict:"client_id,mois"})
-  ));
- };
-
- // ── Week hours ────────────────────────────────────────────────
- const getWeekHours=ek=>{
-  let h=0;
-  Array.from({length:7},(_,i)=>{const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);return d;}).forEach(d=>{
-   const c=planning[ek]?.[dStr(d)];
-   if(c&&c.type!=="repos"&&c.debut&&c.fin){const[dh,dm]=c.debut.split(":").map(Number);const[fh,fm]=c.fin.split(":").map(Number);h+=(fh*60+fm-dh*60-dm)/60;}
-  });
-  return Math.round(h);
- };
-
- // ── Period label ──────────────────────────────────────────────
- const MOIS_SHORT=["jan","fév","mars","avr","mai","juin","juil","août","sep","oct","nov","déc"];
- const MOIS_FULL=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
- const periodLabel=()=>{
-  if(vue==="semaine"){
-   const days=Array.from({length:7},(_,i)=>{const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);return d;});
-   const s=days[0],e=days[6];
-   if(s.getMonth()===e.getMonth()&&s.getFullYear()===e.getFullYear()) return `${s.getDate()} – ${e.getDate()} ${MOIS_SHORT[s.getMonth()]} ${s.getFullYear()}`;
-   if(s.getFullYear()===e.getFullYear()) return `${s.getDate()} ${MOIS_SHORT[s.getMonth()]} – ${e.getDate()} ${MOIS_SHORT[e.getMonth()]} ${s.getFullYear()}`;
-   return `${s.getDate()} ${MOIS_SHORT[s.getMonth()]} ${s.getFullYear()} – ${e.getDate()} ${MOIS_SHORT[e.getMonth()]} ${e.getFullYear()}`;
+ const saveEmp=async()=>{
+  if(!empForm.prenom.trim()||!empForm.nom.trim()) return;
+  const row={client_id:client.id,prenom:empForm.prenom.trim(),nom:empForm.nom.trim(),poste:empForm.poste.trim(),heures_semaine:Number(empForm.heures_semaine)};
+  if(editEmpId){
+   await supabase.from("employes").update(row).eq("id",editEmpId);
+   setEmployes(prev=>prev.map(e=>e.id===editEmpId?{...e,...row}:e));
+   setEditEmpId(null);
+  } else {
+   const {data}=await supabase.from("employes").insert(row).select().single();
+   if(data) setEmployes(prev=>[...prev,data]);
   }
-  return `${MOIS_FULL[moisNav.getMonth()]} ${moisNav.getFullYear()}`;
+  setEmpForm({prenom:"",nom:"",poste:"",heures_semaine:35});
+  setShowEmpForm(false);
  };
 
- const navigatePrev=()=>{ if(vue==="semaine"){const d=new Date(weekStart);d.setDate(d.getDate()-7);setWeekStart(d);}else setMoisNav(new Date(moisNav.getFullYear(),moisNav.getMonth()-1,1)); };
- const navigateNext=()=>{ if(vue==="semaine"){const d=new Date(weekStart);d.setDate(d.getDate()+7);setWeekStart(d);}else setMoisNav(new Date(moisNav.getFullYear(),moisNav.getMonth()+1,1)); };
- const navigateToday=()=>{ const n=new Date(); setWeekStart(plGetMonday(n)); setMoisNav(new Date(n.getFullYear(),n.getMonth(),1)); };
+ const startEditEmp=(e)=>{
+  setEditEmpId(e.id);
+  setEmpForm({prenom:e.prenom||"",nom:e.nom||"",poste:e.poste||"",heures_semaine:e.heures_semaine||35});
+  setShowEmpForm(true);
+ };
 
- // ── Panels ────────────────────────────────────────────────────
- const openEditCreneau=(ek,ds,c)=>{
-  setEditForm({type:c?.type||"matin",debut:c?.debut||"08:00",fin:c?.fin||"17:00",note:c?.note||"",iaRaison:c?.iaRaison||""});
-  setPanelData({empKey:ek,dateStr:ds}); setPanelType("editCreneau");
- };
- const openAddCreneau=(ek="",ds="")=>{
-  const firstEk=employes.length>0?empKey(employes[0]):"";
-  // Default date stays within the currently loaded period to avoid cross-month save issues
-  const defaultDs=ds||(vue==="semaine"?dStr(weekStart):dStr(new Date()));
-  setAddForm({empKey:ek||firstEk,dateStr:defaultDs,type:"matin",debut:"08:00",fin:"14:00",note:""});
-  setPanelType("addCreneau");
- };
- const openFicheEmp=emp=>{
-  setFicheForm({...emp,dispo:emp.dispo||{},conges:emp.conges||[],notePref:emp.notepref||""});
-  setPanelData(emp); setPanelType("ficheEmp");
- };
- const closePanel=()=>{setPanelType(null);setPanelData(null);};
+ const cancelEmpForm=()=>{setShowEmpForm(false);setEditEmpId(null);setEmpForm({prenom:"",nom:"",poste:"",heures_semaine:35});};
 
- const saveCreneau=async(ek,ds,data)=>{
-  const newP={...planning,[ek]:{...(planning[ek]||{}),[ds]:data}};
-  await savePlanningDB(newP); closePanel();
+ const delEmp=async(id)=>{
+  if(!window.confirm("Supprimer cet employé ?")) return;
+  await supabase.from("employes").delete().eq("id",id);
+  setEmployes(prev=>prev.filter(e=>e.id!==id));
  };
- const deleteCreneau=async(ek,ds)=>{
-  const ed={...(planning[ek]||{})}; delete ed[ds];
-  await savePlanningDB({...planning,[ek]:ed}); closePanel();
+
+ const saveRegles=async()=>{
+  await supabase.from("planning_regles").upsert({
+   client_id:client.id,
+   horaire_ouverture:{ouverture:regles.ouverture,fermeture:regles.fermeture,jours_ouverture:regles.jours_ouverture,premiere_arrivee:regles.premiere_arrivee,derniere_depart:regles.derniere_depart},
+   couverture_min:regles.couverture_min,
+   creneaux_speciaux:regles.renforts
+  },{onConflict:"client_id"});
+  setSaveReglesMsg("Règles enregistrées");
+  setTimeout(()=>setSaveReglesMsg(""),2500);
  };
- const saveFicheEmp=async()=>{
-  setFicheSaving(true);
+
+ const saveNotes=async()=>{
+  const nd={notes,planning};
+  await supabase.from("plannings").upsert({client_id:client.id,mois:moisP,data:nd},{onConflict:"client_id,mois"});
+  setSaveNotesMsg("Notes sauvegardées");
+  setTimeout(()=>setSaveNotesMsg(""),2000);
+ };
+
+ const navigateMois=(dir)=>{
+  const [y,m]=moisP.split("-").map(Number);
+  const d=new Date(y,m-1+dir,1);
+  setMoisP(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`);
+ };
+
+ const moisLabel=()=>{
+  const [y,m]=moisP.split("-").map(Number);
+  const s=new Date(y,m-1,1).toLocaleDateString("fr-FR",{month:"long",year:"numeric"});
+  return s.charAt(0).toUpperCase()+s.slice(1);
+ };
+
+ const empKey=e=>`${(e.prenom||"").toUpperCase()} ${e.nom.toUpperCase()}`.trim();
+
+ const fmtTime=t=>{if(!t)return "";const[h,m]=t.split(":").map(Number);return m===0?`${h}h`:`${h}h${String(m).padStart(2,"0")}`;};
+
+ const generateAI=async()=>{
+  if(employes.length===0){setGenMsg("Ajoutez d'abord des employés dans l'onglet Mon équipe.");return;}
+  setGenerating(true); setGenMsg("");
+  const [yr2,mo2]=moisP.split("-").map(Number);
   try {
-   const row={prenom:ficheForm.prenom,nom:ficheForm.nom,poste:ficheForm.poste,heures_semaine:Number(ficheForm.heures_semaine)||35,dispo:ficheForm.dispo||{},conges:ficheForm.conges||[],notepref:ficheForm.notePref||""};
-   const{error:updateErr}=await supabase.from("employes").update(row).eq("id",ficheForm.id);
-   if(updateErr) console.error("saveFicheEmp:",updateErr);
-   setEmployes(prev=>prev.map(e=>e.id===ficheForm.id?{...e,...row}:e));
-   closePanel();
-  } catch(err){console.error("saveFicheEmp:",err);}
-  setFicheSaving(false);
- };
-
- const saveNewEmp=async()=>{
-  if(!addEmpForm.nom.trim())return;
-  setAddEmpSaving(true);
-  setAddEmpError("");
-  try {
-   console.log("saveNewEmp: client.id=",client.id,"type=",typeof client.id);
-   const{data,error}=await supabase.from("employes").insert({
-    client_id:client.id,
-    prenom:addEmpForm.prenom.trim(),
-    nom:addEmpForm.nom.trim(),
-    poste:addEmpForm.poste.trim(),
-    heures_semaine:Number(addEmpForm.heures_semaine)||35
-   }).select();
-   if(error){
-    console.error("saveNewEmp Supabase error:",JSON.stringify(error));
-    setAddEmpError(JSON.stringify(error)||"Erreur lors de l'enregistrement");
-   } else if(data&&data.length>0){
-    setEmployes(prev=>[...prev,...data].sort((a,b)=>a.nom.localeCompare(b.nom)));
-    setAddEmpForm({prenom:"",nom:"",poste:"",heures_semaine:35});
-    closePanel();
-   } else {
-    console.warn("saveNewEmp: no error but data empty",JSON.stringify(data));
-    setAddEmpError("Insert sans erreur mais aucune donnée retournée");
-   }
-  } catch(err){
-   console.error("saveNewEmp:",err);
-   setAddEmpError(err.message||"Erreur inattendue");
-  }
-  setAddEmpSaving(false);
- };
-
- const deleteEmploye=async(emp)=>{
-  if(!window.confirm(`Supprimer ${emp.prenom} ${emp.nom} ?`))return;
-  try {
-   await supabase.from("employes").delete().eq("id",emp.id);
-   setEmployes(prev=>prev.filter(x=>x.id!==emp.id));
-   if(panelData?.id===emp.id)closePanel();
-  } catch(err){console.error("deleteEmploye:",err);}
- };
-
- // ── AI generation ─────────────────────────────────────────────
- const generateIA=async()=>{
-  if(employes.length===0){setIaError("Ajoutez d'abord des employés.");return;}
-  setIaGenerating(true); setIaError(""); setIaPropositions([]);
-  const planMois=vue==="semaine"?weekStart:moisNav;
-  const yr=planMois.getFullYear(),mo=planMois.getMonth()+1;
-  const priorites=Object.entries(iaOpts).filter(([,v])=>v).map(([k])=>k);
-  const contraintes=employes.flatMap(e=>{
-   const lines=[];
-   if(e.notePref) lines.push(`${empKey(e)}: ${e.notePref}`);
-   if(e.conges?.length) e.conges.forEach(c=>lines.push(`${empKey(e)}: absent du ${c.debut} au ${c.fin} (${c.type})`));
-   return lines;
-  });
-  try {
-   const payload={employes,regles:iaOpts,notes:iaNotes,priorites,contraintes,mois:mo,annee:parseInt(yr,10)};
-   console.log("PAYLOAD ENVOYÉ:", JSON.stringify(payload));
-   const r=await fetch("/api/planning/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+   const r=await fetch("/api/planning/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({employes,regles,notes,mois:mo2,annee:yr2})});
    const d=await r.json();
-   if(d.error) setIaError("Erreur IA : "+d.error);
-   else if(d.propositions){setIaPropositions(d.propositions);setIaLastNote(iaNotes);}
-   else setIaError("Réponse inattendue.");
-  } catch(e){setIaError("Erreur réseau : "+e.message);}
-  setIaGenerating(false);
- };
- const applyProposition=async(prop)=>{
-  const normalized={};
-  for(const[k,v] of Object.entries(prop.planning)) normalized[k.toUpperCase()]=v;
-  await savePlanningDB({...planning,...normalized}); closePanel();
+   if(d.error){setGenMsg("Erreur IA : "+d.error);setGenerating(false);return;}
+   const normalized={};
+   for(const[k,v] of Object.entries(d.planning)) normalized[k.toUpperCase()]=v;
+   setPlanning(normalized);
+   await supabase.from("plannings").upsert({client_id:client.id,mois:moisP,data:{notes,planning:normalized}},{onConflict:"client_id,mois"});
+   setGenMsg("Planning généré et sauvegardé !");
+   setTimeout(()=>setGenMsg(""),3000);
+  } catch(e){setGenMsg("Erreur réseau : "+e.message);}
+  setGenerating(false);
  };
 
- // ── Spinner ───────────────────────────────────────────────────
- if(loading) return <div style={{display:"flex",justifyContent:"center",padding:"80px 0"}}><div style={{width:32,height:32,border:"3px solid #a7d4d0",borderTop:"3px solid #005653",borderRadius:"50%",animation:"spin 1s linear infinite"}}/></div>;
+ const updateCell=async(ek,ds,type,debut,fin)=>{
+  const nd={...planning,[ek]:{...(planning[ek]||{}),[ds]:type==="travail"?{type,debut,fin}:{type}}};
+  setPlanning(nd); setEditCell(null);
+  await supabase.from("plannings").upsert({client_id:client.id,mois:moisP,data:{notes,planning:nd}},{onConflict:"client_id,mois"});
+ };
+
+ const [yr,mo]=moisP.split("-").map(Number);
+ const nDays=new Date(yr,mo,0).getDate();
+ const days=Array.from({length:nDays},(_,i)=>i+1);
+ const DN1=["D","L","M","M","J","V","S"];
+ const dayN1=d=>DN1[new Date(yr,mo-1,d).getDay()];
+ const isWE=d=>{const w=new Date(yr,mo-1,d).getDay();return w===0||w===6;};
+ const JFULL=["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
+ const TC={
+  travail:{bg:"#005653",text:"#ffffff"},
+  repos:{bg:"#e5e7eb",text:"#6b7280"},
+  conge:{bg:"#fdba74",text:"#7c2d12"},
+  indispo:{bg:"#fef08a",text:"#854d0e"}
+ };
+ const SI={padding:"8px 12px",borderRadius:8,border:`1.5px solid ${C.border}`,fontSize:13,fontFamily:"'Nunito',sans-serif",outline:"none",background:"white",color:C.text,boxSizing:"border-box"};
+ const dStr=d=>`${yr}-${String(mo).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+ const LBL={fontSize:11,color:"#6b7280",fontWeight:700,display:"block",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.07em"};
+ const INP={...SI,width:"100%",border:"1.5px solid #d1d5db"};
+
+ if(loadingP) return <div style={{display:"flex",justifyContent:"center",padding:"80px 0"}}><div style={{width:32,height:32,border:`3px solid ${C.border}`,borderTop:`3px solid ${C.primary}`,borderRadius:"50%",animation:"spin 1s linear infinite"}}/></div>;
 
  return (
-  <div style={{display:"flex",flexDirection:"column",height:"100%",background:"#f8fffe",fontFamily:"'Nunito',sans-serif",minHeight:0}} className="fade-up">
-
-   {/* ── TOP BAR ── */}
-   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 20px",background:"white",borderBottom:"1px solid #c8e8e5",flexShrink:0,gap:12,flexWrap:"wrap"}}>
-    <div style={{display:"flex",background:"#f0faf8",borderRadius:8,border:"1px solid #c8e8e5",overflow:"hidden"}}>
-     {[["semaine","Semaine"],["mois","Mois"],["liste","Liste"]].map(([id,label])=>(
-      <button key={id} onClick={()=>setVue(id)} style={{padding:"7px 18px",border:"none",cursor:"pointer",background:vue===id?"#005653":"transparent",color:vue===id?"#fff":C.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,transition:"all .15s"}}>{label}</button>
-     ))}
+  <div style={{padding:24}} className="fade-up">
+   {/* Header */}
+   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,flexWrap:"wrap",gap:12}}>
+    <div>
+     <div style={{fontSize:18,fontWeight:900,color:C.text}}>Planning &amp; équipe</div>
+     <div style={{fontSize:12,color:C.textLight,marginTop:2}}>{client.name}</div>
     </div>
-    <div style={{display:"flex",alignItems:"center",gap:10}}>
-     <button onClick={navigatePrev} style={{background:"white",border:"1.5px solid #c8e8e5",borderRadius:8,width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.textMid} strokeWidth="2.5"><polyline points="15,18 9,12 15,6"/></svg>
-     </button>
-     <div style={{fontSize:14,fontWeight:800,color:C.text,minWidth:200,textAlign:"center"}}>{periodLabel()}</div>
-     <button onClick={navigateNext} style={{background:"white",border:"1.5px solid #c8e8e5",borderRadius:8,width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.textMid} strokeWidth="2.5"><polyline points="9,18 15,12 9,6"/></svg>
-     </button>
-     <button onClick={navigateToday} style={{background:"white",border:"1.5px solid #c8e8e5",borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:700,color:C.textMid,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>Aujourd'hui</button>
-    </div>
-    <div style={{display:"flex",gap:8}}>
-     <button onClick={()=>openAddCreneau()} style={{padding:"8px 16px",borderRadius:8,border:"1.5px solid #005653",background:"white",color:"#005653",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>Ajouter un créneau</button>
-     <button onClick={()=>setPanelType("ia")} style={{padding:"8px 16px",borderRadius:8,border:"none",background:"#005653",color:"white",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito',sans-serif",display:"flex",alignItems:"center",gap:6}}>
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-      Générer avec l'IA
-     </button>
-    </div>
+    {isAdminPreview&&<span style={{padding:"4px 14px",background:"#fef3c7",border:"1px solid #f59e0b",borderRadius:8,fontSize:12,fontWeight:700,color:"#92400e"}}>Aperçu admin — lecture seule</span>}
    </div>
 
-   {/* ── MAIN ── */}
-   <div style={{display:"flex",flex:1,overflow:"hidden",minHeight:0}}>
+   {/* Onglets */}
+   <div style={{display:"flex",gap:4,marginBottom:20,background:C.bg,padding:4,borderRadius:10,width:"fit-content",border:`1px solid ${C.border}`}}>
+    {[["equipe","Mon équipe"],["regles","Mes règles"],["planning","Mon planning"]].map(([id,label])=>(
+     <button key={id} onClick={()=>setTab(id)} style={{padding:"8px 16px",borderRadius:7,border:"none",cursor:"pointer",background:tab===id?C.primary:"transparent",color:tab===id?"white":C.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,transition:"all .15s"}}>{label}</button>
+    ))}
+   </div>
 
-    {/* ── SIDEBAR 220px ── */}
-    <div style={{width:220,flexShrink:0,background:"white",borderRight:"1px solid #c8e8e5",display:"flex",flexDirection:"column",overflowY:"auto"}}>
-
-     {/* Équipe */}
-     <div style={{padding:"14px 12px 8px",borderBottom:"1px solid #c8e8e5"}}>
-      <div style={{fontSize:10,fontWeight:800,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Équipe</div>
-      <button onClick={()=>{setAddEmpForm({prenom:"",nom:"",poste:"",heures_semaine:35});setPanelType("addEmp");}} style={{width:"100%",padding:"7px 0",borderRadius:7,border:"1.5px solid #005653",background:"transparent",color:"#005653",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito',sans-serif",marginBottom:8}}>+ Ajouter un employe</button>
-      {employes.length===0&&<div style={{fontSize:12,color:C.textLight,padding:"4px 0"}}>Aucun employe</div>}
-      {employes.map((emp,i)=>{
-       const ek=empKey(emp); const wh=getWeekHours(ek);
-       return (
-        <div key={emp.id}
-         style={{display:"flex",alignItems:"center",gap:6,padding:"6px 4px",borderRadius:8,marginBottom:2,position:"relative"}}
-         onMouseEnter={e=>e.currentTarget.style.background="#f0faf8"}
-         onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-         <div onClick={()=>openFicheEmp(emp)} style={{display:"flex",alignItems:"center",gap:6,flex:1,minWidth:0,cursor:"pointer"}}>
-          <div style={{width:30,height:30,borderRadius:"50%",background:avatarColor(i),display:"flex",alignItems:"center",justifyContent:"center",color:"white",fontSize:10,fontWeight:800,flexShrink:0}}>{initiales(emp)}</div>
-          <div style={{flex:1,minWidth:0}}>
-           <div style={{fontSize:12,fontWeight:800,color:C.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{emp.prenom} {emp.nom}</div>
-           <div style={{fontSize:10,color:C.textLight,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{emp.poste||"—"}</div>
-           <div style={{fontSize:10,fontWeight:700,color:wh>0?"#005653":C.textLight}}>{wh>0?`${wh}h sem.`:"Non planifie"}</div>
-          </div>
-         </div>
-         <div style={{display:"flex",gap:2,flexShrink:0}}>
-          <button title="Modifier" onClick={e=>{e.stopPropagation();openFicheEmp(emp);}} style={{background:"none",border:"none",cursor:"pointer",padding:"3px 4px",borderRadius:5,color:C.textMid}} onMouseEnter={e=>e.currentTarget.style.background="#e0f2ef"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
-           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          </button>
-          <button title="Supprimer" onClick={e=>{e.stopPropagation();deleteEmploye(emp);}} style={{background:"none",border:"none",cursor:"pointer",padding:"3px 4px",borderRadius:5,color:"#dc2626"}} onMouseEnter={e=>e.currentTarget.style.background="#fee2e2"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
-           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-          </button>
-         </div>
-        </div>
-       );
-      })}
+   {/* ── MON ÉQUIPE ── */}
+   {tab==="equipe"&&<Card>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 18px",borderBottom:`1px solid ${C.borderLight}`}}>
+     <div style={{fontSize:14,fontWeight:800,color:C.text}}>Équipe — {employes.length} employé{employes.length!==1?"s":""}</div>
+     {!isAdminPreview&&<Btn onClick={()=>{setShowEmpForm(true);setEditEmpId(null);setEmpForm({prenom:"",nom:"",poste:"",heures_semaine:35});}}>Ajouter un employé</Btn>}
+    </div>
+    {showEmpForm&&!isAdminPreview&&<div style={{borderTop:`2px solid ${C.border}`,padding:20,background:C.bgLight}}>
+     <div style={{fontSize:13,fontWeight:800,color:C.text,marginBottom:14}}>{editEmpId?"Modifier l'employé":"Nouvel employé"}</div>
+     <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
+      <div style={{flex:1,minWidth:130}}>
+       <label style={LBL}>Prénom</label>
+       <input style={INP} value={empForm.prenom} onChange={e=>setEmpForm(f=>({...f,prenom:e.target.value}))} placeholder="Prénom" onKeyDown={e=>e.key==="Enter"&&saveEmp()}/>
+      </div>
+      <div style={{flex:1,minWidth:130}}>
+       <label style={LBL}>Nom</label>
+       <input style={INP} value={empForm.nom} onChange={e=>setEmpForm(f=>({...f,nom:e.target.value}))} placeholder="Nom de famille" onKeyDown={e=>e.key==="Enter"&&saveEmp()}/>
+      </div>
+      <div style={{flex:2,minWidth:150}}>
+       <label style={LBL}>Poste</label>
+       <input style={INP} value={empForm.poste} onChange={e=>setEmpForm(f=>({...f,poste:e.target.value}))} placeholder="Ex : Vendeur, Manager"/>
+      </div>
+      <div style={{minWidth:110}}>
+       <label style={LBL}>H/semaine</label>
+       <input type="number" style={INP} value={empForm.heures_semaine} onChange={e=>setEmpForm(f=>({...f,heures_semaine:e.target.value}))} min={1} max={48}/>
+      </div>
+      <div style={{display:"flex",gap:8}}>
+       <Btn variant="success" onClick={saveEmp}>Enregistrer</Btn>
+       <Btn variant="ghost" onClick={cancelEmpForm}>Annuler</Btn>
+      </div>
      </div>
+    </div>}
+    <div style={{overflowX:"auto"}}>
+     <table style={{width:"100%",borderCollapse:"collapse"}}>
+      <thead><tr>
+       <Th>Nom complet</Th><Th>Poste</Th><Th>H/semaine</Th><Th>H/mois</Th>
+       {!isAdminPreview&&<Th>Actions</Th>}
+      </tr></thead>
+      <tbody>
+       {employes.length===0
+        ?<tr><td colSpan={isAdminPreview?4:5} style={{padding:"48px 0",textAlign:"center",color:C.textLight,fontSize:13}}>{isAdminPreview?"Aucun employé enregistré":"Ajoutez votre premier employé via le bouton ci-dessus"}</td></tr>
+        :employes.map(e=><Tr key={e.id}>
+          <Td bold>{e.prenom?`${e.prenom} ${e.nom}`:e.nom}</Td>
+          <Td>{e.poste||"—"}</Td>
+          <Td>{e.heures_semaine}h</Td>
+          <Td>{Math.round(e.heures_semaine*4.33)}h</Td>
+          {!isAdminPreview&&<Td><div style={{display:"flex",gap:6}}>
+           <Btn small onClick={()=>startEditEmp(e)}>Modifier</Btn>
+           <Btn small variant="danger" onClick={()=>delEmp(e.id)}>Supprimer</Btn>
+          </div></Td>}
+         </Tr>)
+       }
+      </tbody>
+     </table>
+    </div>
+   </Card>}
 
-     {/* Résumé semaine */}
-     <div style={{padding:"12px 14px",borderBottom:"1px solid #c8e8e5"}}>
-      <div style={{fontSize:10,fontWeight:800,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Cette semaine</div>
-      {(()=>{
-       const totalH=employes.reduce((s,e)=>s+getWeekHours(empKey(e)),0);
-       const actifs=employes.filter(e=>getWeekHours(empKey(e))>0).length;
-       const conflict=employes.length>0&&actifs<employes.length;
-       return(<>
-        <div style={{fontSize:12,color:C.text,marginBottom:2}}><b>{totalH}h</b> planifiées</div>
-        <div style={{fontSize:12,color:C.text,marginBottom:8}}><b>{actifs}</b> / {employes.length} actifs</div>
-        <div style={{display:"inline-flex",alignItems:"center",gap:5,padding:"3px 10px",borderRadius:20,background:conflict?"#fef2f2":"#ecfdf5",border:`1px solid ${conflict?"#fca5a5":"#6ee7b7"}`}}>
-         <div style={{width:6,height:6,borderRadius:"50%",background:conflict?"#dc2626":"#059669"}}/>
-         <span style={{fontSize:11,fontWeight:700,color:conflict?"#dc2626":"#059669"}}>{conflict?"Conflit":"Complet"}</span>
-        </div>
-       </>);
-      })()}
+   {/* ── MES RÈGLES ── */}
+   {tab==="regles"&&<Card>
+    {/* Section Horaires */}
+    <SectionHead title="Horaires"/>
+    <div style={{padding:20,borderBottom:`1px solid ${C.borderLight}`}}>
+     <div style={{display:"flex",gap:20,flexWrap:"wrap",marginBottom:20}}>
+      <div style={{flex:1,minWidth:140}}>
+       <label style={LBL}>Ouverture</label>
+       <input type="time" style={INP} value={regles.ouverture} disabled={isAdminPreview} onChange={e=>setRegles(r=>({...r,ouverture:e.target.value}))}/>
+      </div>
+      <div style={{flex:1,minWidth:140}}>
+       <label style={LBL}>Fermeture</label>
+       <input type="time" style={INP} value={regles.fermeture} disabled={isAdminPreview} onChange={e=>setRegles(r=>({...r,fermeture:e.target.value}))}/>
+      </div>
      </div>
+     <div>
+      <label style={LBL}>Jours d'ouverture</label>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+       {["L","M","M","J","V","S","D"].map((j,i)=>{
+        const active=(regles.jours_ouverture||[]).includes(i);
+        return (
+         <button key={i} disabled={isAdminPreview} onClick={()=>{
+          if(isAdminPreview) return;
+          setRegles(r=>{const jo=r.jours_ouverture||[];return{...r,jours_ouverture:jo.includes(i)?jo.filter(x=>x!==i):[...jo,i].sort((a,b)=>a-b)};});
+         }} style={{width:36,height:36,borderRadius:8,border:`2px solid ${active?"#005653":"#d1d5db"}`,background:active?"#005653":"white",color:active?"white":"#9ca3af",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:isAdminPreview?"default":"pointer",transition:"all .15s"}}>
+          {j}
+         </button>
+        );
+       })}
+      </div>
+     </div>
+    </div>
 
-     {/* Note IA active */}
-     {iaLastNote&&<div onClick={()=>setPanelType("ia")} style={{padding:"12px 14px",borderBottom:"1px solid #c8e8e5",cursor:"pointer"}}
-      onMouseEnter={e=>e.currentTarget.style.background="#f0faf8"}
-      onMouseLeave={e=>e.currentTarget.style.background="white"}>
-      <div style={{fontSize:10,fontWeight:800,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4}}>Note IA active</div>
-      <div style={{fontSize:11,color:C.textMid,lineHeight:1.5,display:"-webkit-box",WebkitLineClamp:3,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{iaLastNote}</div>
-     </div>}
+    {/* Section Couverture */}
+    <SectionHead title="Couverture"/>
+    <div style={{padding:20,borderBottom:`1px solid ${C.borderLight}`,display:"flex",gap:20,flexWrap:"wrap"}}>
+     <div style={{flex:1,minWidth:160}}>
+      <label style={LBL}>Personnes min en même temps</label>
+      <input type="number" style={INP} value={regles.couverture_min} min={1} max={20} disabled={isAdminPreview} onChange={e=>setRegles(r=>({...r,couverture_min:Number(e.target.value)}))}/>
+     </div>
+     <div style={{flex:1,minWidth:160}}>
+      <label style={LBL}>1ère personne arrive à</label>
+      <input type="time" style={INP} value={regles.premiere_arrivee} disabled={isAdminPreview} onChange={e=>setRegles(r=>({...r,premiere_arrivee:e.target.value}))}/>
+     </div>
+     <div style={{flex:1,minWidth:160}}>
+      <label style={LBL}>Dernière personne part à</label>
+      <input type="time" style={INP} value={regles.derniere_depart} disabled={isAdminPreview} onChange={e=>setRegles(r=>({...r,derniere_depart:e.target.value}))}/>
+     </div>
+    </div>
 
-     {/* Légende */}
-     <div style={{padding:"12px 14px",marginTop:"auto"}}>
-      <div style={{fontSize:10,fontWeight:800,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Légende</div>
-      {Object.entries(TC).map(([k,v])=>(
-       <div key={k} style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
-        <div style={{width:12,height:12,borderRadius:3,background:v.bg,border:k==="repos"?"1px solid #d1d5db":"none",flexShrink:0}}/>
-        <span style={{fontSize:11,color:C.textMid}}>{v.label}</span>
+    {/* Section Renforts */}
+    <SectionHead title="Renforts"/>
+    <div style={{overflowX:"auto"}}>
+     <table style={{width:"100%",borderCollapse:"collapse",minWidth:480}}>
+      <thead><tr>
+       <Th>Jour</Th><Th>De</Th><Th>A</Th><Th>Personnes en plus</Th>
+       {!isAdminPreview&&<Th></Th>}
+      </tr></thead>
+      <tbody>
+       {regles.renforts.length===0
+        ?<tr><td colSpan={isAdminPreview?4:5} style={{padding:"32px 24px",textAlign:"center",color:"#9ca3af",fontSize:13}}>Aucun renfort défini</td></tr>
+        :regles.renforts.map((r,i)=>(
+         <Tr key={i}>
+          <Td>{isAdminPreview?r.jour:<select style={{...SI,padding:"6px 10px",border:"1.5px solid #d1d5db"}} value={r.jour} onChange={e=>setRegles(re=>({...re,renforts:re.renforts.map((x,j)=>j===i?{...x,jour:e.target.value}:x)}))}>{JFULL.map(j=><option key={j}>{j}</option>)}</select>}</Td>
+          <Td>{isAdminPreview?r.debut:<input type="time" style={{...SI,padding:"6px 10px",border:"1.5px solid #d1d5db",width:130}} value={r.debut} onChange={e=>setRegles(re=>({...re,renforts:re.renforts.map((x,j)=>j===i?{...x,debut:e.target.value}:x)}))}/>}</Td>
+          <Td>{isAdminPreview?r.fin:<input type="time" style={{...SI,padding:"6px 10px",border:"1.5px solid #d1d5db",width:130}} value={r.fin} onChange={e=>setRegles(re=>({...re,renforts:re.renforts.map((x,j)=>j===i?{...x,fin:e.target.value}:x)}))}/>}</Td>
+          <Td>{isAdminPreview?`+${r.extra}`:<input type="number" style={{...SI,padding:"6px 10px",border:"1.5px solid #d1d5db",width:80}} value={r.extra} min={1} max={5} onChange={e=>setRegles(re=>({...re,renforts:re.renforts.map((x,j)=>j===i?{...x,extra:Number(e.target.value)}:x)}))}/>}</Td>
+          {!isAdminPreview&&<Td><button onClick={()=>setRegles(re=>({...re,renforts:re.renforts.filter((_,j)=>j!==i)}))} style={{background:"none",border:"none",cursor:"pointer",color:C.red,padding:"4px 8px",borderRadius:6}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></Td>}
+         </Tr>
+        ))
+       }
+      </tbody>
+     </table>
+    </div>
+    {!isAdminPreview&&<div style={{padding:"14px 20px",borderTop:"1px solid #f0f0f0"}}>
+     <button onClick={()=>setRegles(r=>({...r,renforts:[...r.renforts,{jour:"Lundi",debut:"09:00",fin:"12:00",extra:1}]}))} style={{background:"white",border:"1.5px dashed #d1d5db",borderRadius:8,padding:"8px 18px",fontSize:13,fontWeight:700,color:"#6b7280",cursor:"pointer",fontFamily:"'Nunito',sans-serif",display:"flex",alignItems:"center",gap:8}}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Ajouter un renfort
+     </button>
+    </div>}
+    {!isAdminPreview&&<div style={{padding:"0 20px 20px"}}>
+     <button onClick={saveRegles} style={{background:"#005653",color:"white",border:"none",borderRadius:10,padding:"14px 0",fontSize:14,fontWeight:800,cursor:"pointer",fontFamily:"'Nunito',sans-serif",width:"100%"}}>Enregistrer les règles</button>
+     {saveReglesMsg&&<div style={{textAlign:"center",color:"#005653",fontWeight:700,fontSize:13,marginTop:8}}>{saveReglesMsg}</div>}
+    </div>}
+   </Card>}
+
+   {/* ── MON PLANNING ── */}
+   {tab==="planning"&&<div style={{display:"flex",flexDirection:"column",gap:16}}>
+
+    {/* Navigation mois */}
+    <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:16}}>
+     <button onClick={()=>navigateMois(-1)} style={{background:"white",border:`1.5px solid ${C.border}`,borderRadius:8,width:36,height:36,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:C.textMid}}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15,18 9,12 15,6"/></svg>
+     </button>
+     <div style={{fontSize:16,fontWeight:800,color:C.text,minWidth:180,textAlign:"center"}}>{moisLabel()}</div>
+     <button onClick={()=>navigateMois(1)} style={{background:"white",border:`1.5px solid ${C.border}`,borderRadius:8,width:36,height:36,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:C.textMid}}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9,18 15,12 9,6"/></svg>
+     </button>
+    </div>
+
+    {/* Notes du mois */}
+    <Card>
+     <SectionHead title="Notes du mois"/>
+     <div style={{padding:18}}>
+      <textarea rows={4} value={notes} onChange={e=>setNotes(e.target.value)} disabled={isAdminPreview}
+       placeholder="Ex : Marie en vacances du 8 au 14. Paul repos les 6 et 7. Renforts nécessaires le samedi matin."
+       style={{...SI,width:"100%",minHeight:90,resize:"vertical",lineHeight:1.6,boxSizing:"border-box"}}/>
+      {!isAdminPreview&&<div style={{display:"flex",gap:10,alignItems:"center",marginTop:10}}>
+       <Btn onClick={saveNotes}>Sauvegarder les notes</Btn>
+       {saveNotesMsg&&<span style={{color:C.green,fontWeight:700,fontSize:13}}>{saveNotesMsg}</span>}
+      </div>}
+     </div>
+    </Card>
+
+    {/* Bouton génération IA */}
+    {!isAdminPreview&&<div>
+     <button onClick={generateAI} disabled={generating} style={{background:generating?"#6aaca8":"#005653",color:"white",border:"none",borderRadius:10,padding:"14px 0",fontSize:14,fontWeight:800,cursor:generating?"not-allowed":"pointer",fontFamily:"'Nunito',sans-serif",width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:10,transition:"background .15s"}}>
+      {generating&&<div style={{width:18,height:18,border:"2px solid rgba(255,255,255,0.4)",borderTop:"2px solid white",borderRadius:"50%",animation:"spin 1s linear infinite"}}/>}
+      {generating?"Génération en cours...":"Générer le planning avec l'IA"}
+     </button>
+     {genMsg&&<div style={{marginTop:8,padding:"10px 16px",background:genMsg.startsWith("Erreur")||genMsg.startsWith("Ajoutez")?C.redBg:C.greenBg,border:`1px solid ${genMsg.startsWith("Erreur")||genMsg.startsWith("Ajoutez")?C.red:C.green}`,borderRadius:8,fontSize:13,fontWeight:600,color:genMsg.startsWith("Erreur")||genMsg.startsWith("Ajoutez")?C.red:C.green}}>{genMsg}</div>}
+    </div>}
+
+    {/* Tableau planning — toujours visible */}
+    <Card>
+     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 18px",borderBottom:`1px solid ${C.borderLight}`,flexWrap:"wrap",gap:8}}>
+      <div style={{fontSize:14,fontWeight:800,color:C.text}}>Planning</div>
+      <div style={{display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
+       <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+        {[["travail","#005653","Travail"],["repos","#e5e7eb","Repos"],["conge","#fdba74","Congé payé"],["indispo","#fef08a","Indispo"]].map(([t,bg,l])=>(
+         <div key={t} style={{display:"flex",alignItems:"center",gap:5,fontSize:11}}>
+          <div style={{width:12,height:12,borderRadius:3,background:bg,border:"1px solid rgba(0,0,0,0.1)"}}/>
+          <span style={{color:C.textMid,fontWeight:600}}>{l}</span>
+         </div>
+        ))}
        </div>
-      ))}
+       <button onClick={()=>window.print()} style={{background:"white",border:`1.5px solid ${C.border}`,borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:700,cursor:"pointer",color:C.textMid,fontFamily:"'Nunito',sans-serif"}}>Exporter en PDF</button>
+      </div>
      </div>
-    </div>
-
-    {/* ── GRILLE ── */}
-    <div style={{flex:1,overflow:"auto"}}>
-     {vue==="semaine"&&<PlanningWeekView employes={employes} planning={planning} weekStart={weekStart} TC={TC} empKey={empKey} dStr={dStr} fmtH={fmtH} openEditCreneau={openEditCreneau} openAddCreneau={openAddCreneau} isAdminPreview={isAdminPreview} C={C}/>}
-     {vue==="mois"&&<PlanningMonthView employes={employes} planning={planning} moisNav={moisNav} TC={TC} empKey={empKey} dStr={dStr} fmtH={fmtH} openEditCreneau={openEditCreneau} openAddCreneau={openAddCreneau} isAdminPreview={isAdminPreview} C={C}/>}
-     {vue==="liste"&&<PlanningListView employes={employes} planning={planning} moisNav={moisNav} TC={TC} empKey={empKey} fmtH={fmtH} C={C}/>}
-    </div>
-   </div>
-
-   {/* ── PANELS overlay ── */}
-   {panelType&&(
-    <div style={{position:"fixed",inset:0,zIndex:1000,background:"rgba(0,0,0,0.25)"}} onClick={closePanel}>
-     <div style={{position:"absolute",right:0,top:0,bottom:0,width:440,background:"white",boxShadow:"-4px 0 32px rgba(0,0,0,0.12)",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
-
-      {/* ── EDIT CRÉNEAU ── */}
-      {panelType==="editCreneau"&&panelData&&(()=>{
-       const emp=employes.find(e=>empKey(e)===panelData.empKey);
-       const dateObj=new Date(panelData.dateStr+"T12:00");
-       return (
-        <div style={{padding:24}}>
-         <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:20}}>
-          <div>
-           <div style={{fontSize:15,fontWeight:900,color:C.text}}>{emp?`${emp.prenom} ${emp.nom}`:panelData.empKey}</div>
-           <div style={{fontSize:12,color:C.textLight,marginTop:3}}>{dateObj.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</div>
-          </div>
-          <button onClick={closePanel} style={{background:"none",border:"none",cursor:"pointer",padding:4,marginLeft:8}}>
-           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.textMid} strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-         </div>
-         <label style={LBL}>Type de créneau</label>
-         <div style={{display:"flex",gap:8,marginBottom:18,flexWrap:"wrap"}}>
-          {TYPES.map(t=>(
-           <button key={t} onClick={()=>setEditForm(f=>({...f,type:t,debut:DEF_DEBUT[t]||f.debut,fin:DEF_FIN[t]||f.fin}))} style={{padding:"8px 14px",borderRadius:8,border:`2px solid ${editForm.type===t?TC[t].bg:"#e5e7eb"}`,background:editForm.type===t?TC[t].bg:"white",color:editForm.type===t?TC[t].text:C.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>
-            {TC[t].label}
-           </button>
+     <div style={{overflowX:"auto",padding:"8px 16px 16px"}}>
+      {employes.length===0
+       ?<div style={{padding:"48px 0",textAlign:"center",color:C.textLight,fontSize:13}}>Ajoutez des employés dans l'onglet "Mon équipe" pour afficher le planning.</div>
+       :<table style={{borderCollapse:"collapse",fontSize:11}}>
+        <thead>
+         <tr style={{background:C.bg}}>
+          <th style={{padding:"8px 12px",textAlign:"left",fontWeight:800,color:C.text,fontSize:12,position:"sticky",left:0,background:C.bg,zIndex:2,borderRight:`2px solid ${C.border}`,minWidth:140,whiteSpace:"nowrap"}}>Employé</th>
+          {days.map(d=>(
+           <th key={d} style={{padding:"4px 2px",textAlign:"center",fontWeight:700,fontSize:10,minWidth:48,borderBottom:`2px solid ${C.border}`,background:isWE(d)?"#f5f5f5":C.bg}}>
+            <div style={{fontSize:11,color:isWE(d)?C.orange:C.text,fontWeight:800}}>{d}</div>
+            <div style={{fontSize:9,color:isWE(d)?C.orange:C.textLight}}>{dayN1(d)}</div>
+           </th>
           ))}
-         </div>
-         {editForm.type!=="repos"&&<>
-          <div style={{display:"flex",gap:12,marginBottom:14}}>
-           <div style={{flex:1}}><label style={LBL}>Début</label><input type="time" style={INP} value={editForm.debut} onChange={e=>setEditForm(f=>({...f,debut:e.target.value}))}/></div>
-           <div style={{flex:1}}><label style={LBL}>Fin</label><input type="time" style={INP} value={editForm.fin} onChange={e=>setEditForm(f=>({...f,fin:e.target.value}))}/></div>
-          </div>
-          <div style={{marginBottom:14}}>
-           <label style={LBL}>Note interne</label>
-           <input style={INP} value={editForm.note} onChange={e=>setEditForm(f=>({...f,note:e.target.value}))} placeholder="Commentaire..."/>
-          </div>
-         </>}
-         {editForm.iaRaison&&<div style={{padding:"12px 14px",background:"#f0faf8",borderRadius:8,marginBottom:16,border:"1px solid #c8e8e5"}}>
-          <div style={{fontSize:11,fontWeight:700,color:C.textMid,marginBottom:4}}>Raison IA</div>
-          <div style={{fontSize:12,color:C.textMid,lineHeight:1.5}}>{editForm.iaRaison}</div>
-         </div>}
-         <div style={{display:"flex",gap:8,marginTop:8}}>
-          <button onClick={()=>saveCreneau(panelData.empKey,panelData.dateStr,editForm.type==="repos"?{type:"repos"}:{type:editForm.type,debut:editForm.debut,fin:editForm.fin,note:editForm.note,iaRaison:editForm.iaRaison})} style={{flex:1,padding:"12px 0",borderRadius:8,border:"none",background:"#005653",color:"white",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>Enregistrer</button>
-          <button onClick={()=>deleteCreneau(panelData.empKey,panelData.dateStr)} style={{padding:"12px 16px",borderRadius:8,border:"none",background:"#fee2e2",color:"#dc2626",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>Supprimer</button>
-         </div>
-        </div>
-       );
-      })()}
+          <th style={{padding:"4px 8px",textAlign:"center",fontWeight:800,color:C.text,fontSize:11,borderLeft:`2px solid ${C.border}`,whiteSpace:"nowrap",background:C.bg,minWidth:60}}>Total</th>
+          <th style={{padding:"4px 8px",textAlign:"center",fontWeight:600,color:C.textMid,fontSize:11,whiteSpace:"nowrap",background:C.bg,minWidth:70}}>Contrat</th>
+         </tr>
+        </thead>
+        <tbody>
+         {employes.map(emp=>{
+          const ek=empKey(emp);
+          const ep=planning[ek]||{};
+          let hMois=0;
+          days.forEach(d=>{
+           const ds2=dStr(d);
+           const dd=ep[ds2];
+           if(dd?.type==="travail"&&dd.debut&&dd.fin){
+            const [dh,dm]=dd.debut.split(":").map(Number);
+            const [fh,fm]=dd.fin.split(":").map(Number);
+            hMois+=(fh*60+fm-dh*60-dm)/60;
+           }
+          });
+          hMois=Math.round(hMois);
+          const hContrat=Math.round(emp.heures_semaine*52/12);
+          const ecart=hMois-hContrat;
+          return (
+           <tr key={emp.id} style={{borderBottom:`1px solid ${C.borderLight}`}}>
+            <td style={{padding:"4px 12px",fontWeight:800,color:C.text,position:"sticky",left:0,background:"white",zIndex:1,borderRight:`2px solid ${C.border}`,fontSize:12,whiteSpace:"nowrap"}}>
+             <div>{emp.prenom?`${emp.prenom} ${emp.nom}`:emp.nom}</div>
+             {emp.poste&&<div style={{fontSize:10,color:C.textLight,fontWeight:400}}>{emp.poste}</div>}
+            </td>
+            {days.map(d=>{
+             const ds2=dStr(d);
+             const dd=ep[ds2]||null;
+             const tc=dd?TC[dd.type]||TC.repos:null;
+             const lbl=dd?(dd.type==="travail"&&dd.debut&&dd.fin?`${fmtTime(dd.debut)}–${fmtTime(dd.fin)}`:dd.type==="repos"?"Repos":dd.type==="conge"?"CP":dd.type==="indispo"?"Indispo":""):null;
+             return (
+              <td key={d} style={{padding:1,textAlign:"center",background:isWE(d)&&!tc?"#fafafa":"transparent"}}>
+               <div onClick={()=>{if(isAdminPreview)return;setCellForm({type:dd?.type||"travail",debut:dd?.debut||regles.ouverture,fin:dd?.fin||regles.fermeture});setEditCell({ek,dateStr:ds2});}}
+                title={dd?`${dd.type}${dd.debut?" | "+dd.debut+"–"+dd.fin:""}`:isAdminPreview?"":"Cliquer pour modifier"}
+                style={{width:46,minHeight:28,borderRadius:4,margin:"0 auto",background:tc?tc.bg:isWE(d)?"#f0f0f0":"#f9fafb",display:"flex",alignItems:"center",justifyContent:"center",cursor:isAdminPreview?"default":"pointer",fontSize:7,fontWeight:800,color:tc?tc.text:"#c0c0c0",lineHeight:1.1,padding:"2px 1px",boxSizing:"border-box",whiteSpace:"nowrap",overflow:"hidden"}}>
+                {lbl||<span style={{fontSize:10,color:"#d1d5db"}}>·</span>}
+               </div>
+              </td>
+             );
+            })}
+            <td style={{padding:"4px 8px",textAlign:"center",fontWeight:800,color:C.text,borderLeft:`2px solid ${C.border}`,fontSize:12,whiteSpace:"nowrap"}}>{hMois>0?`${hMois}h`:"—"}</td>
+            <td style={{padding:"4px 8px",textAlign:"center",fontSize:11,whiteSpace:"nowrap",fontWeight:700,color:hMois===0?C.textLight:hMois>=hContrat?C.green:C.red}}>{hContrat}h{hMois>0&&ecart!==0?` (${ecart>0?"+":""}${ecart}h)`:""}</td>
+           </tr>
+          );
+         })}
+         {/* Ligne présences */}
+         <tr style={{borderTop:`2px solid ${C.border}`,background:C.bg}}>
+          <td style={{padding:"6px 12px",fontWeight:800,color:C.textMid,position:"sticky",left:0,background:C.bg,zIndex:1,borderRight:`2px solid ${C.border}`,fontSize:11,whiteSpace:"nowrap"}}>Présents</td>
+          {days.map(d=>{
+           const ds2=dStr(d);
+           const cnt=employes.filter(emp=>planning[empKey(emp)]?.[ds2]?.type==="travail").length;
+           return <td key={d} style={{padding:"4px 1px",textAlign:"center",fontSize:11,fontWeight:700,color:cnt<regles.couverture_min&&cnt>0?C.red:cnt===0?C.textLight:C.primary}}>{cnt||"—"}</td>;
+          })}
+          <td colSpan={2} style={{borderLeft:`2px solid ${C.border}`}}/>
+         </tr>
+        </tbody>
+       </table>
+      }
+     </div>
+    </Card>
+   </div>}
 
-      {/* ── ADD CRÉNEAU ── */}
-      {panelType==="addCreneau"&&(
-       <div style={{padding:24}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
-         <div style={{fontSize:15,fontWeight:900,color:C.text}}>Ajouter un créneau</div>
-         <button onClick={closePanel} style={{background:"none",border:"none",cursor:"pointer",padding:4}}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.textMid} strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-         </button>
-        </div>
-        <div style={{marginBottom:14}}><label style={LBL}>Employé</label>
-         <select style={INP} value={addForm.empKey} onChange={e=>setAddForm(f=>({...f,empKey:e.target.value}))}>
-          {employes.map(e=><option key={e.id} value={empKey(e)}>{e.prenom} {e.nom}</option>)}
-         </select>
-        </div>
-        <div style={{marginBottom:14}}><label style={LBL}>Date</label>
-         {vue==="semaine"?(
-          <select style={INP} value={addForm.dateStr} onChange={e=>setAddForm(f=>({...f,dateStr:e.target.value}))}>
-           {Array.from({length:7},(_,i)=>{const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);return d;}).map(d=>{
-            const ds2=dStr(d);
-            return <option key={ds2} value={ds2}>{d.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}</option>;
-           })}
-          </select>
-         ):(
-          <input type="date" style={INP} value={addForm.dateStr}
-           min={`${moisNav.getFullYear()}-${String(moisNav.getMonth()+1).padStart(2,"0")}-01`}
-           max={`${moisNav.getFullYear()}-${String(moisNav.getMonth()+1).padStart(2,"0")}-${String(new Date(moisNav.getFullYear(),moisNav.getMonth()+1,0).getDate()).padStart(2,"0")}`}
-           onChange={e=>setAddForm(f=>({...f,dateStr:e.target.value}))}/>
-         )}
-        </div>
-        <label style={LBL}>Type de créneau</label>
-        <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
-         {TYPES.map(t=>(
-          <button key={t} onClick={()=>setAddForm(f=>({...f,type:t,debut:DEF_DEBUT[t],fin:DEF_FIN[t]}))} style={{padding:"8px 14px",borderRadius:8,border:`2px solid ${addForm.type===t?TC[t].bg:"#e5e7eb"}`,background:addForm.type===t?TC[t].bg:"white",color:addForm.type===t?TC[t].text:C.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>
-           {TC[t].label}
-          </button>
-         ))}
-        </div>
-        {addForm.type!=="repos"&&<div style={{display:"flex",gap:12,marginBottom:14}}>
-         <div style={{flex:1}}><label style={LBL}>Début</label><input type="time" style={INP} value={addForm.debut} onChange={e=>setAddForm(f=>({...f,debut:e.target.value}))}/></div>
-         <div style={{flex:1}}><label style={LBL}>Fin</label><input type="time" style={INP} value={addForm.fin} onChange={e=>setAddForm(f=>({...f,fin:e.target.value}))}/></div>
-        </div>}
-        <div style={{marginBottom:18}}><label style={LBL}>Note</label>
-         <input style={INP} value={addForm.note} onChange={e=>setAddForm(f=>({...f,note:e.target.value}))} placeholder="Note interne..."/>
-        </div>
-        <button onClick={()=>saveCreneau(addForm.empKey,addForm.dateStr,addForm.type==="repos"?{type:"repos"}:{type:addForm.type,debut:addForm.debut,fin:addForm.fin,note:addForm.note})} style={{width:"100%",padding:"12px 0",borderRadius:8,border:"none",background:"#005653",color:"white",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>Enregistrer</button>
+   {/* Popup modification cellule */}
+   {editCell&&!isAdminPreview&&(
+    <div style={{position:"fixed",inset:0,zIndex:1000,background:"rgba(0,0,0,0.35)",display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setEditCell(null)}>
+     <div style={{background:"white",borderRadius:12,padding:24,boxShadow:"0 12px 48px rgba(0,0,0,0.22)",minWidth:290,maxWidth:340}} onClick={e=>e.stopPropagation()}>
+      <div style={{fontSize:13,fontWeight:800,color:C.text,marginBottom:16}}>
+       {editCell.ek}
+       <span style={{fontWeight:400,color:C.textMid,marginLeft:8}}>{editCell.dateStr}</span>
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+       <div>
+        <label style={{...LBL,marginBottom:4}}>Type</label>
+        <select style={{...SI,width:"100%"}} value={cellForm.type} onChange={e=>setCellForm(f=>({...f,type:e.target.value}))}>
+         <option value="travail">Travail</option>
+         <option value="repos">Repos</option>
+         <option value="conge">Congé payé</option>
+         <option value="indispo">Indisponibilité</option>
+        </select>
        </div>
-      )}
-
-      {/* ── FICHE EMPLOYÉ ── */}
-      {panelType==="ficheEmp"&&(
-       <div style={{padding:24}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
-         <div style={{fontSize:15,fontWeight:900,color:C.text}}>{ficheForm.prenom} {ficheForm.nom}</div>
-         <button onClick={closePanel} style={{background:"none",border:"none",cursor:"pointer",padding:4}}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.textMid} strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-         </button>
+       {cellForm.type==="travail"&&<>
+        <div>
+         <label style={{...LBL,marginBottom:4}}>Heure début</label>
+         <input type="time" style={{...SI,width:"100%"}} value={cellForm.debut} onChange={e=>setCellForm(f=>({...f,debut:e.target.value}))}/>
         </div>
-        <div style={{display:"flex",gap:12,marginBottom:14,flexWrap:"wrap"}}>
-         <div style={{flex:1,minWidth:110}}><label style={LBL}>Prénom</label><input style={INP} value={ficheForm.prenom||""} onChange={e=>setFicheForm(f=>({...f,prenom:e.target.value}))} disabled={isAdminPreview}/></div>
-         <div style={{flex:1,minWidth:110}}><label style={LBL}>Nom</label><input style={INP} value={ficheForm.nom||""} onChange={e=>setFicheForm(f=>({...f,nom:e.target.value}))} disabled={isAdminPreview}/></div>
+        <div>
+         <label style={{...LBL,marginBottom:4}}>Heure fin</label>
+         <input type="time" style={{...SI,width:"100%"}} value={cellForm.fin} onChange={e=>setCellForm(f=>({...f,fin:e.target.value}))}/>
         </div>
-        <div style={{marginBottom:14}}><label style={LBL}>Poste</label><input style={INP} value={ficheForm.poste||""} onChange={e=>setFicheForm(f=>({...f,poste:e.target.value}))} disabled={isAdminPreview}/></div>
-        <div style={{marginBottom:16}}><label style={LBL}>Heures contractuelles / semaine</label><input type="number" style={INP} value={ficheForm.heures_semaine||35} onChange={e=>setFicheForm(f=>({...f,heures_semaine:e.target.value}))} min={1} max={48} disabled={isAdminPreview}/></div>
-        {(()=>{
-         const ek=empKey(ficheForm); const wh=getWeekHours(ek);
-         const contrat=Number(ficheForm.heures_semaine)||35;
-         const pct=Math.min(100,Math.round(wh/contrat*100)); const ok=wh<=contrat;
-         return (
-          <div style={{marginBottom:20,padding:"12px 14px",background:"#f8fffe",borderRadius:10,border:"1px solid #c8e8e5"}}>
-           <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-            <span style={{fontSize:12,fontWeight:700,color:C.textMid}}>Heures cette semaine</span>
-            <span style={{fontSize:12,fontWeight:800,color:ok?"#005653":"#dc2626"}}>{wh}h / {contrat}h</span>
-           </div>
-           <div style={{height:8,background:"#e5e7eb",borderRadius:4,overflow:"hidden"}}>
-            <div style={{height:"100%",width:`${pct}%`,background:ok?"#005653":"#dc2626",borderRadius:4}}/>
-           </div>
-          </div>
-         );
-        })()}
-        <div style={{marginBottom:16}}>
-         <label style={LBL}>Disponibilités habituelles</label>
-         {["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"].map((j,i)=>(
-          <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
-           <div style={{width:74,fontSize:12,color:C.textMid,fontWeight:600}}>{j}</div>
-           <input type="time" style={{...SI,padding:"5px 8px",fontSize:12,width:88}} value={ficheForm.dispo?.[i]?.debut||""} onChange={e=>setFicheForm(f=>({...f,dispo:{...f.dispo,[i]:{...f.dispo?.[i],debut:e.target.value}}}))} disabled={isAdminPreview}/>
-           <span style={{fontSize:11,color:"#9ca3af"}}>–</span>
-           <input type="time" style={{...SI,padding:"5px 8px",fontSize:12,width:88}} value={ficheForm.dispo?.[i]?.fin||""} onChange={e=>setFicheForm(f=>({...f,dispo:{...f.dispo,[i]:{...f.dispo?.[i],fin:e.target.value}}}))} disabled={isAdminPreview}/>
-          </div>
-         ))}
-        </div>
-        <div style={{marginBottom:16}}>
-         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
-          <label style={{...LBL,marginBottom:0}}>Congés et absences</label>
-          {!isAdminPreview&&<button onClick={()=>setFicheForm(f=>({...f,conges:[...(f.conges||[]),{debut:"",fin:"",type:"CP"}]}))} style={{background:"none",border:"none",cursor:"pointer",color:"#005653",fontSize:12,fontWeight:700,fontFamily:"'Nunito',sans-serif"}}>+ Ajouter</button>}
-         </div>
-         {(ficheForm.conges||[]).length===0&&<div style={{fontSize:12,color:C.textLight}}>Aucun congé enregistré</div>}
-         {(ficheForm.conges||[]).map((c,i)=>(
-          <div key={i} style={{display:"flex",gap:5,alignItems:"center",marginBottom:6,flexWrap:"wrap"}}>
-           <input type="date" style={{...SI,padding:"5px 8px",fontSize:11,flex:1,minWidth:100}} value={c.debut} onChange={e=>setFicheForm(f=>({...f,conges:f.conges.map((x,j)=>j===i?{...x,debut:e.target.value}:x)}))} disabled={isAdminPreview}/>
-           <span style={{fontSize:11,color:"#9ca3af"}}>–</span>
-           <input type="date" style={{...SI,padding:"5px 8px",fontSize:11,flex:1,minWidth:100}} value={c.fin} onChange={e=>setFicheForm(f=>({...f,conges:f.conges.map((x,j)=>j===i?{...x,fin:e.target.value}:x)}))} disabled={isAdminPreview}/>
-           <select style={{...SI,padding:"5px 8px",fontSize:11}} value={c.type} onChange={e=>setFicheForm(f=>({...f,conges:f.conges.map((x,j)=>j===i?{...x,type:e.target.value}:x)}))} disabled={isAdminPreview}>
-            <option>CP</option><option>Repos</option><option>Maladie</option>
-           </select>
-           {!isAdminPreview&&<button onClick={()=>setFicheForm(f=>({...f,conges:f.conges.filter((_,j)=>j!==i)}))} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",padding:4}}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-           </button>}
-          </div>
-         ))}
-        </div>
-        <div style={{marginBottom:20}}>
-         <label style={LBL}>Préférences et contraintes</label>
-         <textarea rows={3} style={{...INP,resize:"vertical",lineHeight:1.5}} value={ficheForm.notePref||""} onChange={e=>setFicheForm(f=>({...f,notePref:e.target.value}))} placeholder="Ex: disponible seulement le matin, préfère ne pas travailler le dimanche..." disabled={isAdminPreview}/>
-        </div>
-        {!isAdminPreview&&<button onClick={saveFicheEmp} disabled={ficheSaving} style={{width:"100%",padding:"12px 0",borderRadius:8,border:"none",background:"#005653",color:"white",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:ficheSaving?"not-allowed":"pointer"}}>
-         {ficheSaving?"Enregistrement...":"Enregistrer les modifications"}
-        </button>}
+       </>}
+       <div style={{display:"flex",gap:8,marginTop:4}}>
+        <Btn onClick={()=>updateCell(editCell.ek,editCell.dateStr,cellForm.type,cellForm.debut,cellForm.fin)}>Valider</Btn>
+        <Btn variant="ghost" onClick={()=>setEditCell(null)}>Annuler</Btn>
        </div>
-      )}
-
-      {/* ── AJOUTER EMPLOYE ── */}
-      {panelType==="addEmp"&&(
-       <div style={{padding:24}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
-         <div style={{fontSize:15,fontWeight:900,color:C.text}}>Ajouter un employe</div>
-         <button onClick={closePanel} style={{background:"none",border:"none",cursor:"pointer",padding:4}}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.textMid} strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-         </button>
-        </div>
-        <div style={{display:"flex",gap:12,marginBottom:14,flexWrap:"wrap"}}>
-         <div style={{flex:1,minWidth:110}}><label style={LBL}>Prenom</label><input style={INP} value={addEmpForm.prenom} onChange={e=>setAddEmpForm(f=>({...f,prenom:e.target.value}))} placeholder="Marie"/></div>
-         <div style={{flex:1,minWidth:110}}><label style={LBL}>Nom</label><input style={INP} value={addEmpForm.nom} onChange={e=>setAddEmpForm(f=>({...f,nom:e.target.value}))} placeholder="Dupont"/></div>
-        </div>
-        <div style={{marginBottom:14}}><label style={LBL}>Poste</label><input style={INP} value={addEmpForm.poste} onChange={e=>setAddEmpForm(f=>({...f,poste:e.target.value}))} placeholder="Serveur, Caissier..."/></div>
-        <div style={{marginBottom:20}}><label style={LBL}>Heures / semaine</label><input type="number" style={INP} value={addEmpForm.heures_semaine} onChange={e=>setAddEmpForm(f=>({...f,heures_semaine:e.target.value}))} min={1} max={48}/></div>
-        {addEmpError&&<div style={{marginBottom:12,padding:"8px 12px",background:"#fef2f2",border:"1px solid #fca5a5",borderRadius:6,fontSize:12,color:"#dc2626",fontWeight:700}}>{addEmpError}</div>}
-        <button onClick={saveNewEmp} disabled={addEmpSaving||!addEmpForm.nom.trim()} style={{width:"100%",padding:"12px 0",borderRadius:8,border:"none",background:addEmpSaving||!addEmpForm.nom.trim()?"#a7d4d0":"#005653",color:"white",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:addEmpSaving||!addEmpForm.nom.trim()?"not-allowed":"pointer"}}>
-         {addEmpSaving?"Enregistrement...":"Enregistrer"}
-        </button>
-       </div>
-      )}
-
-      {/* ── PANNEAU IA ── */}
-      {panelType==="ia"&&(
-       <div style={{padding:24}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
-         <div>
-          <div style={{fontSize:15,fontWeight:900,color:C.text}}>Generer avec l'IA</div>
-          <div style={{fontSize:12,color:C.textLight,marginTop:2}}>{MOIS_FULL[(vue==="semaine"?weekStart:moisNav).getMonth()]} {(vue==="semaine"?weekStart:moisNav).getFullYear()}</div>
-         </div>
-         <button onClick={closePanel} style={{background:"none",border:"none",cursor:"pointer",padding:4}}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.textMid} strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-         </button>
-        </div>
-        <div style={{marginBottom:16}}>
-         <label style={LBL}>Instructions pour ce planning</label>
-         <textarea rows={4} style={{...INP,resize:"vertical",lineHeight:1.6}} value={iaNotes} onChange={e=>setIaNotes(e.target.value)} placeholder="Ex: Fermeture lundi, Tom disponible seulement le matin, renfort samedi soir..."/>
-        </div>
-        <div style={{marginBottom:16}}>
-         <label style={LBL}>Règles à appliquer</label>
-         {[["contrats","Respecter les contrats"],["hs","Eviter les heures supplémentaires"],["reconduit","Reconduire les créneaux habituels"],["conges","Respecter les congés"]].map(([k,l])=>(
-          <label key={k} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,cursor:"pointer"}}>
-           <input type="checkbox" checked={iaOpts[k]} onChange={e=>setIaOpts(o=>({...o,[k]:e.target.checked}))} style={{width:15,height:15,accentColor:"#005653"}}/>
-           <span style={{fontSize:13,color:C.text}}>{l}</span>
-          </label>
-         ))}
-        </div>
-        {(()=>{
-         const lines=employes.flatMap(e=>{
-          const res=[];
-          if(e.notePref) res.push(`${e.prenom} ${e.nom}: ${e.notePref}`);
-          if(e.conges?.length) e.conges.forEach(c=>res.push(`${e.prenom} ${e.nom}: absent du ${c.debut} au ${c.fin} (${c.type})`));
-          return res;
-         });
-         if(!lines.length) return null;
-         return (
-          <div style={{marginBottom:16,padding:"12px 14px",background:"#f9fafb",borderRadius:8,border:"1px solid #e5e7eb"}}>
-           <div style={{fontSize:11,fontWeight:700,color:C.textMid,marginBottom:6}}>Contraintes détectées</div>
-           {lines.map((l,i)=><div key={i} style={{fontSize:11,color:C.textMid,marginBottom:2,lineHeight:1.4}}>· {l}</div>)}
-          </div>
-         );
-        })()}
-        <button onClick={generateIA} disabled={iaGenerating||employes.length===0} style={{width:"100%",padding:"12px 0",borderRadius:8,border:"none",background:iaGenerating?"#6aaca8":"#005653",color:"white",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:iaGenerating?"not-allowed":"pointer",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-         {iaGenerating&&<div style={{width:16,height:16,border:"2px solid rgba(255,255,255,0.4)",borderTop:"2px solid white",borderRadius:"50%",animation:"spin 1s linear infinite"}}/>}
-         {iaGenerating?"Génération en cours...":"Générer 3 propositions"}
-        </button>
-        {iaError&&<div style={{padding:"10px 14px",background:"#fef2f2",border:"1px solid #fca5a5",borderRadius:8,fontSize:12,color:"#dc2626",marginBottom:12}}>{iaError}</div>}
-        {iaPropositions.length>0&&(
-         <div>
-          <div style={{fontSize:13,fontWeight:800,color:C.text,marginBottom:12}}>Choisissez un planning</div>
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
-           {iaPropositions.map((prop,i)=>(
-            <div key={i} style={{padding:"14px 16px",border:"2px solid #c8e8e5",borderRadius:10,background:"#f8fffe"}}>
-             <div style={{fontSize:10,fontWeight:800,color:C.textLight,textTransform:"uppercase",marginBottom:4}}>Option {i+1}</div>
-             <div style={{fontSize:13,fontWeight:700,color:C.text,marginBottom:10,lineHeight:1.4}}>{prop.resume}</div>
-             <button onClick={()=>applyProposition(prop)} style={{padding:"8px 16px",borderRadius:8,border:"none",background:"#005653",color:"white",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>Appliquer ce planning</button>
-            </div>
-           ))}
-          </div>
-         </div>
-        )}
-       </div>
-      )}
-
+      </div>
      </div>
     </div>
    )}
@@ -6285,16 +5985,10 @@ function RapportIA({ clients, moisIdx, moisYear }) {
     if(!client||!kpis) return;
     setLoading(true); setText("");
     const prompt=`Tu es analyste financier senior chez NVM Finance. Rapport mensuel pour :\nClient : ${client.name} | Secteur : ${client.sector} | Periode : ${MONTHS[moisIdx]} ${moisYear}\nCA HT : ${fmt(kpis.ca)} | Marge brute : ${fmt(kpis.marge)} (${pct(kpis.ca>0?kpis.marge/kpis.ca*100:0)}) | EBE : ${fmt(kpis.ebe)} | Resultat : ${fmt(kpis.result)}\nEmprunts : ${(client.emprunts||[]).length} en cours | Investissements : ${(client.investissements||[]).length}\nAlertes : ${calcAlertes(client,moisIdx,moisYear).filter(a=>a.level!=="green").map(a=>`[${a.level.toUpperCase()}] ${a.kpi}`).join(", ")||"Aucune"}\nRedige : 1. SYNTHESE 2. PERFORMANCES 3. TRESORERIE 4. POINTS D'ATTENTION 5. 3 RECOMMANDATIONS — Professionnel, concis, oriente decision.`;
-    if(!prompt?.trim()){setText("Erreur : prompt vide.");setLoading(false);return;}
-    console.log("PROMPT:", prompt);
     try {
-      const res = await fetch("/api/ai", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt })
-      });
-      const data = await res.json();
-      setText(data.text || "Erreur.");
+      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:prompt}]})});
+      const data=await res.json();
+      setText(data.content?.map(b=>b.text||"").join("")||"Erreur.");
     } catch { setText("Erreur reseau."); }
     setLoading(false);
   };
