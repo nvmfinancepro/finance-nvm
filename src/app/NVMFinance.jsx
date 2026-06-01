@@ -580,9 +580,9 @@ function SidebarBase({ children, role, onLogout, open, onClose }) {
  <>
    {open && <div className="saas-backdrop" onClick={onClose}/>}
    <aside className={"saas-sidebar"+(open?" open":"")} style={{width:220,background:C.primary,display:"flex",flexDirection:"column",height:"100vh",position:"sticky",top:0,flexShrink:0}}>
-   <div style={{padding:"16px 16px 12px",borderBottom:"1px solid rgba(255,255,255,0.1)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+   <div style={{padding:"16px 16px 12px",borderBottom:"1px solid rgba(255,255,255,0.1)",display:"flex",justifyContent:"center",alignItems:"center",position:"relative"}}>
      <LogoSVG width={100} showLabel={true} labelColor="white" fillColor="white" brightGreen="#21C45D"/>
-     <button onClick={onClose} style={{display:"none",background:"rgba(255,255,255,.12)",border:"none",borderRadius:7,width:28,height:28,color:"white",fontSize:16,cursor:"pointer",alignItems:"center",justifyContent:"center",flexShrink:0}} className="saas-close-btn">✕</button>
+     <button onClick={onClose} style={{display:"none",position:"absolute",right:12,background:"rgba(255,255,255,.12)",border:"none",borderRadius:7,width:28,height:28,color:"white",fontSize:16,cursor:"pointer",alignItems:"center",justifyContent:"center",flexShrink:0}} className="saas-close-btn">✕</button>
    </div>
    <div style={{padding:"5px 16px 8px",borderBottom:"1px solid rgba(255,255,255,0.08)",textAlign:"center"}}>
    <span style={{fontSize:9,color:"rgba(255,255,255,0.4)",letterSpacing:"0.14em",textTransform:"uppercase"}}>{role}</span>
@@ -639,7 +639,7 @@ function ClientSidebar({ view, setView, onLogout, clientName, alertCount, open, 
  {id:"previsionnel",  icon:"→", label:"Prévisionnel"},
  ]},
  { label:"MON ÉQUIPE", items:[
- {id:"planning", icon:"👥", label:"Planning"},
+ {id:"planning", icon:"", label:"Planning"},
  ]},
  ];
  return (
@@ -5359,7 +5359,10 @@ function PlanningView({ client, isAdminPreview=false }) {
   matin:      {bg:"#005653",text:"#fff",label:"Matin"},
   "apres-midi":{bg:"#7C3AED",text:"#fff",label:"Après-midi"},
   journee:    {bg:"#2563EB",text:"#fff",label:"Journée"},
+  travail:    {bg:"#005653",text:"#fff",label:"Travail"},
   repos:      {bg:"#E5E7EB",text:"#6B7280",label:"Repos"},
+  conge:      {bg:"#D97706",text:"#fff",label:"Congé"},
+  indispo:    {bg:"#FEF08A",text:"#713F12",label:"Indispo"},
  };
  const TYPES=["matin","apres-midi","journee","repos"];
  const DEF_DEBUT={matin:"08:00","apres-midi":"13:00",journee:"09:00",repos:""};
@@ -5527,6 +5530,7 @@ function PlanningView({ client, isAdminPreview=false }) {
 
  // ── AI generation ─────────────────────────────────────────────
  const generateIA=async()=>{
+  console.log("EMPLOYES STATE:", employes);
   if(employes.length===0){setIaError("Ajoutez d'abord des employés.");return;}
   setIaGenerating(true); setIaError(""); setIaPropositions([]);
   const planMois=vue==="semaine"?weekStart:moisNav;
@@ -5539,8 +5543,9 @@ function PlanningView({ client, isAdminPreview=false }) {
    return lines;
   });
   try {
-   const payload={employes,regles:iaOpts,notes:iaNotes,priorites,contraintes,mois:mo,annee:parseInt(yr,10)};
-   console.log("PAYLOAD ENVOYÉ:", JSON.stringify(payload));
+   if(!Array.isArray(employes)||employes.length===0){setIaError("Aucun employé à planifier.");setIaGenerating(false);return;}
+   const payload={employes,regles:iaOpts,notes:iaNotes,priorites,contraintes,mois:parseInt(mo,10),annee:parseInt(yr,10)};
+   console.log("PLANNING PAYLOAD:", JSON.stringify(payload));
    const r=await fetch("/api/planning/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
    const d=await r.json();
    if(d.error) setIaError("Erreur IA : "+d.error);
@@ -5549,9 +5554,21 @@ function PlanningView({ client, isAdminPreview=false }) {
   } catch(e){setIaError("Erreur réseau : "+e.message);}
   setIaGenerating(false);
  };
+ const stripAccents=s=>s.normalize("NFD").replace(/[̀-ͯ]/g,"");
  const applyProposition=async(prop)=>{
+  console.log("APPLYING PROPOSITION:", prop);
   const normalized={};
-  for(const[k,v] of Object.entries(prop.planning)) normalized[k.toUpperCase()]=v;
+  for(const[k,v] of Object.entries(prop.planning)){
+   const kNorm=stripAccents(k).toUpperCase();
+   const match=employes.find(e=>stripAccents(empKey(e)).toUpperCase()===kNorm);
+   const realKey=match?empKey(match):k.toUpperCase();
+   const normDays={};
+   for(const[ds,cr] of Object.entries(v)){
+    normDays[ds]=cr&&cr.type==="congé"?{...cr,type:"conge"}:cr;
+   }
+   normalized[realKey]=normDays;
+  }
+  console.log("NORMALIZED KEYS:", Object.keys(normalized));
   await savePlanningDB({...planning,...normalized}); closePanel();
  };
 
