@@ -5194,7 +5194,14 @@ function PlanningWeekView({ employes, planning, weekStart, TC, empKey, dStr, fmt
             {tc?(
              <>
               <div style={{fontSize:10,fontWeight:800,color:tc.text,textAlign:"center",lineHeight:1.2}}>{TC[c.type]?.label}</div>
-              {c.debut&&c.fin&&<div style={{fontSize:8,color:tc.text,opacity:.85,textAlign:"center",lineHeight:1.2}}>{label}</div>}
+              {c.debut&&c.fin&&(c.pause_debut&&c.pause_fin?(
+               <>
+                <div style={{fontSize:8,color:tc.text,opacity:.9,textAlign:"center",lineHeight:1.3}}>{fmtH(c.debut)}–{fmtH(c.pause_debut)}</div>
+                <div style={{fontSize:8,color:tc.text,opacity:.9,textAlign:"center",lineHeight:1.3}}>{fmtH(c.pause_fin)}–{fmtH(c.fin)}</div>
+               </>
+              ):(
+               <div style={{fontSize:8,color:tc.text,opacity:.85,textAlign:"center",lineHeight:1.2}}>{label}</div>
+              ))}
              </>
             ):(
              <span style={{fontSize:18,color:"#c8e8e5",lineHeight:1,fontWeight:300}}>+</span>
@@ -5283,7 +5290,7 @@ function PlanningListView({ employes, planning, moisNav, TC, empKey, fmtH, C }) 
    const ek=empKey(emp); const c=planning[ek]?.[ds];
    if(c){
     let h=0;
-    if(c.type!=="repos"&&c.debut&&c.fin){const[dh,dm]=c.debut.split(":").map(Number);const[fh,fm]=c.fin.split(":").map(Number);h=(fh*60+fm-dh*60-dm)/60;}
+    if(c.type!=="repos"&&c.debut&&c.fin){const[dh,dm]=c.debut.split(":").map(Number);const[fh,fm]=c.fin.split(":").map(Number);let pauseMin=0;if(c.pause_debut&&c.pause_fin){const[ph,pm]=c.pause_debut.split(":").map(Number);const[qh,qm]=c.pause_fin.split(":").map(Number);pauseMin=qh*60+qm-ph*60-pm;}h=(fh*60+fm-dh*60-dm-pauseMin)/60;}
     rows.push({ds,emp,c,h:Math.round(h*10)/10});
    }
   });
@@ -5308,7 +5315,7 @@ function PlanningListView({ employes, planning, moisNav, TC, empKey, fmtH, C }) 
         <td style={{padding:"10px 14px",color:C.text,fontSize:12}}>{dateLabel}</td>
         <td style={{padding:"10px 14px",fontWeight:700,color:C.text,fontSize:12}}>{row.emp.prenom} {row.emp.nom}</td>
         <td style={{padding:"10px 14px"}}><span style={{padding:"3px 10px",borderRadius:20,background:tc.bg,color:tc.text,fontSize:11,fontWeight:700}}>{TC[row.c.type]?.label||row.c.type}</span></td>
-        <td style={{padding:"10px 14px",color:C.textMid,fontSize:12,fontFamily:"monospace"}}>{row.c.debut&&row.c.fin?`${row.c.debut} – ${row.c.fin}`:"—"}</td>
+        <td style={{padding:"10px 14px",color:C.textMid,fontSize:12,fontFamily:"monospace"}}>{row.c.debut&&row.c.fin?(row.c.pause_debut&&row.c.pause_fin?`${row.c.debut}–${row.c.pause_debut} / ${row.c.pause_fin}–${row.c.fin}`:`${row.c.debut} – ${row.c.fin}`):"—"}</td>
         <td style={{padding:"10px 14px",textAlign:"right",fontWeight:700,color:C.text,fontSize:12}}>{row.h>0?`${row.h}h`:"—"}</td>
        </tr>
       );
@@ -5332,9 +5339,9 @@ function PlanningView({ client, isAdminPreview=false }) {
  const [panelData,setPanelData]=useState(null);
 
  // edit form
- const [editForm,setEditForm]=useState({type:"matin",debut:"08:00",fin:"14:00",note:"",iaRaison:""});
+ const [editForm,setEditForm]=useState({type:"matin",debut:"08:00",fin:"14:00",pause_debut:"",pause_fin:"",note:"",iaRaison:""});
  // add form
- const [addForm,setAddForm]=useState({empKey:"",dateStr:"",type:"matin",debut:"08:00",fin:"14:00",note:""});
+ const [addForm,setAddForm]=useState({empKey:"",dateStr:"",type:"matin",debut:"08:00",fin:"14:00",pause_debut:"",pause_fin:"",note:""});
  // fiche form
  const [ficheForm,setFicheForm]=useState({});
  const [ficheSaving,setFicheSaving]=useState(false);
@@ -5344,7 +5351,7 @@ function PlanningView({ client, isAdminPreview=false }) {
 
  // IA
  const [iaNotes,setIaNotes]=useState("");
- const [iaOpts,setIaOpts]=useState({contrats:true,hs:true,reconduit:true,conges:true});
+ const [iaOpts,setIaOpts]=useState({contrats:true,hs:true,reconduit:true,conges:true,pauses:true});
  const [iaGenerating,setIaGenerating]=useState(false);
  const [iaPropositions,setIaPropositions]=useState([]);
  const [iaLastNote,setIaLastNote]=useState("");
@@ -5427,7 +5434,7 @@ function PlanningView({ client, isAdminPreview=false }) {
   let h=0;
   Array.from({length:7},(_,i)=>{const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);return d;}).forEach(d=>{
    const c=planning[ek]?.[dStr(d)];
-   if(c&&c.type!=="repos"&&c.debut&&c.fin){const[dh,dm]=c.debut.split(":").map(Number);const[fh,fm]=c.fin.split(":").map(Number);h+=(fh*60+fm-dh*60-dm)/60;}
+   if(c&&c.type!=="repos"&&c.debut&&c.fin){const[dh,dm]=c.debut.split(":").map(Number);const[fh,fm]=c.fin.split(":").map(Number);let pauseMin=0;if(c.pause_debut&&c.pause_fin){const[ph,pm]=c.pause_debut.split(":").map(Number);const[qh,qm]=c.pause_fin.split(":").map(Number);pauseMin=qh*60+qm-ph*60-pm;}h+=(fh*60+fm-dh*60-dm-pauseMin)/60;}
   });
   return Math.round(h);
  };
@@ -5452,7 +5459,7 @@ function PlanningView({ client, isAdminPreview=false }) {
 
  // ── Panels ────────────────────────────────────────────────────
  const openEditCreneau=(ek,ds,c)=>{
-  setEditForm({type:c?.type||"matin",debut:c?.debut||"08:00",fin:c?.fin||"17:00",note:c?.note||"",iaRaison:c?.iaRaison||""});
+  setEditForm({type:c?.type||"matin",debut:c?.debut||"08:00",fin:c?.fin||"17:00",pause_debut:c?.pause_debut||"",pause_fin:c?.pause_fin||"",note:c?.note||"",iaRaison:c?.iaRaison||""});
   setPanelData({empKey:ek,dateStr:ds}); setPanelType("editCreneau");
  };
  const openAddCreneau=(ek="",ds="")=>{
@@ -5722,6 +5729,11 @@ function PlanningView({ client, isAdminPreview=false }) {
            <div style={{flex:1}}><label style={LBL}>Début</label><input type="time" style={INP} value={editForm.debut} onChange={e=>setEditForm(f=>({...f,debut:e.target.value}))}/></div>
            <div style={{flex:1}}><label style={LBL}>Fin</label><input type="time" style={INP} value={editForm.fin} onChange={e=>setEditForm(f=>({...f,fin:e.target.value}))}/></div>
           </div>
+          <label style={{...LBL,textTransform:"none",letterSpacing:"0.02em",color:"#9ca3af",marginBottom:6}}>Pause (facultatif)</label>
+          <div style={{display:"flex",gap:12,marginBottom:14}}>
+           <div style={{flex:1}}><label style={{...LBL,textTransform:"none",fontSize:10,color:"#b0b8c1"}}>Début pause</label><input type="time" style={INP} value={editForm.pause_debut} onChange={e=>setEditForm(f=>({...f,pause_debut:e.target.value}))}/></div>
+           <div style={{flex:1}}><label style={{...LBL,textTransform:"none",fontSize:10,color:"#b0b8c1"}}>Fin pause</label><input type="time" style={INP} value={editForm.pause_fin} onChange={e=>setEditForm(f=>({...f,pause_fin:e.target.value}))}/></div>
+          </div>
           <div style={{marginBottom:14}}>
            <label style={LBL}>Note interne</label>
            <input style={INP} value={editForm.note} onChange={e=>setEditForm(f=>({...f,note:e.target.value}))} placeholder="Commentaire..."/>
@@ -5732,7 +5744,7 @@ function PlanningView({ client, isAdminPreview=false }) {
           <div style={{fontSize:12,color:C.textMid,lineHeight:1.5}}>{editForm.iaRaison}</div>
          </div>}
          <div style={{display:"flex",gap:8,marginTop:8}}>
-          <button onClick={()=>saveCreneau(panelData.empKey,panelData.dateStr,editForm.type==="repos"?{type:"repos"}:{type:editForm.type,debut:editForm.debut,fin:editForm.fin,note:editForm.note,iaRaison:editForm.iaRaison})} style={{flex:1,padding:"12px 0",borderRadius:8,border:"none",background:"#005653",color:"white",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>Enregistrer</button>
+          <button onClick={()=>saveCreneau(panelData.empKey,panelData.dateStr,editForm.type==="repos"?{type:"repos"}:{type:editForm.type,debut:editForm.debut,fin:editForm.fin,pause_debut:editForm.pause_debut,pause_fin:editForm.pause_fin,note:editForm.note,iaRaison:editForm.iaRaison})} style={{flex:1,padding:"12px 0",borderRadius:8,border:"none",background:"#005653",color:"white",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>Enregistrer</button>
           <button onClick={()=>deleteCreneau(panelData.empKey,panelData.dateStr)} style={{padding:"12px 16px",borderRadius:8,border:"none",background:"#fee2e2",color:"#dc2626",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>Supprimer</button>
          </div>
         </div>
@@ -5776,14 +5788,21 @@ function PlanningView({ client, isAdminPreview=false }) {
           </button>
          ))}
         </div>
-        {addForm.type!=="repos"&&<div style={{display:"flex",gap:12,marginBottom:14}}>
-         <div style={{flex:1}}><label style={LBL}>Début</label><input type="time" style={INP} value={addForm.debut} onChange={e=>setAddForm(f=>({...f,debut:e.target.value}))}/></div>
-         <div style={{flex:1}}><label style={LBL}>Fin</label><input type="time" style={INP} value={addForm.fin} onChange={e=>setAddForm(f=>({...f,fin:e.target.value}))}/></div>
-        </div>}
+        {addForm.type!=="repos"&&<>
+         <div style={{display:"flex",gap:12,marginBottom:14}}>
+          <div style={{flex:1}}><label style={LBL}>Début</label><input type="time" style={INP} value={addForm.debut} onChange={e=>setAddForm(f=>({...f,debut:e.target.value}))}/></div>
+          <div style={{flex:1}}><label style={LBL}>Fin</label><input type="time" style={INP} value={addForm.fin} onChange={e=>setAddForm(f=>({...f,fin:e.target.value}))}/></div>
+         </div>
+         <label style={{...LBL,textTransform:"none",letterSpacing:"0.02em",color:"#9ca3af",marginBottom:6}}>Pause (facultatif)</label>
+         <div style={{display:"flex",gap:12,marginBottom:14}}>
+          <div style={{flex:1}}><label style={{...LBL,textTransform:"none",fontSize:10,color:"#b0b8c1"}}>Début pause</label><input type="time" style={INP} value={addForm.pause_debut} onChange={e=>setAddForm(f=>({...f,pause_debut:e.target.value}))}/></div>
+          <div style={{flex:1}}><label style={{...LBL,textTransform:"none",fontSize:10,color:"#b0b8c1"}}>Fin pause</label><input type="time" style={INP} value={addForm.pause_fin} onChange={e=>setAddForm(f=>({...f,pause_fin:e.target.value}))}/></div>
+         </div>
+        </>}
         <div style={{marginBottom:18}}><label style={LBL}>Note</label>
          <input style={INP} value={addForm.note} onChange={e=>setAddForm(f=>({...f,note:e.target.value}))} placeholder="Note interne..."/>
         </div>
-        <button onClick={()=>saveCreneau(addForm.empKey,addForm.dateStr,addForm.type==="repos"?{type:"repos"}:{type:addForm.type,debut:addForm.debut,fin:addForm.fin,note:addForm.note})} style={{width:"100%",padding:"12px 0",borderRadius:8,border:"none",background:"#005653",color:"white",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>Enregistrer</button>
+        <button onClick={()=>saveCreneau(addForm.empKey,addForm.dateStr,addForm.type==="repos"?{type:"repos"}:{type:addForm.type,debut:addForm.debut,fin:addForm.fin,pause_debut:addForm.pause_debut,pause_fin:addForm.pause_fin,note:addForm.note})} style={{width:"100%",padding:"12px 0",borderRadius:8,border:"none",background:"#005653",color:"white",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>Enregistrer</button>
        </div>
       )}
 
@@ -5899,7 +5918,7 @@ function PlanningView({ client, isAdminPreview=false }) {
         </div>
         <div style={{marginBottom:16}}>
          <label style={LBL}>Règles à appliquer</label>
-         {[["contrats","Respecter les contrats"],["hs","Eviter les heures supplémentaires"],["reconduit","Reconduire les créneaux habituels"],["conges","Respecter les congés"]].map(([k,l])=>(
+         {[["contrats","Respecter les contrats"],["hs","Eviter les heures supplémentaires"],["reconduit","Reconduire les créneaux habituels"],["conges","Respecter les congés"],["pauses","Inclure les temps de pause"]].map(([k,l])=>(
           <label key={k} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,cursor:"pointer"}}>
            <input type="checkbox" checked={iaOpts[k]} onChange={e=>setIaOpts(o=>({...o,[k]:e.target.checked}))} style={{width:15,height:15,accentColor:"#005653"}}/>
            <span style={{fontSize:13,color:C.text}}>{l}</span>
@@ -5925,7 +5944,14 @@ function PlanningView({ client, isAdminPreview=false }) {
          {iaGenerating&&<div style={{width:16,height:16,border:"2px solid rgba(255,255,255,0.4)",borderTop:"2px solid white",borderRadius:"50%",animation:"spin 1s linear infinite"}}/>}
          {iaGenerating?"Génération en cours...":"Générer 3 propositions"}
         </button>
-        {iaError&&<div style={{padding:"10px 14px",background:"#fef2f2",border:"1px solid #fca5a5",borderRadius:8,fontSize:12,color:"#dc2626",marginBottom:12}}>{iaError}</div>}
+        {iaError&&(/(rate limit|tokens per day)/i.test(iaError)?(
+         <div style={{padding:"12px 14px",background:"#fff7ed",border:"1px solid #fed7aa",borderRadius:8,marginBottom:12}}>
+          <div style={{fontSize:12,color:"#c2410c",fontWeight:700,marginBottom:8}}>Limite journalière IA atteinte. Réessayez demain — les crédits se renouvellent automatiquement chaque jour à minuit.</div>
+          <button onClick={closePanel} style={{width:"100%",padding:"8px 0",borderRadius:7,border:"1.5px solid #c2410c",background:"transparent",color:"#c2410c",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>Modifier manuellement</button>
+         </div>
+        ):(
+         <div style={{padding:"10px 14px",background:"#fef2f2",border:"1px solid #fca5a5",borderRadius:8,fontSize:12,color:"#dc2626",marginBottom:12}}>{iaError}</div>
+        ))}
         {iaPropositions.length>0&&(
          <div>
           <div style={{fontSize:13,fontWeight:800,color:C.text,marginBottom:12}}>Choisissez un planning</div>

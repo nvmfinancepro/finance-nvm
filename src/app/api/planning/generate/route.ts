@@ -5,7 +5,7 @@ export async function POST(req: NextRequest) {
     if (!process.env.GROQ_API_KEY) {
       return NextResponse.json({ error: "GROQ_API_KEY manquante" }, { status: 500 });
     }
-    const { employes, notes, mois, annee } = await req.json();
+    const { employes, notes, mois, annee, regles } = await req.json();
     console.log("ROUTE HIT", { employes: employes?.length, mois, annee });
     if (!employes || !mois || !annee) {
       return NextResponse.json({ error: "Paramètres manquants" }, { status: 400 });
@@ -13,7 +13,10 @@ export async function POST(req: NextRequest) {
     const nDays = new Date(annee, mois, 0).getDate();
     const moStr = String(mois).padStart(2, "0");
     const empList = employes.map((e: Employe) => `${(e.prenom||"").trim()} ${e.nom.trim()} (${e.heures_semaine}h/sem)`).join(", ");
-    const prompt = `Tu es un assistant RH. Genere 1 planning mensuel pour ${annee}-${moStr} (${nDays} jours) pour : ${empList}. Instructions: ${(notes||"").slice(0,800)}. Retourne UNIQUEMENT ce JSON sans texte autour : {"propositions":[{"resume":"description courte","planning":{"PRENOM NOM":{"${annee}-${moStr}-01":{"type":"travail","debut":"08:00","fin":"16:00"},"${annee}-${moStr}-02":{"type":"repos"}}}}]}`;
+    const pauseInstruction = regles?.pauses
+      ? `Pour chaque créneau de travail, inclure une pause dejeuner ou de milieu de journee via les champs "pause_debut" et "pause_fin" (format HH:MM, ex: "12:00" et "13:00"). Les heures de pause ne comptent pas comme heures travaillees.`
+      : `Les champs pause_debut et pause_fin sont optionnels, ne les inclure que si l'employe en a une.`;
+    const prompt = `Tu es un assistant RH. Genere 1 planning mensuel pour ${annee}-${moStr} (${nDays} jours) pour : ${empList}. Instructions: ${(notes||"").slice(0,800)}. ${pauseInstruction} Retourne UNIQUEMENT ce JSON sans texte autour : {"propositions":[{"resume":"description courte","planning":{"PRENOM NOM":{"${annee}-${moStr}-01":{"type":"travail","debut":"08:00","fin":"16:00","pause_debut":"12:00","pause_fin":"13:00"},"${annee}-${moStr}-02":{"type":"repos"}}}}]}`;
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
