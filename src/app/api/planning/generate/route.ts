@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     const pauseInstruction = regles?.pauses
       ? `Pour chaque créneau de travail, inclure une pause dejeuner ou de milieu de journee via les champs "pause_debut" et "pause_fin" (format HH:MM, ex: "12:00" et "13:00"). Les heures de pause ne comptent pas comme heures travaillees.`
       : `Les champs pause_debut et pause_fin sont optionnels, ne les inclure que si l'employe en a une.`;
-    const prompt = `Tu es un assistant RH. Genere 1 planning mensuel pour ${annee}-${moStr} (${nDays} jours) pour : ${empList}. Instructions: ${(notes||"").slice(0,800)}. ${pauseInstruction} Retourne UNIQUEMENT ce JSON sans texte autour : {"propositions":[{"resume":"description courte","planning":{"PRENOM NOM":{"${annee}-${moStr}-01":{"type":"travail","debut":"08:00","fin":"16:00","pause_debut":"12:00","pause_fin":"13:00"},"${annee}-${moStr}-02":{"type":"repos"}}}}]}`;
+    const prompt = `Tu es un assistant RH. Genere 1 planning mensuel pour ${annee}-${moStr} (${nDays} jours) pour : ${empList}. Instructions: ${(notes||"").slice(0,800)}. ${pauseInstruction} RÈGLE ABSOLUE de couverture : vérifier chaque samedi et dimanche qu'il n'y a pas tous les employés en repos simultanément. Si tous les employés demandent repos le même jour, laisser quand même 1 employé en travail ce jour-là et décaler son repos au jour suivant disponible. Retourne UNIQUEMENT ce JSON sans texte autour : {"propositions":[{"resume":"description courte","planning":{"PRENOM NOM":{"${annee}-${moStr}-01":{"type":"travail","debut":"08:00","fin":"16:00","pause_debut":"12:00","pause_fin":"13:00"},"${annee}-${moStr}-02":{"type":"repos"}}}}]}`;
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
         max_tokens: 8192,
         temperature: 0.1,
         messages: [
-          { role: "system", content: "RÈGLE ABSOLUE : il doit toujours y avoir au minimum le nombre de personnes requis simultanément. Ne jamais mettre tous les employés en repos le même jour. Vérifier chaque jour que la couverture minimum est respectée avant de valider le planning. Tu es un assistant RH. Reponds UNIQUEMENT avec du JSON valide, sans texte avant ni apres, sans backticks." },
+          { role: "system", content: "RÈGLE ABSOLUE : il doit toujours y avoir au minimum le nombre de personnes requis simultanément. Ne jamais mettre tous les employés en repos le même jour. Vérifier chaque jour que la couverture minimum est respectée avant de valider le planning. Tu es un assistant RH. Reponds UNIQUEMENT avec du JSON valide, sans texte avant ni apres, sans backticks. Types autorisés UNIQUEMENT : travail, repos, conge. Pour les congés payés utilise TOUJOURS conge. Ne jamais utiliser cp, conge_paye, congé ou tout autre variante." },
           { role: "user", content: prompt }
         ],
       }),
