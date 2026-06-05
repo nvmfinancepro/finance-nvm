@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
     data: { clientId, name, role: "CLIENT" },
-    redirectTo: (process.env.NEXT_PUBLIC_SITE_URL || "https://nvm-finance.vercel.app") + "/",
+    redirectTo: (process.env.NEXT_PUBLIC_SITE_URL || "https://www.nvm-finance.fr") + "/set-password",
   });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
