@@ -693,19 +693,30 @@ function AdminClients({ clients, onViewAsClient, onAddClient, onUpdateClient, on
  const [newC,setNewC]=useState({name:"",sector:SECTORS[0],manager:"",email:""});
  const [editId,setEditId]=useState(null);
  const [editC,setEditC]=useState({});
- const [confirmDelete,setConfirmDelete]=useState(null); // id du client à supprimer
+ const [editSaving,setEditSaving]=useState(false);
+ const [editError,setEditError]=useState("");
+ const [confirmDelete,setConfirmDelete]=useState(null);
 
- const startEdit=(c)=>{ setEditId(c.id); setEditC({name:c.name,sector:c.sector,manager:c.manager,status:c.status,email:c.email||""}); };
- const saveEdit=()=>{
-    const existing = clients.find(c=>c.id===editId);
-    onUpdateClient(editId,{
-      name:editC.name,
-      sector:editC.sector,
-      manager:editC.manager,
-      email:editC.email,
-      status:existing?.status||"healthy",
-    });
-    setEditId(null);
+ const startEdit=(c)=>{ setEditError(""); setEditId(c.id); setEditC({name:c.name,sector:c.sector,manager:c.manager,status:c.status,email:c.email||""}); };
+ const saveEdit=async()=>{
+    if(editSaving) return;
+    setEditSaving(true); setEditError("");
+    // Mise à jour locale immédiate
+    onUpdateClient(editId,{name:editC.name,sector:editC.sector,manager:editC.manager,email:editC.email});
+    // Sauvegarde directe Supabase (UPDATE simple sur les champs modifiables)
+    try {
+      const {error}=await supabase.from("clients").update({
+        name:editC.name,
+        sector:editC.sector||"",
+        manager:editC.manager,
+        email:editC.email||"",
+      }).eq("id",editId);
+      if(error) throw error;
+      setEditId(null);
+    } catch(e){
+      setEditError("Erreur lors de la sauvegarde : "+((e&&e.message)||"inconnue"));
+    }
+    setEditSaving(false);
   };
 
  const clientToDelete = confirmDelete ? clients.find(c=>c.id===confirmDelete) : null;
@@ -758,9 +769,10 @@ function AdminClients({ clients, onViewAsClient, onAddClient, onUpdateClient, on
  <FormRow label="Responsable NVM"><input value={editC.manager||""} onChange={e=>setEditC({...editC,manager:e.target.value})} className="inp"/></FormRow>
  <FormRow label="Secteur"><select value={editC.sector||""} onChange={e=>setEditC({...editC,sector:e.target.value})} className="inp">{SECTORS.map(s=><option key={s}>{s}</option>)}</select></FormRow>
  </div>
+ {editError&&<div style={{padding:"0 20px 8px",color:C.red,fontSize:12,fontWeight:700}}>{editError}</div>}
  <div style={{padding:"0 20px 20px",display:"flex",gap:10}}>
- <Btn variant="ghost" onClick={()=>setEditId(null)}>Annuler</Btn>
- <Btn variant="orange" onClick={saveEdit}> Enregistrer les modifications</Btn>
+ <Btn variant="ghost" onClick={()=>{setEditId(null);setEditError("");}}>Annuler</Btn>
+ <Btn variant="orange" onClick={saveEdit} disabled={editSaving}>{editSaving?"Enregistrement...":"Enregistrer les modifications"}</Btn>
  </div>
  </Card>
  )}
@@ -6461,7 +6473,7 @@ export default function App() {
         if(!cd||cd.length===0) return;
         const extras=cd.map(c=>({
           id:c.id,name:c.name,sector:c.sector,color:c.color,manager:c.manager,
-          since:c.since,status:c.status,email:c.email||"",
+          since:c.since,status:c.status,email:c.email||(ud||[]).find(u=>u.client_id===c.id)?.email||"",
           kpis:c.kpis||{ca:0,marge:0,charges:0,salaires:0,ebe:0,result:0,tresorerie:0},
           emprunts:c.emprunts||[],investissements:c.investissements||[],
           tresorerie:c.tresorerie||{soldeInitial:0,ajustements:[]},
