@@ -27,7 +27,7 @@ const MONTHS = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","N
 const _NOW = new Date();
 const CUR_M = _NOW.getMonth(); // 0-11
 const CUR_Y = _NOW.getFullYear();
-const SECTORS = ["E-Commerce","Prestation de services","Fabrication & Vente","Restauration","Hôtellerie","Immobilier","Distribution","Conseil","BTP","Santé"];
+const SECTORS = ["E-Commerce","Prestation de services","Fabrication & Vente","Restauration","Hôtellerie","Immobilier","Distribution","Conseil","BTP","Santé","Bar / Tabac / Presse"];
 const fmt = (n: number) => { if(n===null||n===undefined||isNaN(n)) return "—"; const abs=Math.abs(n); const s=abs>=1e6?(abs/1e6).toFixed(2).replace(".",",")+" M€":new Intl.NumberFormat("fr-FR").format(Math.round(abs))+" €"; return n<0?"–"+s:s; };
 const pct = (n: number) => (n==null||isNaN(n))?"—":`${Number(n).toFixed(1)} %`;
 

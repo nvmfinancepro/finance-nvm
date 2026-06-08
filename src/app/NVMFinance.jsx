@@ -42,7 +42,7 @@ const MONTHS = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","N
 const _NOW = new Date();
 const CUR_M = _NOW.getMonth(); // 0-11
 const CUR_Y = _NOW.getFullYear();
-const SECTORS = ["E-Commerce","Prestation de services","Fabrication & Vente","Restauration","Hôtellerie","Immobilier","Distribution","Conseil","BTP","Santé"];
+const SECTORS = ["E-Commerce","Prestation de services","Fabrication & Vente","Restauration","Hôtellerie","Immobilier","Distribution","Conseil","BTP","Santé","Bar / Tabac / Presse"];
 const fmt = (n) => { if(n===null||n===undefined||isNaN(n)) return "—"; const abs=Math.abs(n); const s=abs>=1e6?(abs/1e6).toFixed(2).replace(".",",")+" M€":new Intl.NumberFormat("fr-FR").format(Math.round(abs))+" €"; return n<0?"–"+s:s; };
 const pct = (n) => (n==null||isNaN(n))?"—":`${Number(n).toFixed(1)} %`;
 
@@ -59,6 +59,7 @@ const CSV_TEMPLATES = {
  "Distribution":"reference;designation;qte_vendue;prix_achat_ht;prix_vente_ht;ca_ht;marge_ht\nDIS-001;Boissons palettes;28;15;22;616;196\nDIS-002;Épicerie fine;150;8;13;1950;750\nDIS-003;Produits frais;80;5;9;720;320",
  "Conseil":"reference_mission;libelle;client;taux_journalier_ht;nb_jours;ca_ht;charges_directes_ht\nCONS-001;Stratégie commerciale;Groupe Alpha;1200;5;6000;0\nCONS-002;Audit organisationnel;PME Bertrand;900;8;7200;500\nCONS-003;Accompagnement RH;SAS Horizon;800;3;2400;0",
  "Prestation de services":"reference;libelle;client;quantite;prix_unitaire_ht;ca_ht;marge_ht\nPREST-001;Accompagnement mensuel;Client A;1;1500;1500;1500\nPREST-002;Mission ponctuelle;Client B;1;3200;3200;3200\nPREST-003;Formation;Client C;2;900;1800;1600",
+ "Bar / Tabac / Presse":"date;categorie;libelle;quantite;prix_unit_ht;ca_ht;marge_ht\n2025-10-01;Bar;Café et boissons chaudes;80;1.83;146;107\n2025-10-01;Bar;Bières et softs;55;2.91;160;96\n2025-10-01;Bar;Alcools et cocktails;28;5.83;163;114\n2025-10-01;Tabac;Cigarettes et tabacs;210;9.58;2012;141\n2025-10-01;Presse;Journaux quotidiens;45;1.49;67;10\n2025-10-01;Presse;Magazines et hebdos;22;3.58;79;13",
  default:"reference;libelle;quantite;prix_unitaire_ht;ca_ht;cout_unitaire_ht;marge_ht\nVTE-001;Produit / Prestation A;50;200;10000;80;6000\nVTE-002;Produit / Prestation B;30;150;4500;60;2700",
  },
  autres_ventes:{
@@ -74,6 +75,7 @@ const CSV_TEMPLATES = {
  "Conseil":"date;fournisseur;libelle;montant_ht;taux_tva;tva_recuperable;type\n2025-10-01;WeWork;Location bureaux;1800;20;oui;fixe\n2025-10-01;SNCF;Frais déplacement;420;10;oui;variable\n2025-10-01;Adobe;Logiciels créatifs;54;20;oui;fixe\n2025-10-01;Sous-traitant;Prestation externe;2400;20;oui;variable",
  "Prestation de services":"date;fournisseur;libelle;montant_ht;taux_tva;tva_recuperable;type\n2025-10-01;Bail SCI;Loyer bureaux;2200;0;non;fixe\n2025-10-01;SaaS Tools;Abonnements logiciels;380;20;oui;fixe\n2025-10-01;SNCF;Frais déplacement;580;10;oui;variable\n2025-10-01;Sous-traitant;Prestation externe;1800;20;oui;variable",
  "Distribution":"date;fournisseur;libelle;montant_ht;taux_tva;tva_recuperable;type\n2025-10-01;Fournisseur principal;Achats marchandises;8500;20;oui;variable\n2025-10-01;Transports DHL;Frais de port;620;20;oui;variable\n2025-10-01;Bail entrepôt;Loyer;2800;0;non;fixe",
+ "Bar / Tabac / Presse":"date;fournisseur;libelle;montant_ht;taux_tva;tva_recuperable;type\n2025-10-01;Distributeur tabac agréé;Approvisionnement tabac;18500;20;oui;variable\n2025-10-01;Hachette Distribution;Dépôt presse mensuel;980;2.1;oui;variable\n2025-10-01;METRO;Achats alimentaires et boissons;2800;5.5;oui;variable\n2025-10-01;SCI bailleur;Loyer local commercial;3200;0;non;fixe\n2025-10-01;Mairie / Préfecture;Taxe licence IV (mensualisée);150;0;non;fixe\n2025-10-01;EDF Pro;Électricité;420;20;oui;fixe\n2025-10-01;Assurance pro;RC et multirisque;180;9;non;fixe",
  default:"date;fournisseur;libelle;montant_ht;taux_tva;tva_recuperable;type\n2025-10-01;Fournisseur A;Charge fixe (loyer, assurance...);1000;20;oui;fixe\n2025-10-01;Fournisseur B;Charge variable (matières, sous-traitance...);500;20;oui;variable\n2025-10-01;Fournisseur C;Autre charge;200;20;oui;autre",
  },
   salaires:{
@@ -86,12 +88,14 @@ const CSV_TEMPLATES = {
  "Prestation de services":"nom_prenom;statut;poste;salaire_brut;cotisations_salariales;cotisations_patronales;salaire_net\nDirecteur;CDI;Directeur;4500;945;2070;3555\nChargé mission;CDI;Chargé de mission;3400;714;1564;2686\nAssistant;CDI;Assistant;2600;546;1196;2054",
  "Distribution":"nom_prenom;statut;poste;salaire_brut;cotisations_salariales;cotisations_patronales;salaire_net\nResponsable dépôt;CDI;Responsable logistique;3200;672;1472;2528\nMagasinier;CDI;Magasinier;2400;504;1104;1896\nCommercial;CDI;Commercial terrain;3000;630;1380;2370",
  "Immobilier":"nom_prenom;statut;poste;salaire_brut;cotisations_salariales;cotisations_patronales;salaire_net\nGestionnaire;CDI;Gestionnaire de biens;3200;672;1472;2528\nComptable;CDI;Comptable;3400;714;1564;2686",
+ "Bar / Tabac / Presse":"nom_prenom;statut;poste;salaire_brut;avantages_nature;cotisations_salariales;cotisations_patronales;salaire_net\nPatron;TNS;Gérant buraliste;0;0;0;0;0\nEmployé bar;CDI;Barman-serveur;1900;50;399;874;1551\nEmployé tabac-presse;CDD;Vendeur tabac / presse;1800;0;378;828;1422",
  default:"nom_prenom;statut;poste;salaire_brut;cotisations_salariales;cotisations_patronales;salaire_net\nEmployé 1;CDI;Responsable;3800;798;1748;3002\nEmployé 2;CDI;Collaborateur;3200;672;1472;2528\nEmployé 3;CDI;Assistant;2600;546;1196;2054",
  },
  catalogue:{
  "E-Commerce":"reference;nom_produit;pvht;taux_tva;paht;fournisseur;stock_min\nPRD-001;T-shirt bio;29.90;20;12.00;Fournisseur FR;20",
  "Restauration":"reference;designation;categorie;prix_vente_ttc;cout_matiere;food_cost_pct\nPLAT-001;Steak frites;Plat;22.00;6.60;30%",
  "Fabrication & Vente":"reference;designation;matiere_premiere;temps_fabrication_h;pvht;cout_production;marge\nFAB-001;Table chêne 180cm;Chêne massif;8;680;204;476",
+ "Bar / Tabac / Presse":"reference;designation;categorie;prix_vente_ttc;cout_achat_ht;taux_marge_pct\nBAR-001;Café expresso;Bar;1.80;0.25;64%\nBAR-002;Bière pression 25cl;Bar;3.50;0.80;62%\nBAR-003;Coca-Cola 33cl;Bar;3.00;0.55;65%\nTAB-001;Marlboro rouge;Tabac;11.50;10.83;6%\nTAB-002;Tabac à rouler 30g;Tabac;14.00;13.16;6%\nPRE-001;Le Monde;Presse;2.20;1.76;20%\nPRE-002;Le Figaro;Presse;2.10;1.68;20%\nPRE-003;Paris Match;Presse;3.50;2.80;20%",
  default:"reference;nom_produit;pvht;taux_tva;paht\nPRD-001;Produit A;150;20;60\nPRD-002;Service B;200;20;40",
  },
  creances_clients:{
@@ -1770,11 +1774,20 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
             </div>
             {/* Analyse des postes */}
             {kpis.ca>0&&(()=>{
+              const isBarTabac = client.sector === "Bar / Tabac / Presse";
               const posts = [
-                {label:"Marge brute", val:kpis.marge, pct:kpis.marge/kpis.ca*100, seuil:40, inv:false, tip:"En dessous de 40% : attention aux coûts d'achat"},
-                {label:"Charges externes", val:kpis.charges, pct:kpis.charges/kpis.ca*100, seuil:30, inv:true, tip:"Au-dessus de 30% du CA : charges trop élevées"},
-                {label:"Masse salariale", val:kpis.salaires, pct:kpis.salaires/kpis.ca*100, seuil:35, inv:true, tip:"Au-dessus de 35% du CA : masse salariale lourde"},
-                {label:"EBE", val:kpis.ebe, pct:kpis.ebe/kpis.ca*100, seuil:10, inv:false, tip:"En dessous de 10% : rentabilité opérationnelle faible"},
+                {label:"Marge brute", val:kpis.marge, pct:kpis.marge/kpis.ca*100,
+                  seuil:isBarTabac?25:40, inv:false,
+                  tip:isBarTabac?"En dessous de 25% : renforcer la part bar (tabac/presse ont des marges de 6-20%)":"En dessous de 40% : attention aux coûts d'achat"},
+                {label:"Charges externes", val:kpis.charges, pct:kpis.charges/kpis.ca*100,
+                  seuil:isBarTabac?38:30, inv:true,
+                  tip:isBarTabac?"Au-dessus de 38% : licences et approvisionnement tabac élèvent les charges":"Au-dessus de 30% du CA : charges trop élevées"},
+                {label:"Masse salariale", val:kpis.salaires, pct:kpis.salaires/kpis.ca*100,
+                  seuil:isBarTabac?30:35, inv:true,
+                  tip:isBarTabac?"Au-dessus de 30% du CA : masse salariale lourde pour ce secteur":"Au-dessus de 35% du CA : masse salariale lourde"},
+                {label:"EBE", val:kpis.ebe, pct:kpis.ebe/kpis.ca*100,
+                  seuil:isBarTabac?8:10, inv:false,
+                  tip:isBarTabac?"En dessous de 8% : rentabilité faible (tabac/presse compriment l'EBE)":"En dessous de 10% : rentabilité opérationnelle faible"},
               ];
               return (
                 <div style={{marginTop:14,borderTop:`1px solid ${C.borderLight}`,paddingTop:10,display:"flex",flexDirection:"column",gap:6}}>
@@ -1802,7 +1815,7 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
 
         <Card>
           {(()=>{
-            const sectorsService = ["Prestation de services","Conseil","Immobilier","Santé"];
+            const sectorsService = ["Prestation de services","Conseil","Immobilier","Santé","Bar / Tabac / Presse"];
             const isService = sectorsService.includes(client.sector);
             const hasVolumes = months12.some(m=>m.qte>0);
             // Pour secteurs service : afficher répartition CA par prestation
@@ -6036,34 +6049,55 @@ function calcAlertes(client, moisIdx, moisYear) {
     action:"Surveillez l'évolution du ratio masse salariale / CA chaque mois."
   });
 
-  // ── Taux de marge faible
+  // ── Taux de marge faible (seuils adaptés par secteur)
   const tauxMarge = kpis.ca > 0 ? kpis.marge/kpis.ca*100 : 0;
-  if (tauxMarge > 0 && tauxMarge < 20) alerts.push({
+  const isBarTabacPresse = client.sector === "Bar / Tabac / Presse";
+  const seuilMargeRed    = isBarTabacPresse ? 12 : 20;
+  const seuilMargeOrange = isBarTabacPresse ? 20 : 30;
+  if (tauxMarge > 0 && tauxMarge < seuilMargeRed) alerts.push({
     level:"red", kpi:"Taux de marge très faible",
-    current: `${Math.round(tauxMarge)}%`, threshold:"> 20%",
-    msg:`Votre marge brute est de ${Math.round(tauxMarge)}% du CA. En dessous de 20%, votre activité manque gravement de rentabilité.`,
-    action:"Négociez vos prix d'achat fournisseurs ou augmentez vos prix de vente."
+    current: `${Math.round(tauxMarge)}%`, threshold:`> ${seuilMargeRed}%`,
+    msg:isBarTabacPresse
+      ? `Votre marge brute est de ${Math.round(tauxMarge)}% du CA. Même en tenant compte des faibles marges tabac/presse (6-20%), ce niveau est critique. Développez la partie bar.`
+      : `Votre marge brute est de ${Math.round(tauxMarge)}% du CA. En dessous de 20%, votre activité manque gravement de rentabilité.`,
+    action:isBarTabacPresse
+      ? "Augmentez la part des ventes bar (café, alcools) qui génèrent 60-70% de marge, et réduisez la dépendance au tabac."
+      : "Négociez vos prix d'achat fournisseurs ou augmentez vos prix de vente."
   });
-  else if (tauxMarge > 0 && tauxMarge < 30) alerts.push({
+  else if (tauxMarge > 0 && tauxMarge < seuilMargeOrange) alerts.push({
     level:"orange", kpi:"Taux de marge faible",
-    current: `${Math.round(tauxMarge)}%`, threshold:"> 30%",
-    msg:`Votre marge brute est de ${Math.round(tauxMarge)}% du CA. Le seuil de vigilance est à 30%.`,
-    action:"Identifiez les produits/services à faible marge et optimisez votre mix commercial."
+    current: `${Math.round(tauxMarge)}%`, threshold:`> ${seuilMargeOrange}%`,
+    msg:isBarTabacPresse
+      ? `Votre marge brute est de ${Math.round(tauxMarge)}% du CA. Le tabac (6%) et la presse (20%) tirent la marge vers le bas — le mix de ventes est déterminant.`
+      : `Votre marge brute est de ${Math.round(tauxMarge)}% du CA. Le seuil de vigilance est à 30%.`,
+    action:isBarTabacPresse
+      ? "Analysez la répartition bar/tabac/presse dans vos ventes et cherchez à valoriser les produits bar (cocktails, planches)."
+      : "Identifiez les produits/services à faible marge et optimisez votre mix commercial."
   });
 
-  // ── Charges externes > 40% du CA
+  // ── Charges externes (seuils adaptés : Bar/Tabac/Presse a des charges structurellement élevées)
   const tauxChargesExt = kpis.ca > 0 ? kpis.charges/kpis.ca*100 : 0;
-  if (tauxChargesExt > 40 && kpis.ca > 0) alerts.push({
+  const seuilChargesRed    = isBarTabacPresse ? 48 : 40;
+  const seuilChargesOrange = isBarTabacPresse ? 38 : 25;
+  if (tauxChargesExt > seuilChargesRed && kpis.ca > 0) alerts.push({
     level:"red", kpi:"Charges externes critiques",
-    current: `${Math.round(tauxChargesExt)}% du CA`, threshold:"< 40% du CA",
-    msg:`Vos charges externes représentent ${Math.round(tauxChargesExt)}% de votre CA. C'est un niveau très élevé.`,
-    action:"Auditez chaque poste de charge : abonnements, prestataires, loyer. Négociez ou supprimez les dépenses non essentielles."
+    current: `${Math.round(tauxChargesExt)}% du CA`, threshold:`< ${seuilChargesRed}% du CA`,
+    msg:isBarTabacPresse
+      ? `Vos charges externes représentent ${Math.round(tauxChargesExt)}% du CA. Au-delà de 48% (licences + appro tabac + loyer), la rentabilité s'effondre.`
+      : `Vos charges externes représentent ${Math.round(tauxChargesExt)}% de votre CA. C'est un niveau très élevé.`,
+    action:isBarTabacPresse
+      ? "Renégociez le loyer, mutualisez les approvisionnements, et vérifiez les commissions sur les jeux si applicable."
+      : "Auditez chaque poste de charge : abonnements, prestataires, loyer. Négociez ou supprimez les dépenses non essentielles."
   });
-  else if (tauxChargesExt > 25 && kpis.ca > 0) alerts.push({
+  else if (tauxChargesExt > seuilChargesOrange && kpis.ca > 0) alerts.push({
     level:"orange", kpi:"Charges externes à surveiller",
-    current: `${Math.round(tauxChargesExt)}% du CA`, threshold:"< 25% du CA",
-    msg:`Vos charges externes représentent ${Math.round(tauxChargesExt)}% de votre CA.`,
-    action:"Identifiez les charges compressibles et négociez-les."
+    current: `${Math.round(tauxChargesExt)}% du CA`, threshold:`< ${seuilChargesOrange}% du CA`,
+    msg:isBarTabacPresse
+      ? `Vos charges externes représentent ${Math.round(tauxChargesExt)}% du CA. Tabac et licences sont incompressibles — surveillez loyer et approvisionnements.`
+      : `Vos charges externes représentent ${Math.round(tauxChargesExt)}% de votre CA.`,
+    action:isBarTabacPresse
+      ? "Comparez vos tarifs d'approvisionnement boissons et identifiez les charges compressibles hors tabac/presse."
+      : "Identifiez les charges compressibles et négociez-les."
   });
 
   // ── Total charges (sal + ext) > 80% du CA
@@ -6327,7 +6361,10 @@ function RapportIA({ clients, moisIdx, moisYear }) {
   const generate=async()=>{
     if(!client||!kpis) return;
     setLoading(true); setText("");
-    const prompt=`Tu es analyste financier senior chez NVM Finance. Rapport mensuel pour :\nClient : ${client.name} | Secteur : ${client.sector} | Periode : ${MONTHS[moisIdx]} ${moisYear}\nCA HT : ${fmt(kpis.ca)} | Marge brute : ${fmt(kpis.marge)} (${pct(kpis.ca>0?kpis.marge/kpis.ca*100:0)}) | EBE : ${fmt(kpis.ebe)} | Resultat : ${fmt(kpis.result)}\nEmprunts : ${(client.emprunts||[]).length} en cours | Investissements : ${(client.investissements||[]).length}\nAlertes : ${calcAlertes(client,moisIdx,moisYear).filter(a=>a.level!=="green").map(a=>`[${a.level.toUpperCase()}] ${a.kpi}`).join(", ")||"Aucune"}\nRedige : 1. SYNTHESE 2. PERFORMANCES 3. TRESORERIE 4. POINTS D'ATTENTION 5. 3 RECOMMANDATIONS — Professionnel, concis, oriente decision.`;
+    const sectorContext = client.sector === "Bar / Tabac / Presse"
+      ? "\nContexte sectoriel : activite mixte bar + tabac reglemente + presse. Marge structurellement faible : tabac 6-8%, presse 15-20%, bar 60-70%. Treso en cash importante (recettes journalieres). Charges fixes elevees : licence IV, approvisionnement tabac obligatoire, loyer. KPIs secteur : marge brute cible 20-30%, EBE cible 8-12%, charges ext max 38%."
+      : "";
+    const prompt=`Tu es analyste financier senior chez NVM Finance. Rapport mensuel pour :\nClient : ${client.name} | Secteur : ${client.sector} | Periode : ${MONTHS[moisIdx]} ${moisYear}${sectorContext}\nCA HT : ${fmt(kpis.ca)} | Marge brute : ${fmt(kpis.marge)} (${pct(kpis.ca>0?kpis.marge/kpis.ca*100:0)}) | EBE : ${fmt(kpis.ebe)} | Resultat : ${fmt(kpis.result)}\nEmprunts : ${(client.emprunts||[]).length} en cours | Investissements : ${(client.investissements||[]).length}\nAlertes : ${calcAlertes(client,moisIdx,moisYear).filter(a=>a.level!=="green").map(a=>`[${a.level.toUpperCase()}] ${a.kpi}`).join(", ")||"Aucune"}\nRedige : 1. SYNTHESE 2. PERFORMANCES 3. TRESORERIE 4. POINTS D'ATTENTION 5. 3 RECOMMANDATIONS — Professionnel, concis, oriente decision.`;
     if(!prompt?.trim()){setText("Erreur : prompt vide.");setLoading(false);return;}
     console.log("PROMPT:", prompt);
     try {
