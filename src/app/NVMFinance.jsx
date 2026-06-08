@@ -695,21 +695,16 @@ function AdminClients({ clients, onViewAsClient, onAddClient, onUpdateClient, on
  const [editC,setEditC]=useState({});
  const [confirmDelete,setConfirmDelete]=useState(null); // id du client à supprimer
 
- const startEdit=(c)=>{ setEditId(c.id); setEditC({name:c.name,sector:c.sector,manager:c.manager,status:c.status}); };
+ const startEdit=(c)=>{ setEditId(c.id); setEditC({name:c.name,sector:c.sector,manager:c.manager,status:c.status,email:c.email||""}); };
  const saveEdit=()=>{
-    const client = clients.find(c=>c.id===editId);
-    // Calcul automatique du statut financier
-    const kpis = client ? calcMonthKpis(client, moisIdx, moisYear) : null;
-    let autoStatus = "healthy";
-    if(kpis) {
-      const alertes = calcAlertes(client, moisIdx, moisYear);
-      const reds = alertes.filter(a=>a.level==="red").length;
-      const oranges = alertes.filter(a=>a.level==="orange").length;
-      if(reds > 0) autoStatus = "critical";
-      else if(oranges > 0) autoStatus = "warning";
-      else autoStatus = "healthy";
-    }
-    onUpdateClient(editId,{name:editC.name,sector:editC.sector,manager:editC.manager,email:editC.email,status:autoStatus});
+    const existing = clients.find(c=>c.id===editId);
+    onUpdateClient(editId,{
+      name:editC.name,
+      sector:editC.sector,
+      manager:editC.manager,
+      email:editC.email,
+      status:existing?.status||"healthy",
+    });
     setEditId(null);
   };
 
