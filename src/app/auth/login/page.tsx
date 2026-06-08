@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { LogoSVG } from "@/components/ui/Logo";
@@ -13,8 +13,16 @@ export default function LoginPage() {
   const [forgot, setForgot] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotSent,  setForgotSent]  = useState(false);
+  const [passwordCreated, setPasswordCreated] = useState(false);
   const router = useRouter();
   const supabase = createClient();
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("success") === "1") {
+      setPasswordCreated(true);
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
 
   const handleLogin = async () => {
     setLoading(true); setErr("");
@@ -90,6 +98,13 @@ export default function LoginPage() {
         <p className="text-xs text-gray-400 uppercase tracking-widest text-center mb-6">
           Espace de connexion sécurisé
         </p>
+
+        {passwordCreated && (
+          <div className="mb-5 px-4 py-3 rounded-xl text-sm font-bold text-center"
+            style={{background:"#f0fdf4",color:"#15803d",border:"1.5px solid #86efac"}}>
+            ✅ Votre mot de passe a été créé avec succès. Connectez-vous maintenant.
+          </div>
+        )}
 
         {[{ label: "Adresse e-mail", val: email, set: setEmail, type: "email", ph: "vous@entreprise.fr" },
           { label: "Mot de passe",   val: pass,  set: setPass,  type: "password", ph: "••••••••" }

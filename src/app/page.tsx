@@ -127,7 +127,23 @@ export default function SitePage() {
   const [scanStep, setScanStep] = useState(-1);
   const [alertsVisible, setAlertsVisible] = useState(0);
   const [tresorKey, setTresorKey] = useState(0);
+  const [authError, setAuthError] = useState<string | null>(null);
   const demoRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.includes("error=")) {
+      const params = new URLSearchParams(hash.slice(1));
+      const code = params.get("error_code");
+      if (code === "otp_expired") {
+        setAuthError("Le lien d'invitation a expiré. Demandez à votre administrateur d'envoyer une nouvelle invitation.");
+      } else {
+        const desc = params.get("error_description");
+        setAuthError(desc?.replace(/\+/g, " ") || "Le lien est invalide. Contactez votre administrateur.");
+      }
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
 
   const ca = useCountUp(35400, 2000, heroVisible, statsKey);
   const mg = useCountUp(949, 1800, heroVisible, statsKey);
@@ -204,6 +220,17 @@ export default function SitePage() {
     { label:"EBE", display: ebe.toLocaleString("fr-FR")+" €", delta:"+24%" },
     { label:"Trésorerie", display: tr.toLocaleString("fr-FR")+" €", delta:"+12%" },
   ];
+
+  if (authError) return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg,#005653 0%,#003d3a 100%)",fontFamily:"'Nunito',sans-serif"}}>
+      <div style={{background:"white",borderRadius:20,padding:"48px 40px",width:"100%",maxWidth:420,boxShadow:"0 24px 60px rgba(0,0,0,0.3)",textAlign:"center"}}>
+        <div style={{fontSize:48,marginBottom:16}}>⏱️</div>
+        <div style={{fontSize:20,fontWeight:900,color:"#005653",marginBottom:12}}>Lien expiré</div>
+        <div style={{fontSize:14,color:"#6aaca8",lineHeight:1.6,marginBottom:28}}>{authError}</div>
+        <a href="/auth/login" style={{display:"block",padding:"14px",background:"#005653",color:"white",borderRadius:12,fontSize:15,fontWeight:800,textDecoration:"none"}}>Retour à la connexion</a>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{fontFamily:"'Nunito',sans-serif", background:"#fff", color:C.text, minHeight:"100vh", overflowX:"hidden"}}>

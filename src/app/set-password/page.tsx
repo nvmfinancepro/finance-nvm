@@ -29,7 +29,8 @@ function SetPasswordForm() {
     const { error } = await supabase.auth.updateUser({ password });
     if (error) { setError(error.message); setLoading(false); return; }
     setSuccess(true);
-    setTimeout(() => { window.location.href = "/"; }, 2000);
+    await supabase.auth.signOut();
+    setTimeout(() => { window.location.href = "/auth/login?success=1"; }, 2000);
   };
 
   const C = {
@@ -42,7 +43,7 @@ function SetPasswordForm() {
       <div style={{background:"white",borderRadius:20,padding:"48px 40px",textAlign:"center",maxWidth:420}}>
         <div style={{fontSize:48,marginBottom:16}}>✅</div>
         <div style={{fontSize:20,fontWeight:900,color:C.primary,marginBottom:8}}>Mot de passe défini !</div>
-        <div style={{fontSize:14,color:C.textLight}}>Redirection vers votre espace client...</div>
+        <div style={{fontSize:14,color:C.textLight}}>Redirection vers la page de connexion...</div>
       </div>
     </div>
   );
