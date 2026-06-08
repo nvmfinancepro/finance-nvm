@@ -27,8 +27,21 @@ export default function LoginPage() {
   const handleLogin = async () => {
     setLoading(true); setErr("");
     const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
-    if (error) setErr("Identifiants incorrects. Vérifiez votre e-mail et mot de passe.");
-    else router.push("/dashboard");
+    if (error) { setErr("Identifiants incorrects. Vérifiez votre e-mail et mot de passe."); setLoading(false); return; }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: adminData } = await supabase
+      .from("admin_users")
+      .select("id")
+      .eq("email", user?.email ?? "")
+      .single();
+
+    // Admin et client utilisent tous les deux /dashboard — NVMFinance.jsx détecte la session et affiche l'espace correct
+    if (adminData) {
+      router.push("/dashboard");
+    } else {
+      router.push("/dashboard");
+    }
     setLoading(false);
   };
 

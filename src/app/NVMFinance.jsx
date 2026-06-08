@@ -6395,6 +6395,26 @@ export default function App() {
     }
   },[]);
 
+  // Auto-connexion si une session Supabase active existe déjà (ex: après auth/login/page.tsx)
+  useEffect(()=>{
+    (async()=>{
+      const {data:{session}} = await supabase.auth.getSession();
+      if(!session?.user) return;
+      const email = session.user.email;
+      const {data:adminData} = await supabase.from("admin_users").select("*").eq("email",email).single();
+      if(adminData) {
+        setUser({id:"admin",email,role:"ADMIN",name:"Administrateur NVM",firstLogin:false});
+        setView("clients");
+        return;
+      }
+      const {data:clientUser} = await supabase.from("client_users").select("*").eq("email",email).single();
+      if(clientUser) {
+        setUser({id:"c"+clientUser.client_id,email,role:"CLIENT",clientId:clientUser.client_id,name:clientUser.name||"",firstLogin:clientUser.first_login||false});
+        setView("dashboard");
+      }
+    })();
+  },[]);
+
   // resetMode sera géré dans le return principal
   // ── Clients : démos fixes + clients créés persistés dans storage ──
   const [clients,setClients]=useState([]);
