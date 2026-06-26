@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import { LogoSVG } from "@/components/ui/Logo";
+import { setEnabled, playType, playPop, playTransition, playCheck, playLoginSuccess, playSuccess } from "./sounds";
 
 /* ═══════════════════════════════════════════════════════
    NVM Finance Demo — De la donnée à la décision, 4 étapes
@@ -217,6 +218,43 @@ function StepLeft({num,title,desc,step}){
   );
 }
 
+
+/* ════ SOUND TOGGLE ══════════════════════════════════════ */
+function SpeakerOn(){
+  return(
+    <svg width={15} height={15} viewBox="0 0 16 16" fill="none">
+      <path d="M2 5.5h2.5L8 2.5v11l-3.5-3H2v-5z" stroke="currentColor" strokeWidth={1.5} strokeLinejoin="round"/>
+      <path d="M10 5a3.5 3.5 0 0 1 0 6" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round"/>
+      <path d="M11.5 3a6 6 0 0 1 0 10" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round"/>
+    </svg>
+  );
+}
+function SpeakerOff(){
+  return(
+    <svg width={15} height={15} viewBox="0 0 16 16" fill="none">
+      <path d="M2 5.5h2.5L8 2.5v11l-3.5-3H2v-5z" stroke="currentColor" strokeWidth={1.5} strokeLinejoin="round"/>
+      <path d="M11 6l3 4M14 6l-3 4" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round"/>
+    </svg>
+  );
+}
+function SoundToggle({on, toggle}){
+  return(
+    <button onClick={toggle} style={{
+      position:"fixed",top:14,right:18,zIndex:300,
+      background:on?"rgba(0,86,83,.85)":"rgba(0,0,0,.35)",
+      backdropFilter:"blur(8px)",
+      border:`1px solid ${on?"rgba(33,196,93,.4)":"rgba(255,255,255,.18)"}`,
+      borderRadius:50,padding:"7px 13px",
+      display:"flex",alignItems:"center",gap:6,
+      cursor:"pointer",color:"#fff",fontSize:11,fontWeight:800,
+      transition:"all .2s",letterSpacing:".03em",
+    }}>
+      {on?<SpeakerOn/>:<SpeakerOff/>}
+      {on?"Son activé":"Son"}
+    </button>
+  );
+}
+
 /* ════ PANEL LOGIN ═══════════════════════════════════════ */
 function PanelLogin({active}){
   const emailText="boulangerie.martin@gmail.com";
@@ -247,6 +285,15 @@ function PanelLogin({active}){
 
     return()=>{timers.forEach(clearTimeout);if(emailIv)clearInterval(emailIv);};
   },[active]);
+
+
+  // ── Sons ──
+  const prevEChars = useRef(0);
+  useEffect(()=>{
+    if(eChars > prevEChars.current) playType();
+    prevEChars.current = eChars;
+  },[eChars]);
+  useEffect(()=>{ if(btnState===3) playLoginSuccess(); },[btnState]);
 
   const btnLabel = btnState===3 ? "✓ Connecté · Chargement du tableau de bord…"
     : btnState===2 ? "Connexion en cours…"
@@ -708,6 +755,14 @@ function PanelAuto({active}){
   const seq = useSeq(5, active, 700, 400);
   const hours = useCounter(8, active && seq>=4, 1200);
 
+  // ── Sons checkmarks ──
+  const prevSeq = useRef(-1);
+  useEffect(()=>{
+    if(seq > prevSeq.current && seq > 0) playCheck();
+    prevSeq.current = seq;
+  },[seq]);
+
+
   const steps=[
     {ic:"mail",label:"Relances clients impayés",        auto:"Automatisé"},
     {ic:"box",label:"Commandes fournisseurs · réappro", auto:"Automatisé"},
@@ -802,6 +857,9 @@ function PanelAuto({active}){
 
 /* ════ PANEL OUTRO ═══════════════════════════════════════ */
 function PanelOutro({restart}){
+
+  useEffect(()=>{ if(active!==false) playSuccess(); },[]);
+
   const offs=[
     {t:"Offre Finance",  p:"490€/mois", c:G,        feats:["Tableau de bord","Alertes auto","Conseiller dédié","Prévisionnel"]},
     {t:"Module Gestion", p:"100€/mois", c:"#f59e0b", feats:["Planning équipe","Kanban tâches","Congés & stock","Onboarding"]},
@@ -856,12 +914,22 @@ function PanelOutro({restart}){
 export default function DemoPage(){
   const[elapsed,setElapsed]=useState(0);
   const[rk,setRk]=useState(0);
+  const[soundOn,setSoundOn]=useState(false);
   const elRef=useRef(0);
   const lastTRef=useRef(null);
   const progRef=useRef(null);
+  const prevCurRef=useRef(null);
 
   const restart=()=>{elRef.current=0;lastTRef.current=null;setElapsed(0);setRk(k=>k+1);};
   const cur=PANELS.find(p=>elapsed>=p.s&&elapsed<p.e)?.id||"outro";
+
+  const toggleSound=()=>setSoundOn(v=>{setEnabled(!v);return !v;});
+
+  // Panel transition sounds
+  useEffect(()=>{
+    if(prevCurRef.current && prevCurRef.current!==cur) playTransition();
+    prevCurRef.current=cur;
+  },[cur]);
 
   useEffect(()=>{
     let raf;
@@ -888,6 +956,7 @@ export default function DemoPage(){
       <style>{CSS}</style>
       <a href="/" style={{position:"fixed",top:14,left:18,zIndex:200,fontSize:11,fontWeight:700,
         color:MID,textDecoration:"none",letterSpacing:".05em",opacity:.55}}>← Retour</a>
+      <SoundToggle on={soundOn} toggle={toggleSound}/>
 
       <div style={{position:"relative",width:"min(1100px,92vw)",aspectRatio:"16/9",
         borderRadius:22,overflow:"hidden",flexShrink:0,
