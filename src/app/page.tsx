@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { ReviewsSection, ReviewsWidget } from "@/components/ui/GoogleReviews";
 
 const C = { primary:"#005653", green:"#21C45D", bg:"#ecfdf5", text:"#002e2c", mid:"#2d6b68", light:"#a7d4d0", border:"#c8e8e5" };
 
@@ -128,7 +129,12 @@ export default function SitePage() {
   const [alertsVisible, setAlertsVisible] = useState(0);
   const [tresorKey, setTresorKey] = useState(0);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [reviews, setReviews] = useState<{rating:number;total:number;reviews:{author:string;avatar:string|null;rating:number;text:string;date:string}[]}|null>(null);
   const demoRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetch("/api/reviews").then(r => r.ok ? r.json() : null).then(d => { if (d && !d.error) setReviews(d); });
+  }, []);
 
   useEffect(() => {
     const hash = window.location.hash;
@@ -544,6 +550,9 @@ export default function SitePage() {
         </div>
       </section>
 
+      {/* AVIS GOOGLE */}
+      <ReviewsSection data={reviews}/>
+
       {/* FOOTER */}
       <footer className="footer" style={{background:"#002e2c",padding:"48px 48px 24px"}}>
         <div style={{maxWidth:1100,margin:"0 auto"}}>
@@ -582,6 +591,9 @@ export default function SitePage() {
           </div>
         </div>
       </footer>
+
+      {/* WIDGET FLOTTANT AVIS */}
+      <ReviewsWidget data={reviews}/>
     </div>
   );
 }
