@@ -856,9 +856,9 @@ function PanelAuto({active}){
 }
 
 /* ════ PANEL OUTRO ═══════════════════════════════════════ */
-function PanelOutro({restart}){
+function PanelOutro({restart, active}){
 
-  useEffect(()=>{ if(active!==false) playSuccess(); },[]);
+  useEffect(()=>{ if(active) playSuccess(); },[active]);
 
   const offs=[
     {t:"Offre Finance",  p:"490€/mois", c:G,        feats:["Tableau de bord","Alertes auto","Conseiller dédié","Prévisionnel"]},
@@ -968,7 +968,7 @@ export default function DemoPage(){
           <div className={`pan ${cur==="analyse"?"on":""}`}><PanelAnalyse active={cur==="analyse"}/></div>
           <div className={`pan ${cur==="optim"  ?"on":""}`}><PanelOptim   active={cur==="optim"}/></div>
           <div className={`pan ${cur==="auto"   ?"on":""}`}><PanelAuto    active={cur==="auto"}/></div>
-          <div className={`pan ${cur==="outro"  ?"on":""}`}><PanelOutro   restart={restart}/></div>
+          <div className={`pan ${cur==="outro"  ?"on":""}`}><PanelOutro   restart={restart} active={cur==="outro"}/></div>
         </div>
 
         {/* Step dots */}
