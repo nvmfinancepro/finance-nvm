@@ -343,7 +343,7 @@ export default function SitePage() {
               Prenez les bonnes<br/>décisions. Avec les<br/><em style={{color:C.primary,fontStyle:"normal",borderBottom:`3px solid ${C.green}`}}>bons chiffres.</em>
             </h1>
             <p style={{...a(.2),fontSize:17,fontWeight:600,color:C.mid,lineHeight:1.75,marginBottom:12,maxWidth:460}}>
-              NVM Finance transforme vos données comptables en un tableau de bord vivant, analysé par des experts financiers.
+              Un conseiller dédié analyse vos chiffres chaque mois, identifie ce qui vous coûte cher et vous aide à l'optimiser. On automatise les process trop lourds, et on intègre les outils de gestion dont votre entreprise a besoin — le tout au même endroit.
             </p>
             <p style={{...a(.22),fontSize:14,fontWeight:800,color:C.primary,marginBottom:36}}>Mise en place en 48h · Sans engagement.</p>
             <div className="cta-btns" style={{...a(.3),display:"flex",gap:12,flexWrap:"wrap",marginBottom:40}}>
@@ -351,7 +351,7 @@ export default function SitePage() {
               <a href="/demo" className="cta-outline" style={{background:"#fff",color:C.primary,padding:"15px 32px",borderRadius:100,fontSize:15,fontWeight:800,textDecoration:"none",border:`2px solid ${C.light}`,transition:"all .2s"}}>Voir la démo →</a>
             </div>
             <div className="stats-row" style={{...a(.4),display:"flex",gap:0,paddingTop:28,borderTop:`1px solid ${C.border}`}}>
-              {[{n:"+40%",l:"Gain de rentabilité moyen constaté"},{n:"−3h",l:"Gagnées par semaine sur la gestion financière"},{n:"360°",l:"Visibilité sur toute votre activité"}].map((t,i)=>(
+              {[{n:"+40%",l:"Gain de rentabilité moyen constaté"},{n:"−3h",l:"Gagnées par semaine sur la gestion financière"},{n:"1 outil",l:"Pour piloter finances ET opérations"}].map((t,i)=>(
                 <div key={i} style={{flex:1,paddingRight:24,borderRight:i<2?`1px solid ${C.border}`:"none",marginRight:i<2?24:0}}>
                   <div style={{fontSize:28,fontWeight:900,color:C.primary}}>{t.n}</div>
                   <div style={{fontSize:11,fontWeight:700,color:"#6aaca8",marginTop:4,lineHeight:1.4}}>{t.l}</div>
@@ -418,12 +418,105 @@ export default function SitePage() {
         </div>
       </section>
 
+      {/* COMMENT CA MARCHE */}
+      <section className="section-pad" style={{padding:"96px 48px",background:"#fff"}}>
+        <div style={{maxWidth:1100,margin:"0 auto"}}>
+          <div style={{textAlign:"center",marginBottom:64}}>
+            <div style={{display:"inline-block",background:C.bg,color:C.primary,fontSize:11,fontWeight:800,padding:"5px 14px",borderRadius:100,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:14,border:`1px solid ${C.border}`}}>Méthode</div>
+            <h2 style={{fontSize:"clamp(28px,3.5vw,44px)",fontWeight:900,color:C.text,marginBottom:12,lineHeight:1.12}}>
+              De la donnée à la décision,<br/><em style={{color:C.primary,fontStyle:"normal"}}>en 4 étapes.</em>
+            </h2>
+          </div>
+          <div className="steps-grid" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:24}}>
+            {[
+              {num:"01",icon:<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="5" width="18" height="13" rx="3" stroke={C.primary} strokeWidth="1.6"/><path d="M6 9h10M6 13h6" stroke={C.primary} strokeWidth="1.6" strokeLinecap="round"/></svg>,titre:"Visualisez",desc:"Toutes vos données financières et opérationnelles dans un tableau de bord clair, mis à jour chaque mois."},
+              {num:"02",icon:<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="8" stroke={C.primary} strokeWidth="1.6"/><path d="M8 8l3 3 3-3" stroke={C.primary} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M11 11v4" stroke={C.primary} strokeWidth="1.6" strokeLinecap="round"/></svg>,titre:"Analysez",desc:"Un conseiller dédié décortique vos chiffres et identifie ce qui doit changer."},
+              {num:"03",icon:<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M4 17 L8 11 L12 14 L16 7 L20 5" stroke={C.primary} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M17 5h3v3" stroke={C.primary} strokeWidth="1.6" strokeLinecap="round"/></svg>,titre:"Optimisez",desc:"Des solutions concrètes pour réduire vos coûts et développer votre activité."},
+              {num:"04",icon:<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M5 11h12M13 7l4 4-4 4" stroke={C.primary} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M5 7V5a1 1 0 011-1h4" stroke={C.primary} strokeWidth="1.6" strokeLinecap="round"/></svg>,titre:"Automatisez",desc:"Les process trop lourds ou trop coûteux sont automatisés pour vous faire gagner du temps."},
+            ].map((s,i)=>(
+              <div key={i} className="feat-card" style={{background:"#f8fffe",borderRadius:20,padding:"28px 24px",border:`1px solid ${C.border}`,position:"relative",transition:"all .3s",cursor:"default"}}>
+                <div style={{fontSize:44,fontWeight:900,color:C.border,lineHeight:1,marginBottom:16,letterSpacing:"-0.02em",fontVariantNumeric:"tabular-nums"}}>{s.num}</div>
+                <div style={{width:44,height:44,borderRadius:12,background:C.bg,border:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"center",marginBottom:14}}>{s.icon}</div>
+                <div style={{fontSize:16,fontWeight:900,color:C.text,marginBottom:8}}>{s.titre}</div>
+                <p style={{fontSize:13,fontWeight:600,color:C.mid,lineHeight:1.7,margin:0}}>{s.desc}</p>
+                {i<3 && <div style={{position:"absolute",top:"42%",right:-13,width:26,height:26,borderRadius:"50%",background:"#fff",border:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:C.light,zIndex:1}}>›</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* OUTILS DE GESTION */}
+      <section className="section-pad" style={{padding:"96px 48px",background:C.bg}}>
+        <div style={{maxWidth:1200,margin:"0 auto"}}>
+          <div className="hero-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:72,alignItems:"center"}}>
+
+            {/* Kanban mockup (gauche) */}
+            <div style={{position:"relative",paddingBottom:16,paddingLeft:16}}>
+              <div style={{background:"#fff",borderRadius:24,boxShadow:"0 32px 80px rgba(0,86,83,.14),0 0 0 1px rgba(0,86,83,.06)",padding:"24px 20px",animation:"float 8s ease-in-out infinite .5s"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
+                  <div>
+                    <div style={{fontSize:10,fontWeight:800,color:"#6aaca8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>Module Gestion</div>
+                    <div style={{fontSize:15,fontWeight:900,color:C.text}}>Kanban — Semaine</div>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:6,background:C.bg,padding:"5px 12px",borderRadius:100,border:`1px solid ${C.border}`}}>
+                    <div style={{width:7,height:7,borderRadius:"50%",background:C.green,animation:"pulse-dot 2s infinite"}}/>
+                    <span style={{fontSize:10,fontWeight:800,color:C.primary}}>En direct</span>
+                  </div>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
+                  {([
+                    {col:"À faire",   color:"#6aaca8", bg:"#f8fffe", bd:C.border,       tasks:["Relancer devis client","Mise à jour stock été"]},
+                    {col:"En cours",  color:"#d97706", bg:"#fffbeb", bd:"#fde68a",       tasks:["Planning juillet","Recrutement saisonnier"]},
+                    {col:"Terminé",   color:"#059669", bg:"#f0fdf4", bd:"#bbf7d0",       tasks:["Rapport mai","Commande fournisseur"]},
+                  ] as {col:string;color:string;bg:string;bd:string;tasks:string[]}[]).map((col,ci)=>(
+                    <div key={ci}>
+                      <div style={{fontSize:9,fontWeight:800,textTransform:"uppercase",letterSpacing:"0.08em",color:col.color,marginBottom:8,display:"flex",alignItems:"center",gap:5}}>
+                        <div style={{width:6,height:6,borderRadius:"50%",background:col.color,flexShrink:0}}/>
+                        {col.col}
+                      </div>
+                      <div style={{display:"flex",flexDirection:"column",gap:7}}>
+                        {col.tasks.map((t,ti)=>(
+                          <div key={ti} style={{background:col.bg,borderRadius:8,padding:"9px 10px",border:`1px solid ${col.bd}`}}>
+                            <div style={{fontSize:10,fontWeight:700,color:C.text,lineHeight:1.3}}>{t}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{position:"absolute",bottom:0,right:-16,background:"#fff",borderRadius:14,boxShadow:"0 8px 28px rgba(0,86,83,.12),0 0 0 1px rgba(0,86,83,.06)",padding:"10px 14px",display:"flex",alignItems:"center",gap:10,animation:"float2 8s ease-in-out infinite 2s"}}>
+                <div style={{width:28,height:28,borderRadius:8,background:"#f0fdf4",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l3 3 7-7" stroke="#059669" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+                <div><div style={{fontSize:10,fontWeight:800,color:C.primary}}>Tâche complétée</div><div style={{fontSize:9,fontWeight:600,color:"#6aaca8"}}>Rapport mai — validé</div></div>
+              </div>
+            </div>
+
+            {/* Texte (droite) */}
+            <div>
+              <div style={{display:"inline-block",background:"#fff",color:C.primary,fontSize:11,fontWeight:800,padding:"5px 14px",borderRadius:100,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16,border:`1px solid ${C.border}`}}>Outils de gestion</div>
+              <h2 style={{fontSize:"clamp(26px,3vw,40px)",fontWeight:900,color:C.text,lineHeight:1.15,marginBottom:20}}>
+                Vos outils de gestion,<br/><em style={{color:C.primary,fontStyle:"normal"}}>au même endroit que vos finances.</em>
+              </h2>
+              <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.75,marginBottom:32}}>
+                Planning d'équipe, gestion des tâches, suivi des congés, gestion du stock — tout est intégré dans votre espace NVM Finance. Besoin d'un outil spécifique pour votre activité ? On peut aussi vous le créer sur mesure.
+              </p>
+              <a href="/services" style={{display:"inline-flex",alignItems:"center",gap:8,background:C.primary,color:"#fff",padding:"13px 28px",borderRadius:100,fontSize:14,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 20px rgba(0,86,83,.25)",transition:"all .2s"}}>
+                Découvrir les outils de gestion →
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* 3 PILIERS */}
       <section className="pillar-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",background:C.primary}}>
         {[
-          {ic:<IconChart/>,t:"Pilotage précis",p:"CA, marge, EBE, trésorerie — une vision financière structurée et exploitable en temps réel chaque mois."},
-          {ic:<IconShield/>,t:"Anticipation des risques",p:"Notre système détecte les dérives avant qu'elles impactent votre activité. Alertes automatiques et analyse experte."},
-          {ic:<IconRocket/>,t:"Performance durable",p:"Recommandations concrètes adaptées à votre situation pour optimiser vos résultats et développer sereinement."},
+          {ic:<IconChart/>,t:"Conseiller inclus",p:"Un expert humain lit vos chiffres chaque mois, identifie les dérives et vous donne une lecture claire et exploitable — pas juste un tableau."},
+          {ic:<IconShield/>,t:"Anticipation des risques",p:"Notre système détecte les problèmes avant qu'ils impactent votre activité. Alertes automatiques, analyse experte et optimisation des charges."},
+          {ic:<IconRocket/>,t:"Tout au même endroit",p:"Process automatisés, outils de gestion intégrés (planning, tâches, stock) — pour centraliser finances et opérationnel sans jongler entre plusieurs logiciels."},
         ].map((p,i)=>(
           <div key={i} className="pillar" style={{padding:"44px 40px",borderLeft:i>0?"1px solid rgba(255,255,255,.1)":"none",transition:"background .25s",cursor:"default"}}>
             <div style={{marginBottom:16}}>{p.ic}</div>
@@ -431,264 +524,6 @@ export default function SitePage() {
             <p style={{fontSize:14,fontWeight:600,color:"rgba(255,255,255,.65)",lineHeight:1.7,margin:0}}>{p.p}</p>
           </div>
         ))}
-      </section>
-
-      {/* EN ACTION — section interactive demo */}
-      <section ref={demoRef} className="section-pad demo-section-pad" style={{padding:"80px 48px",background:"#fff"}}>
-        <div style={{maxWidth:1100,margin:"0 auto"}}>
-          <div style={{textAlign:"center",marginBottom:40}}>
-            <div style={{fontSize:12,fontWeight:800,color:C.primary,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:10}}>L'outil en action</div>
-            <h2 style={{fontSize:"clamp(26px,3.2vw,40px)",fontWeight:900,color:C.text,lineHeight:1.13,marginBottom:12}}>Une vraie analyse sur vos chiffres,<br/><em style={{color:C.primary,fontStyle:"normal"}}>faite chaque mois.</em></h2>
-            <p style={{fontSize:15,fontWeight:600,color:C.mid,maxWidth:480,margin:"0 auto",lineHeight:1.65}}>Tableau de bord, trésorerie, alertes — chaque module est pensé pour une lecture immédiate et des décisions éclairées.</p>
-          </div>
-
-          {/* Tabs */}
-          <div style={{display:"flex",justifyContent:"center",gap:8,marginBottom:36,flexWrap:"wrap"}}>
-            {["Tableau de bord","Trésorerie","Alertes"].map((t,i)=>(
-              <button key={i} className={"demo-tab"+(demoTab===i?" on":"")} onClick={()=>setDemoTab(i)}>{t}</button>
-            ))}
-          </div>
-
-          {/* Panel */}
-          <div style={{background:"#f8fffe",borderRadius:24,padding:"28px 32px",boxShadow:"0 4px 32px rgba(0,86,83,.07),0 0 0 1px rgba(0,86,83,.06)",minHeight:340}}>
-
-            {/* ── ONGLET 1 : TABLEAU DE BORD ── */}
-            {demoTab===0&&(
-              <div>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
-                  <div style={{fontSize:14,fontWeight:900,color:C.text}}>Tableau de bord</div>
-                  <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,fontWeight:800,color:C.green,background:"#ecfdf5",padding:"4px 12px",borderRadius:20}}>
-                    <span style={{width:6,height:6,borderRadius:"50%",background:C.green,display:"inline-block",animation:"pulse-dot 2s infinite"}}/>Live
-                  </div>
-                </div>
-                {/* KPI cards avec effet scan */}
-                <div className="demo-kpi-grid" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:18}}>
-                  {DEMO_KPIS.map((k,i)=>{
-                    const active=scanStep===i, past=scanStep>i;
-                    return (
-                      <div key={i} style={{background:active?"#edf9f8":"#fff",border:`1.5px solid ${active?C.primary:past?(k.ok?"rgba(33,196,93,.4)":"rgba(245,158,11,.4)"):C.border}`,borderRadius:12,padding:"14px 14px",position:"relative",transition:"all .4s",opacity:scanStep>=0&&!active&&!past?.5:1,animation:active?"scan-pulse 1s ease-in-out":"none"}}>
-                        <div style={{fontSize:9,fontWeight:800,color:"#6aaca8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4}}>{k.label}</div>
-                        <div style={{fontSize:19,fontWeight:900,color:C.text}}>{k.value}</div>
-                        <div style={{fontSize:11,fontWeight:700,color:k.ok?C.green:"#f59e0b",marginTop:2}}>{k.trend}</div>
-                        {past&&(
-                          <div style={{position:"absolute",top:-9,right:6,background:k.ok?C.green:"#f59e0b",color:"#fff",fontSize:9,fontWeight:900,padding:"2px 8px",borderRadius:20,animation:"badge-pop .3s ease both",whiteSpace:"nowrap"}}>
-                            {k.ok?"✓ OK":"⚠ Attention"}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-                {/* Graphique ligne lissée CA — même style que le hero */}
-                <div style={{background:"#fff",borderRadius:12,padding:"14px 18px",border:`1px solid ${C.border}`}}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-                    <div style={{fontSize:10,fontWeight:800,color:"#6aaca8",letterSpacing:"0.08em",textTransform:"uppercase"}}>Évolution CA — 6 mois</div>
-                    <div style={{fontSize:10,fontWeight:800,color:C.green,background:"#ecfdf5",padding:"2px 8px",borderRadius:20}}>+52% sur la période</div>
-                  </div>
-                  <svg viewBox="0 0 560 80" width="100%" style={{display:"block",overflow:"visible"}}>
-                    <defs>
-                      <linearGradient id="cag" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#005653" stopOpacity="0.14"/>
-                        <stop offset="100%" stopColor="#005653" stopOpacity="0"/>
-                      </linearGradient>
-                    </defs>
-                    <path d="M0,75 L112,59 L224,68 L336,47 L448,35 L560,5 L560,80 L0,80 Z" fill="url(#cag)"/>
-                    <path d="M0,75 L112,59 L224,68 L336,47 L448,35 L560,5" fill="none" stroke="#005653" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"/>
-                    {([[0,75],[112,59],[224,68],[336,47],[448,35],[560,5]] as [number,number][]).map(([x,y],i)=>(
-                      <circle key={i} cx={x} cy={y} r={i===5?5:2.5} fill={i===5?C.primary:"#fff"} stroke={C.primary} strokeWidth={i===5?0:1.5}/>
-                    ))}
-                    <rect x={496} y={-10} width={68} height={20} rx={6} fill={C.primary}/>
-                    <text x={530} y={4} textAnchor="middle" fontSize="9" fill="white" fontFamily="Nunito,sans-serif" fontWeight="800">38 400 € ↑</text>
-                    {(["Nov","Déc","Jan","Fév","Mar","Avr"] as string[]).map((m,i)=>(
-                      <text key={i} x={i*112} y={92} textAnchor={i===0?"start":i===5?"end":"middle"} fontSize="9" fill={i===5?C.text:"#6aaca8"} fontFamily="Nunito,sans-serif" fontWeight={i===5?800:600}>{m}</text>
-                    ))}
-                  </svg>
-                </div>
-                {scanStep<0&&<div style={{textAlign:"center",marginTop:12,fontSize:11,fontWeight:700,color:"#6aaca8"}}>Analyse en cours…</div>}
-              </div>
-            )}
-
-            {/* ── ONGLET 2 : TRÉSORERIE ── */}
-            {demoTab===1&&(
-              <div>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,flexWrap:"wrap",gap:8}}>
-                  <div style={{fontSize:14,fontWeight:900,color:C.text}}>Trésorerie · Vue 7 mois</div>
-                  <div style={{display:"flex",gap:14}}>
-                    <div style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:10,height:10,borderRadius:3,background:C.primary}}/><span style={{fontSize:11,fontWeight:700,color:C.mid}}>Solde sain</span></div>
-                    <div style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:10,height:10,borderRadius:3,background:"#f59e0b"}}/><span style={{fontSize:11,fontWeight:700,color:C.mid}}>Zone critique</span></div>
-                  </div>
-                </div>
-                {/* KPI résumé */}
-                <div className="demo-tresor-kpi" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:20}}>
-                  {[
-                    {l:"Solde actuel",v:"38 200 €",c:C.green,sub:"Confortable",bg:"#fff",br:C.border},
-                    {l:"Variation vs M-1",v:"+16 000 €",c:C.green,sub:"Hausse forte",bg:"#fff",br:C.border},
-                    {l:"Point bas (mars)",v:"12 000 €",c:"#d97706",sub:"⚠ Seuil critique",bg:"#fffbeb",br:"#fde68a"},
-                  ].map((s,i)=>(
-                    <div key={i} style={{background:s.bg,borderRadius:12,padding:"13px 15px",border:`1.5px solid ${s.br}`}}>
-                      <div style={{fontSize:9,fontWeight:800,color:"#6aaca8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4}}>{s.l}</div>
-                      <div style={{fontSize:18,fontWeight:900,color:s.c}}>{s.v}</div>
-                      <div style={{fontSize:11,fontWeight:700,color:s.c,marginTop:2}}>{s.sub}</div>
-                    </div>
-                  ))}
-                </div>
-                {/* Graphique barres trésorerie — style site */}
-                <div style={{background:"#fff",borderRadius:12,padding:"16px 18px 12px",border:`1px solid ${C.border}`}}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-                    <div style={{fontSize:10,fontWeight:800,color:"#6aaca8",letterSpacing:"0.08em",textTransform:"uppercase"}}>Solde fin de mois (k€)</div>
-                    <div style={{display:"flex",gap:12}}>
-                      <div style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:2,background:C.primary}}/><span style={{fontSize:9,fontWeight:700,color:C.mid}}>Sain</span></div>
-                      <div style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:2,background:"#f59e0b"}}/><span style={{fontSize:9,fontWeight:700,color:C.mid}}>Critique</span></div>
-                    </div>
-                  </div>
-                  <div style={{position:"relative"}}>
-                    {/* Lignes de grille */}
-                    {[100,66,33].map(pct=>(
-                      <div key={pct} style={{position:"absolute",top:`${(100-pct)*0.86}px`,left:0,right:0,borderTop:"1px dashed rgba(0,86,83,.08)",zIndex:0}}/>
-                    ))}
-                    <div key={tresorKey} style={{display:"flex",alignItems:"flex-end",gap:"3%",height:86,position:"relative",zIndex:1}}>
-                      {TRESOR_DATA.map((d,i)=>(
-                        <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:0,position:"relative"}}>
-                          {d.low&&(
-                            <div style={{position:"absolute",top:-20,left:"50%",transform:"translateX(-50%)",fontSize:8,fontWeight:900,color:"#b45309",whiteSpace:"nowrap",background:"#fef3c7",padding:"1px 6px",borderRadius:4,border:"1px solid #fde68a"}}>⚠</div>
-                          )}
-                          <div style={{fontSize:"clamp(7px,1vw,9px)",fontWeight:800,color:d.low?"#b45309":C.mid,marginBottom:3,whiteSpace:"nowrap"}}>{d.v}</div>
-                          <div style={{
-                            width:"100%",
-                            height:d.pct*.82+"px",
-                            background:d.low
-                              ?"linear-gradient(to top,#f59e0b,#fde68a)"
-                              :"linear-gradient(to top,rgba(0,86,83,.9),rgba(0,86,83,.45))",
-                            borderRadius:"4px 4px 0 0",
-                            border:d.low?"1.5px solid #f59e0b":"none",
-                            transformOrigin:"bottom",
-                            animation:`bar-grow .5s ease ${i*.07}s both`,
-                          }}/>
-                          <div style={{fontSize:"clamp(7px,1vw,9px)",fontWeight:700,color:d.low?"#d97706":"#6aaca8",marginTop:4}}>{d.m}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div style={{marginTop:14,fontSize:12,fontWeight:700,color:"#b45309",background:"#fffbeb",border:"1.5px solid #fde68a",borderRadius:10,padding:"10px 16px"}}>
-                  💡 En mars, votre solde est passé sous le seuil d'alerte. NVM Finance vous aurait signalé ce risque dès février.
-                </div>
-              </div>
-            )}
-
-            {/* ── ONGLET 3 : ALERTES ── */}
-            {demoTab===2&&(
-              <div>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
-                  <div style={{fontSize:14,fontWeight:900,color:C.text}}>Centre d'alertes · 3 actives</div>
-                  <div style={{fontSize:11,fontWeight:800,color:"#dc2626",background:"#fef2f2",padding:"4px 12px",borderRadius:20}}>3 non lues</div>
-                </div>
-                <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                  {ALERTS_DEMO.map((al,i)=>(
-                    <div key={i} style={{display:"flex",alignItems:"flex-start",gap:14,background:al.bg,border:`1.5px solid ${al.border}`,borderRadius:12,padding:"14px 18px",opacity:alertsVisible>i?1:0,transform:alertsVisible>i?"translateY(0)":"translateY(14px)",transition:`opacity .35s ease ${i*.05}s, transform .35s ease ${i*.05}s`}}>
-                      <div style={{width:10,height:10,borderRadius:"50%",background:al.dot,flexShrink:0,marginTop:5}}/>
-                      <div style={{flex:1}}>
-                        <div style={{fontSize:13,fontWeight:900,color:C.text,marginBottom:3}}>{al.title}</div>
-                        <div style={{fontSize:12,fontWeight:600,color:C.mid,lineHeight:1.55}}>{al.desc}</div>
-                      </div>
-                      <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4,flexShrink:0}}>
-                        <div style={{fontSize:9,fontWeight:800,color:"#fff",background:al.dot,padding:"2px 8px",borderRadius:20}}>{al.lv}</div>
-                        <div style={{fontSize:10,fontWeight:700,color:"#6aaca8"}}>{al.date}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {alertsVisible>=3&&(
-                  <div style={{marginTop:14,background:C.bg,borderRadius:10,padding:"12px 18px",display:"flex",alignItems:"center",gap:10,animation:"alert-in .4s ease"}}>
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#005653" strokeWidth="1.5"/><path d="M8 5v3.5" stroke="#005653" strokeWidth="1.5" strokeLinecap="round"/><circle cx="8" cy="11" r=".8" fill="#005653"/></svg>
-                    <span style={{fontSize:12,fontWeight:700,color:C.primary}}>Recommandation IA disponible — cliquez sur une alerte pour voir l'analyse complète.</span>
-                  </div>
-                )}
-              </div>
-            )}
-
-          </div>
-        </div>
-      </section>
-
-      {/* FEATURES */}
-      <section className="section-pad" style={{padding:"96px 48px",background:"#fff"}}>
-        <div style={{maxWidth:1100,margin:"0 auto"}}>
-          <div style={{textAlign:"center",marginBottom:56}}>
-            <h2 style={{fontSize:"clamp(28px,3.5vw,44px)",fontWeight:900,color:C.text,marginBottom:12,lineHeight:1.12}}>
-              Pas juste des chiffres.<br/><em style={{color:C.primary,fontStyle:"normal"}}>Des décisions.</em>
-            </h2>
-            <p style={{fontSize:16,fontWeight:600,color:C.mid,maxWidth:480,margin:"0 auto",lineHeight:1.65}}>Là où d'autres outils s'arrêtent aux données, NVM Finance va jusqu'à l'action.</p>
-          </div>
-          <div className="feat-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:20}}>
-            {[
-              {ic:<><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="10" width="3" height="8" rx="1" stroke="#005653" strokeWidth="1.5"/><rect x="8" y="6" width="3" height="12" rx="1" stroke="#005653" strokeWidth="1.5"/><rect x="14" y="2" width="3" height="16" rx="1" stroke="#005653" strokeWidth="1.5"/><path d="M2 8 L8 4 L14 1" stroke="#21C45D" strokeWidth="1.5" strokeLinecap="round"/></svg></>,h:"Vision financière 360°",p:"CA, marge, EBE, trésorerie, TVA, IS, prévisionnel — tout calculé automatiquement depuis vos imports."},
-              {ic:<><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2C7 2 5 5 5 8v4l-2 2v1h14v-1l-2-2V8c0-3-2-6-5-6z" stroke="#005653" strokeWidth="1.5" strokeLinecap="round"/><path d="M8 17a2 2 0 004 0" stroke="#005653" strokeWidth="1.5"/><circle cx="14" cy="4" r="3" fill="#005653"/></svg></>,h:"Alertes avant les problèmes",p:"Trésorerie critique, marge en chute, IS à anticiper — identifiés et signalés avant que ça devienne urgent."},
-              {ic:<><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M2 14 L6 8 L10 11 L14 4 L18 2" stroke="#005653" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M15 2 L18 2 L18 5" stroke="#005653" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></>,h:"Prévisionnel intelligent",p:"Projection N+1 et N+2 basée sur vos données réelles. Tendances calculées, ajustements mois par mois."},
-              {ic:<><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="4" stroke="#005653" strokeWidth="1.5"/><path d="M3 18c0-3.3 3.1-6 7-6s7 2.7 7 6" stroke="#005653" strokeWidth="1.5" strokeLinecap="round"/><path d="M13 5l2 2-4 4" stroke="#005653" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></>,h:"Analyse et recommandations",p:"Notre équipe analyse vos données et propose des solutions concrètes adaptées à votre situation réelle."},
-              {ic:<><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="8" width="14" height="10" rx="2" stroke="#005653" strokeWidth="1.5"/><path d="M7 8V6a3 3 0 016 0v2" stroke="#005653" strokeWidth="1.5" strokeLinecap="round"/><circle cx="10" cy="13" r="1.5" fill="#005653"/></svg></>,h:"Espace client sécurisé",p:"Accès personnalisé par entreprise. Interface claire, zéro formation requise, disponible 24h/24."},
-              {ic:<><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="#005653" strokeWidth="1.5"/><path d="M10 6v4l3 3" stroke="#005653" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></>,h:"Opérationnel en 48h",p:"Importez vos données CSV, on s'occupe du reste. Tableau de bord opérationnel en 2 jours."},
-            ].map((f,i)=>(
-              <div key={i} className="feat-card" style={{background:"#f8fffe",borderRadius:16,padding:"24px 22px",border:`1px solid ${C.border}`,transition:"all .3s",cursor:"default"}}>
-                <div style={{marginBottom:16,width:40,height:40,borderRadius:10,background:C.bg,display:"flex",alignItems:"center",justifyContent:"center"}}>{f.ic}</div>
-                <div style={{fontSize:15,fontWeight:900,color:C.text,marginBottom:8}}>{f.h}</div>
-                <p style={{fontSize:13,fontWeight:600,color:C.mid,lineHeight:1.7,margin:0}}>{f.p}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CHECKLIST */}
-      <section className="section-pad" style={{background:"linear-gradient(135deg,#003d3a 0%,#005653 100%)",padding:"96px 48px",position:"relative",overflow:"hidden"}}>
-        <div className="check-grid" style={{maxWidth:880,margin:"0 auto",display:"grid",gridTemplateColumns:"1fr 1fr",gap:64,alignItems:"center",position:"relative"}}>
-          <div>
-            <h2 style={{fontSize:"clamp(28px,3.2vw,40px)",fontWeight:900,color:"#fff",lineHeight:1.15,marginBottom:16}}>Ce que vous gagnez dès le premier mois.</h2>
-            <p style={{fontSize:15,fontWeight:600,color:"rgba(255,255,255,.6)",lineHeight:1.75,marginBottom:32}}>Une clarté financière que peu d'entreprises ont — sans embaucher un DAF.</p>
-            <a href="https://calendly.com/nvmfinance-pro/30min" style={{background:C.green,color:C.text,padding:"14px 32px",borderRadius:100,fontSize:14,fontWeight:900,textDecoration:"none",display:"inline-block",boxShadow:"0 4px 20px rgba(33,196,93,.3)"}}>Démarrer maintenant →</a>
-          </div>
-          <div style={{display:"flex",flexDirection:"column",gap:14}}>
-            {["Vision exacte de votre rentabilité chaque mois","Risques identifiés avant qu'ils deviennent des problèmes","Recommandations concrètes adaptées à votre activité","Prévisionnel fiable pour décider avec confiance","Moins de temps sur les chiffres, plus sur votre métier","Sérénité : vous savez exactement où vous en êtes"].map((t,i)=>(
-              <div key={i} style={{display:"flex",alignItems:"flex-start",gap:12}}>
-                <div style={{width:22,height:22,borderRadius:7,background:"rgba(33,196,93,.2)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>
-                  <svg viewBox="0 0 12 12" fill="none" width="12" height="12"><path d="M2 6l3 3 5-5" stroke={C.green} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </div>
-                <span style={{fontSize:14,fontWeight:700,color:"rgba(255,255,255,.87)",lineHeight:1.45}}>{t}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-
-      {/* AVIS CLIENTS */}
-      <section className="section-pad" style={{padding:"80px 48px",background:"#f8fffe"}}>
-        <div style={{maxWidth:1100,margin:"0 auto"}}>
-          <div style={{textAlign:"center",marginBottom:48}}>
-            <h2 style={{fontSize:"clamp(24px,3vw,38px)",fontWeight:900,color:C.text,marginBottom:10}}>Ce que disent nos clients</h2>
-            <p style={{fontSize:15,fontWeight:600,color:C.mid}}>Des dirigeants qui ont repris le contrôle de leurs finances.</p>
-          </div>
-          <div className="avis-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:24}}>
-            {[
-              {name:"Sophie M.",role:"Dirigeante, cabinet RH",avis:"Avant NVM Finance, je regardais mes chiffres une fois par an avec mon comptable. Maintenant je sais exactement où j'en suis chaque mois. C'est rassurant.",stars:5},
-              {name:"Thomas B.",role:"Gérant, agence digitale",avis:"L'alerte trésorerie m'a sauvé en juin. J'aurais pas vu venir le creux sans le tableau de bord. Mise en place rapide, équipe réactive.",stars:5},
-              {name:"Claire D.",role:"Fondatrice, e-commerce",avis:"Enfin une vision claire de ma marge réelle produit par produit. Le prévisionnel m'aide à planifier mes recrutements avec confiance.",stars:5},
-            ].map((a,i)=>(
-              <div key={i} style={{background:"#fff",borderRadius:16,padding:"24px",border:`1px solid ${C.border}`,display:"flex",flexDirection:"column",gap:16}}>
-                <div style={{display:"flex",gap:2}}>
-                  {Array.from({length:a.stars}).map((_,j)=>(
-                    <svg key={j} width="16" height="16" viewBox="0 0 16 16"><path d="M8 1l1.8 3.6L14 5.4l-3 2.9.7 4.1L8 10.4l-3.7 2L5 8.3 2 5.4l4.2-.8z" fill="#21C45D"/></svg>
-                  ))}
-                </div>
-                <p style={{fontSize:14,fontWeight:600,color:C.mid,lineHeight:1.7,margin:0,fontStyle:"italic"}}>"{a.avis}"</p>
-                <div style={{borderTop:`1px solid ${C.border}`,paddingTop:12}}>
-                  <div style={{fontSize:13,fontWeight:800,color:C.text}}>{a.name}</div>
-                  <div style={{fontSize:11,fontWeight:600,color:"#6aaca8"}}>{a.role}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
       </section>
 
       {/* CTA */}

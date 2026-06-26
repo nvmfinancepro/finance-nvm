@@ -103,7 +103,7 @@ export default function Page() {
         </div>
         <div style={{marginBottom:40}}>
           <h2 style={{fontSize:20,fontWeight:800,color:C.primary,marginBottom:16,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>Tarifs</h2>
-          <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Les prix sont en euros HT. NVM Finance se réserve le droit de les modifier avec 30 jours de préavis.</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Offres : Essentielle 35€/mois, Gestion 250€/mois, Gestion+ 500€/mois, Ultime 600€/mois.</p>
+          <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Les prix sont en euros HT. NVM Finance se réserve le droit de les modifier avec 30 jours de préavis.</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Offres : Offre Finance 490€ HT/mois, Module Outils de gestion 150€ HT/mois (120€ HT/mois en complément de l'Offre Finance), Sur-mesure : sur devis.</p>
         </div>
         <div style={{marginBottom:40}}>
           <h2 style={{fontSize:20,fontWeight:800,color:C.primary,marginBottom:16,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>Paiement</h2>

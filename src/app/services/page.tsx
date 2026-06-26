@@ -58,40 +58,49 @@ export default function ServicesPage() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const offres = [
+  type OffreItem = { tag:string; best:boolean; name:string; items:string[]; prix:string; sticker?:string; cta:string };
+  const offres: OffreItem[] = [
     {
-      tag:"Offre Essentielle", name:"Suivi des marges", best:false,
-      items:["Analyse des marges par produit ou service","Identification de la rentabilité du produit","Suivi de l'évolution des marges dans le temps"],
-      mensuel:"35€ HT", unite:"50€ HT",
+      tag:"Offre Finance", best:true,
+      name:"Finances pilotées chaque mois, conseiller inclus.",
+      items:[
+        "Tableau de bord complet",
+        "Suivi ventes, charges, marges",
+        "Masse salariale",
+        "Créances clients & dettes fournisseurs",
+        "Trésorerie, TVA, IS",
+        "Emprunts & investissements",
+        "Alertes des potentiels risques",
+        "Analyse mensuelle conseiller",
+        "Recommandations d'optimisation",
+        "Automatisation des process",
+        "Anticipation des risques",
+        "Prévisionnel",
+      ],
+      prix:"490€ HT/mois", cta:"Démarrer",
     },
     {
-      tag:"Offre Gestion", name:"Tableau de bord", best:false,
-      items:["Offre Essentielle incluse","Suivi des produits et des charges","Calcul du résultat mensuel","Tableau de bord structuré avec indicateurs"],
-      mensuel:"250€ HT", unite:"300€ HT",
+      tag:"Module Gestion", best:false,
+      name:"L'opérationnel au même endroit que vos finances.",
+      items:[
+        "Planning d'équipe",
+        "Gestion des tâches (Kanban)",
+        "Suivi des congés et absences",
+        "Checklist onboarding",
+        "Gestion du stock incluse",
+      ],
+      prix:"100€ HT/mois", sticker:"-20% avec l'Offre Finance", cta:"Démarrer",
     },
     {
-      tag:"Offre Gestion +", name:"Tableau de bord complet", best:true,
-      items:["Offre Tableau de bord inclus","Suivi de la trésorerie inclus","Tableau de bord de gestion complet","Suivi des investissements","Suivi emprunt bancaire","Suivi IS","Suivi TVA","Suivi créances et dettes"],
-      mensuel:"500€ HT", unite:"1 000€ HT",
-    },
-    {
-      tag:"Offre Ultime", name:"Prévisionnel intégré", best:false,
-      items:["Offre Gestion + inclus","Prévisionnel intégré au tableau de bord","Comparaison résultats prévus vs réels","Projection N+1 et N+2"],
-      mensuel:"600€ HT", unite:"1 500€ HT",
-      note:"*Prévisionnel uniquement",
-    },
-  ];
-
-  const supplements = [
-    {
-      tag:"Supplément", name:"Suivi de la trésorerie",
-      desc:"Cet outil permet d'éviter les tensions de trésorerie en donnant une vision claire, anticipée et fiable des flux financiers.",
-      mensuel:"+125€ HT", unite:undefined as string | undefined,
-    },
-    {
-      tag:"Supplément", name:"Suivi des stocks",
-      desc:"Cet outil permet de suivre les stocks en temps réel et d'en connaître la valeur exacte afin d'optimiser les coûts et améliorer la rentabilité.",
-      mensuel:"+125€ HT", unite:"+200€ HT" as string | undefined,
+      tag:"Sur-mesure", best:false,
+      name:"Un outil unique pour votre besoin précis.",
+      items:[
+        "Outil dédié sur mesure",
+        "Intégré au logiciel ou indépendant",
+        "Accompagnement projet complet",
+        "Site web",
+      ],
+      prix:"Sur devis", cta:"Nous contacter",
     },
   ];
 
@@ -175,64 +184,36 @@ export default function ServicesPage() {
         </p>
       </div>
 
-      {/* 4 OFFRES */}
+      {/* 3 OFFRES */}
       <section className="section-pad" style={{padding:"64px 48px",maxWidth:1200,margin:"0 auto"}}>
-        <div className="offre-grid" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:20}}>
+        <div className="offre-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:24}}>
           {offres.map((o,i)=>(
             <div key={i} className="offre-card" style={{background:"#fff",borderRadius:20,border:o.best?`2px solid ${C.primary}`:`1px solid ${C.border}`,boxShadow:o.best?"0 8px 40px rgba(0,86,83,.15)":"0 2px 12px rgba(0,86,83,.05)",display:"flex",flexDirection:"column",overflow:"hidden",transition:"all .3s"}}>
-              {o.best && <div style={{background:C.primary,color:"#fff",fontSize:10,fontWeight:800,textAlign:"center",padding:"7px",letterSpacing:"0.1em",textTransform:"uppercase"}}>Le plus populaire</div>}
+              {/* Bannière toujours présente pour garder l'alignement des cartes */}
+              <div style={{background:o.best?C.primary:"transparent",color:o.best?"#fff":"transparent",fontSize:10,fontWeight:800,textAlign:"center",padding:"7px",letterSpacing:"0.1em",textTransform:"uppercase",userSelect:"none"}}>
+                {o.best?"Le plus populaire":"·"}
+              </div>
               <div style={{padding:"24px 20px",flex:1}}>
-                <div style={{fontSize:10,fontWeight:800,color:C.primary,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{o.tag}</div>
-                <div style={{fontSize:20,fontWeight:900,color:C.text,marginBottom:20,lineHeight:1.2}}>{o.name}</div>
-                <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:24}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                  <div style={{fontSize:10,fontWeight:800,color:C.primary,letterSpacing:"0.1em",textTransform:"uppercase"}}>{o.tag}</div>
+                  {o.sticker && <div style={{background:"#dcfce7",color:"#15803d",fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:100,border:"1px solid #86efac",whiteSpace:"nowrap"}}>{o.sticker}</div>}
+                </div>
+                <div style={{fontSize:18,fontWeight:900,color:C.text,marginBottom:20,lineHeight:1.2}}>{o.name}</div>
+                {/* Items en 2 colonnes si > 6 (Offre Finance), sinon 1 colonne */}
+                <div style={{display:"grid",gridTemplateColumns:o.items.length>6?"1fr 1fr":"1fr",gap:o.items.length>6?"8px 12px":"10px",marginBottom:24}}>
                   {o.items.map((it,j)=>(
-                    <div key={j} style={{display:"flex",alignItems:"flex-start",gap:8}}>
+                    <div key={j} style={{display:"flex",alignItems:"flex-start",gap:7}}>
                       <Check/>
-                      <span style={{fontSize:13,fontWeight:j===0&&it.includes("inclus")?800:600,color:j===0&&it.includes("inclus")?C.primary:C.mid,lineHeight:1.4}}>{it}</span>
+                      <span style={{fontSize:12,fontWeight:600,color:C.mid,lineHeight:1.4}}>{it}</span>
                     </div>
                   ))}
                 </div>
               </div>
-              <div style={{padding:"20px",borderTop:`1px solid ${C.border}`,background:o.best?C.bg:"#f8fffe"}}>
-                <div style={{marginBottom:8}}>
-                  <span style={{fontSize:26,fontWeight:900,color:C.text}}>{o.mensuel}</span>
-                  <span style={{fontSize:13,fontWeight:600,color:C.mid}}> / Mensuel</span>
-                </div>
-                {o.unite && <div>
-                  <span style={{fontSize:20,fontWeight:800,color:C.mid}}>{o.unite}</span>
-                  <span style={{fontSize:12,fontWeight:600,color:C.mid}}> / Unité</span>
-                </div>}
-                {"note" in o && o.note && <div style={{fontSize:10,color:C.mid,marginTop:4}}>{o.note}</div>}
-                <a href="https://calendly.com/nvmfinance-pro/30min" style={{display:"block",marginTop:16,background:o.best?C.primary:"white",color:o.best?"#fff":C.primary,padding:"11px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",textAlign:"center",border:`2px solid ${C.primary}`,transition:"all .2s"}}>
-                  Démarrer
+              <div style={{padding:"20px",borderTop:`1px solid ${C.border}`,background:o.best?C.bg:"#f8fffe",marginTop:"auto"}}>
+                <span style={{fontSize:26,fontWeight:900,color:C.text}}>{o.prix}</span>
+                <a href="https://calendly.com/nvmfinance-pro/30min" style={{display:"block",marginTop:14,background:o.best?C.primary:"white",color:o.best?"#fff":C.primary,padding:"11px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",textAlign:"center",border:`2px solid ${C.primary}`,transition:"all .2s"}}>
+                  {o.cta}
                 </a>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* SUPPLÉMENTS */}
-      <section style={{padding:"0 48px 64px",maxWidth:1200,margin:"0 auto"}}>
-        <div style={{textAlign:"center",marginBottom:36}}>
-          <h2 style={{fontSize:28,fontWeight:900,color:C.text,marginBottom:8}}>Options supplémentaires</h2>
-          <p style={{fontSize:15,fontWeight:600,color:C.mid}}>Ces modules s'ajoutent à votre offre principale.</p>
-        </div>
-        <div className="suppl-grid" style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:20,maxWidth:800,margin:"0 auto"}}>
-          {supplements.map((s,i)=>(
-            <div key={i} style={{background:"#fff",borderRadius:20,border:`1px solid ${C.border}`,padding:"28px 24px",display:"flex",flexDirection:"column"}}>
-              <div style={{fontSize:10,fontWeight:800,color:C.primary,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{s.tag}</div>
-              <div style={{fontSize:19,fontWeight:900,color:C.text,marginBottom:12}}>{s.name}</div>
-              <p style={{fontSize:13,fontWeight:600,color:C.mid,lineHeight:1.65,flex:1,marginBottom:20}}>{s.desc}</p>
-              <div style={{borderTop:`1px solid ${C.border}`,paddingTop:16}}>
-                <div style={{marginBottom:s.unite?6:0}}>
-                  <span style={{fontSize:24,fontWeight:900,color:C.primary}}>{s.mensuel}</span>
-                  <span style={{fontSize:13,fontWeight:600,color:C.mid}}> / Mensuel</span>
-                </div>
-                {s.unite && <div>
-                  <span style={{fontSize:18,fontWeight:800,color:C.mid}}>{s.unite}</span>
-                  <span style={{fontSize:12,fontWeight:600,color:C.mid}}> / Unité</span>
-                </div>}
               </div>
             </div>
           ))}
