@@ -16,7 +16,7 @@ export async function GET() {
       {
         headers: {
           "X-Goog-Api-Key": apiKey,
-          "X-Goog-FieldMask": "rating,userRatingCount,reviews",
+          "X-Goog-FieldMask": "rating,userRatingCount,reviews.rating,reviews.text,reviews.originalText,reviews.authorAttribution,reviews.relativePublishTimeDescription",
         },
         next: { revalidate: 3600 },
       }
@@ -30,12 +30,13 @@ export async function GET() {
       authorAttribution: { displayName: string; photoUri: string };
       rating: number;
       text?: { text: string };
+      originalText?: { text: string };
       relativePublishTimeDescription?: string;
     }) => ({
       author:   r.authorAttribution?.displayName ?? "Anonyme",
       avatar:   r.authorAttribution?.photoUri ?? null,
       rating:   r.rating,
-      text:     r.text?.text ?? "",
+      text:     r.originalText?.text ?? r.text?.text ?? "",
       date:     r.relativePublishTimeDescription ?? "",
     }));
 
