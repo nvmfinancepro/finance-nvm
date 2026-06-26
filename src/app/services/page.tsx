@@ -223,7 +223,7 @@ export default function ServicesPage() {
       {/* CTA */}
       <section className="hero-pad" style={{background:C.primary,padding:"64px 48px",textAlign:"center"}}>
         <h2 style={{fontSize:34,fontWeight:900,color:"#fff",marginBottom:12,lineHeight:1.1}}>Pas sûr de quelle offre choisir ?</h2>
-        <p style={{fontSize:16,fontWeight:600,color:"rgba(255,255,255,.7)",marginBottom:32}}>On fait le point ensemble en 20 minutes — gratuitement.</p>
+        <p style={{fontSize:16,fontWeight:600,color:"rgba(255,255,255,.7)",marginBottom:32}}>On fait le point ensemble en 20 minutes, gratuitement.</p>
         <a href="https://calendly.com/nvmfinance-pro/30min" style={{background:C.green,color:C.text,padding:"16px 44px",borderRadius:100,fontSize:16,fontWeight:900,textDecoration:"none",display:"inline-block",boxShadow:"0 4px 24px rgba(33,196,93,.3)"}}>
           Prendre RDV gratuitement →
         </a>
@@ -231,7 +231,7 @@ export default function ServicesPage() {
       </section>
 
       <footer className="footer" style={{background:"#002e2c",padding:"24px 48px",textAlign:"center"}}>
-        <p style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,.35)"}}>© 2026 NVM Finance — Tous droits réservés</p>
+        <p style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,.35)"}}>© 2026 NVM Finance · Tous droits réservés</p>
       </footer>
     </div>
   );

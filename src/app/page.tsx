@@ -111,9 +111,9 @@ const TRESOR_DATA = [
   {m:"Mai",v:"38k",pct:100,low:false},
 ];
 const ALERTS_DEMO = [
-  {title:"Trésorerie en zone de risque — mars",   desc:"Solde descendu sous 15 000 €. Anticipez vos entrées d'avril pour éviter la rupture.",dot:"#dc2626",bg:"#fef2f2",border:"#fecaca",date:"15 mar",lv:"Rouge"},
-  {title:"Marge brute en baisse — 2 mois consécutifs",desc:"Passée de 26% à 23.4%. Une révision de vos prix ou coûts est recommandée.",dot:"#f59e0b",bg:"#fffbeb",border:"#fde68a",date:"01 mai",lv:"Orange"},
-  {title:"IS à anticiper — provision conseillée",  desc:"Sur la base du bénéfice actuel : provisionnez ~4 200 € pour l'IS du trimestre.",dot:"#005653",bg:"#f0faf8",border:"#c8e8e5",date:"Maintenant",lv:"Info"},
+  {title:"Trésorerie en zone de risque · mars",   desc:"Solde descendu sous 15 000 €. Anticipez vos entrées d'avril pour éviter la rupture.",dot:"#dc2626",bg:"#fef2f2",border:"#fecaca",date:"15 mar",lv:"Rouge"},
+  {title:"Marge brute en baisse · 2 mois consécutifs",desc:"Passée de 26% à 23.4%. Une révision de vos prix ou coûts est recommandée.",dot:"#f59e0b",bg:"#fffbeb",border:"#fde68a",date:"01 mai",lv:"Orange"},
+  {title:"IS à anticiper · provision conseillée",  desc:"Sur la base du bénéfice actuel : provisionnez ~4 200 € pour l'IS du trimestre.",dot:"#005653",bg:"#f0faf8",border:"#c8e8e5",date:"Maintenant",lv:"Info"},
 ];
 
 export default function SitePage() {
@@ -343,7 +343,7 @@ export default function SitePage() {
               Prenez les bonnes<br/>décisions. Avec les<br/><em style={{color:C.primary,fontStyle:"normal",borderBottom:`3px solid ${C.green}`}}>bons chiffres.</em>
             </h1>
             <p style={{...a(.2),fontSize:17,fontWeight:600,color:C.mid,lineHeight:1.75,marginBottom:12,maxWidth:460}}>
-              Un conseiller dédié analyse vos chiffres chaque mois, identifie ce qui vous coûte cher et vous aide à l'optimiser. On automatise les process trop lourds, et on intègre les outils de gestion dont votre entreprise a besoin — le tout au même endroit.
+              Un conseiller dédié analyse vos chiffres chaque mois, identifie ce qui vous coûte cher et vous aide à l'optimiser. On automatise les process trop lourds, et on intègre les outils de gestion dont votre entreprise a besoin, le tout au même endroit.
             </p>
             <p style={{...a(.22),fontSize:14,fontWeight:800,color:C.primary,marginBottom:36}}>Mise en place en 48h · Sans engagement.</p>
             <div className="cta-btns" style={{...a(.3),display:"flex",gap:12,flexWrap:"wrap",marginBottom:40}}>
@@ -384,7 +384,7 @@ export default function SitePage() {
               </div>
               <div style={{background:"#f8fffe",borderRadius:12,padding:"14px 16px",border:`1px solid ${C.border}`}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                  <span style={{fontSize:10,fontWeight:800,color:C.mid}}>Trésorerie — 12 mois</span>
+                  <span style={{fontSize:10,fontWeight:800,color:C.mid}}>Trésorerie · 12 mois</span>
                   <span style={{fontSize:10,fontWeight:800,color:C.green}}>↑ +12%</span>
                 </div>
                 <svg viewBox="0 0 560 92" width="100%" style={{display:"block",overflow:"visible"}}>
@@ -457,7 +457,7 @@ export default function SitePage() {
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
                   <div>
                     <div style={{fontSize:10,fontWeight:800,color:"#6aaca8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>Module Gestion</div>
-                    <div style={{fontSize:15,fontWeight:900,color:C.text}}>Kanban — Semaine</div>
+                    <div style={{fontSize:15,fontWeight:900,color:C.text}}>Kanban · Semaine</div>
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:6,background:C.bg,padding:"5px 12px",borderRadius:100,border:`1px solid ${C.border}`}}>
                     <div style={{width:7,height:7,borderRadius:"50%",background:C.green,animation:"pulse-dot 2s infinite"}}/>
@@ -490,7 +490,7 @@ export default function SitePage() {
                 <div style={{width:28,height:28,borderRadius:8,background:"#f0fdf4",display:"flex",alignItems:"center",justifyContent:"center"}}>
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l3 3 7-7" stroke="#059669" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </div>
-                <div><div style={{fontSize:10,fontWeight:800,color:C.primary}}>Tâche complétée</div><div style={{fontSize:9,fontWeight:600,color:"#6aaca8"}}>Rapport mai — validé</div></div>
+                <div><div style={{fontSize:10,fontWeight:800,color:C.primary}}>Tâche complétée</div><div style={{fontSize:9,fontWeight:600,color:"#6aaca8"}}>Rapport mai · validé</div></div>
               </div>
             </div>
 
@@ -501,7 +501,7 @@ export default function SitePage() {
                 Vos outils de gestion,<br/><em style={{color:C.primary,fontStyle:"normal"}}>au même endroit que vos finances.</em>
               </h2>
               <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.75,marginBottom:32}}>
-                Planning d'équipe, gestion des tâches, suivi des congés, gestion du stock — tout est intégré dans votre espace NVM Finance. Besoin d'un outil spécifique pour votre activité ? On peut aussi vous le créer sur mesure.
+                Planning d'équipe, gestion des tâches, suivi des congés, gestion du stock : tout est intégré dans votre espace NVM Finance. Besoin d'un outil spécifique pour votre activité ? On peut aussi vous le créer sur mesure.
               </p>
               <a href="/services" style={{display:"inline-flex",alignItems:"center",gap:8,background:C.primary,color:"#fff",padding:"13px 28px",borderRadius:100,fontSize:14,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 20px rgba(0,86,83,.25)",transition:"all .2s"}}>
                 Découvrir les outils de gestion →
@@ -514,9 +514,9 @@ export default function SitePage() {
       {/* 3 PILIERS */}
       <section className="pillar-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",background:C.primary}}>
         {[
-          {ic:<IconChart/>,t:"Conseiller inclus",p:"Un expert humain lit vos chiffres chaque mois, identifie les dérives et vous donne une lecture claire et exploitable — pas juste un tableau."},
+          {ic:<IconChart/>,t:"Conseiller inclus",p:"Un expert humain lit vos chiffres chaque mois, identifie les dérives et vous donne une lecture claire et exploitable, pas juste un tableau."},
           {ic:<IconShield/>,t:"Anticipation des risques",p:"Notre système détecte les problèmes avant qu'ils impactent votre activité. Alertes automatiques, analyse experte et optimisation des charges."},
-          {ic:<IconRocket/>,t:"Tout au même endroit",p:"Process automatisés, outils de gestion intégrés (planning, tâches, stock) — pour centraliser finances et opérationnel sans jongler entre plusieurs logiciels."},
+          {ic:<IconRocket/>,t:"Tout au même endroit",p:"Process automatisés, outils de gestion intégrés (planning, tâches, stock), pour centraliser finances et opérationnel sans jongler entre plusieurs logiciels."},
         ].map((p,i)=>(
           <div key={i} className="pillar" style={{padding:"44px 40px",borderLeft:i>0?"1px solid rgba(255,255,255,.1)":"none",transition:"background .25s",cursor:"default"}}>
             <div style={{marginBottom:16}}>{p.ic}</div>
@@ -577,7 +577,7 @@ export default function SitePage() {
             </div>
           </div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",paddingTop:24,flexWrap:"wrap",gap:12}}>
-            <p style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,.25)"}}>© 2026 NVM Finance — Tous droits réservés</p>
+            <p style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,.25)"}}>© 2026 NVM Finance · Tous droits réservés</p>
             <p style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,.25)"}}>ANALYSE FINANCIÈRE · SUIVI DE PERFORMANCE · PILOTAGE D'ACTIVITÉ</p>
           </div>
         </div>

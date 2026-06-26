@@ -248,7 +248,7 @@ function PanelLogin({active}){
     return()=>{timers.forEach(clearTimeout);if(emailIv)clearInterval(emailIv);};
   },[active]);
 
-  const btnLabel = btnState===3 ? "✓ Connecté — Chargement du tableau de bord…"
+  const btnLabel = btnState===3 ? "✓ Connecté · Chargement du tableau de bord…"
     : btnState===2 ? "Connexion en cours…"
     : "Accéder à mon tableau de bord →";
   const btnBg = btnState===3 ? G : P;
@@ -814,7 +814,7 @@ function PanelOutro({restart}){
         <LogoSVG width={72} showLabel fillColor="#fff" brightGreen={G} labelColor="rgba(255,255,255,.45)"/>
       </div>
       <div className="a2" style={{fontSize:20,fontWeight:900,color:"#fff",textAlign:"center",marginBottom:4,lineHeight:1.2}}>
-        De la donnée à la décision — c&apos;est NVM Finance.
+        De la donnée à la décision, c&apos;est NVM Finance.
       </div>
       <div className="a3" style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,.4)",marginBottom:22,textAlign:"center"}}>
         Choisissez l&apos;offre adaptée à votre étape. Démarrage en 48h · Sans engagement.
