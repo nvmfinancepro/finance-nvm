@@ -6734,7 +6734,7 @@ export default function App() {
         cabinet_id:previewCabinet?previewCabinet.id:(user.role==="CABINET"?user.cabinetId:null),
       }).select().single();
       if(error) throw error;
-      const clientAvecId={...newClient,id:data.id};
+      const clientAvecId={...newClient,id:data.id,cabinet_id:data.cabinet_id};
       setClients(prev=>[...prev,clientAvecId]);
       // 2. Inviter le client par email via Supabase Auth
       if(newC.email){
