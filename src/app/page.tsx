@@ -274,6 +274,8 @@ export default function SitePage() {
           .hero-right-card{padding-bottom:0!important;padding-right:0!important;}
           .hero-notif{display:none!important;}
           .pillar-grid{grid-template-columns:1fr!important;}
+          .steps-grid{grid-template-columns:1fr 1fr!important;}
+          .step-arrow{display:none!important;}
           .feat-grid{grid-template-columns:1fr 1fr!important;gap:12px!important;}
           .check-grid{grid-template-columns:1fr!important;gap:32px!important;}
           .avis-grid{grid-template-columns:1fr!important;}
@@ -295,6 +297,7 @@ export default function SitePage() {
         @media(max-width:480px){
           .feat-grid{grid-template-columns:1fr!important;}
           .footer-grid{grid-template-columns:1fr!important;}
+          .steps-grid{grid-template-columns:1fr!important;}
         }
       `}</style>
 
@@ -445,7 +448,7 @@ export default function SitePage() {
                 <div style={{width:44,height:44,borderRadius:12,background:C.bg,border:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"center",marginBottom:14}}>{s.icon}</div>
                 <div style={{fontSize:16,fontWeight:900,color:C.text,marginBottom:8}}>{s.titre}</div>
                 <p style={{fontSize:13,fontWeight:600,color:C.mid,lineHeight:1.7,margin:0}}>{s.desc}</p>
-                {i<3 && <div style={{position:"absolute",top:"42%",right:-13,width:26,height:26,borderRadius:"50%",background:"#fff",border:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:C.light,zIndex:1}}>›</div>}
+                {i<3 && <div className="step-arrow" style={{position:"absolute",top:"42%",right:-13,width:26,height:26,borderRadius:"50%",background:"#fff",border:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:C.light,zIndex:1}}>›</div>}
               </div>
             ))}
           </div>

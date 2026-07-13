@@ -49,6 +49,18 @@ export default function Page() {
   return (
     <div style={{fontFamily:"'Nunito',sans-serif",background:"#fff",color:C.text,minHeight:"100vh"}}>
       <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+      <style>{`
+        @media(max-width:768px){
+          .desktop-nav-bar{display:none!important;}
+          .mobile-nav-bar{display:flex!important;}
+          .legal-hero{padding:32px 20px 28px!important;}
+          .legal-content{padding:40px 20px!important;}
+          .footer-grid{grid-template-columns:1fr 1fr!important;gap:24px!important;}
+        }
+        @media(max-width:480px){
+          .footer-grid{grid-template-columns:1fr!important;}
+        }
+      `}</style>
       <header style={{background:scrolled?"rgba(255,255,255,.97)":"rgba(255,255,255,.85)",backdropFilter:"blur(20px)",borderBottom:`1px solid ${C.border}`,position:"sticky",top:0,zIndex:100,transition:"all .3s"}}>
         <div style={{display:"flex",justifyContent:"center",paddingTop:18,paddingBottom:12}}><Logo width={80}/></div>
         <div className="desktop-nav-bar" style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 48px 14px",borderTop:`1px solid ${C.border}`}}>
@@ -69,6 +81,7 @@ export default function Page() {
             <span style={{display:"block",width:22,height:2,background:C.primary,borderRadius:2}}/>
           </button>
         </div>
+      </header>
         {menuOpen && <div onClick={()=>setMenuOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.3)",zIndex:199}}/>}
         <div className="drawer" style={{position:"fixed",top:0,right:0,bottom:0,width:"75%",maxWidth:300,background:"#fff",zIndex:200,transform:menuOpen?"translateX(0)":"translateX(100%)",transition:"transform .3s ease",boxShadow:"-8px 0 32px rgba(0,0,0,.1)",display:"flex",flexDirection:"column",padding:"24px 0"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0 24px 20px",borderBottom:`1px solid ${C.border}`,marginBottom:8}}>
@@ -88,8 +101,8 @@ export default function Page() {
             </a>
           </div>
         </div>
-      </header>
-      <div style={{background:C.primary,padding:"48px 48px 40px"}}>
+
+      <div className="legal-hero" style={{background:C.primary,padding:"48px 48px 40px"}}>
         <div style={{maxWidth:800,margin:"0 auto"}}>
           <a href="/" style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,.5)",textDecoration:"none",display:"inline-block",marginBottom:12}}>← Retour au site</a>
           <h1 style={{fontSize:36,fontWeight:900,color:"#fff"}}>Mentions légales</h1>

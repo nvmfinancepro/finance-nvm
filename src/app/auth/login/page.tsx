@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { LogoSVG } from "@/components/ui/Logo";
 
@@ -14,7 +13,6 @@ export default function LoginPage() {
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotSent,  setForgotSent]  = useState(false);
   const [passwordCreated, setPasswordCreated] = useState(false);
-  const router = useRouter();
   const supabase = createClient();
 
   useEffect(() => {
@@ -36,13 +34,9 @@ export default function LoginPage() {
       .eq("email", user?.email ?? "")
       .single();
 
-    // Admin et client utilisent tous les deux /dashboard — NVMFinance.jsx détecte la session et affiche l'espace correct
-    if (adminData) {
-      router.push("/dashboard");
-    } else {
-      router.push("/dashboard");
-    }
-    setLoading(false);
+    // Redirection hard pour que les cookies Supabase soient bien envoyés au middleware
+    window.location.href = "/dashboard";
+    // setLoading reste true pendant la navigation
   };
 
   const handleForgot = async () => {
@@ -57,13 +51,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center"
+    <div className="min-h-screen flex items-center justify-center px-4 py-8"
       style={{ background: "linear-gradient(135deg, #003d3a 0%, #005653 55%, #00706c 100%)" }}>
 
       {/* Modal mot de passe oublié */}
       {forgot && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 w-[420px] shadow-2xl">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl p-6 sm:p-8 w-full max-w-[420px] shadow-2xl">
             {!forgotSent ? (
               <>
                 <h2 className="text-lg font-black text-gray-800 mb-2">Mot de passe oublié</h2>
@@ -104,7 +98,7 @@ export default function LoginPage() {
       )}
 
       {/* Formulaire login */}
-      <div className="bg-white rounded-2xl p-10 w-[420px] shadow-2xl">
+      <div className="bg-white rounded-2xl p-6 sm:p-10 w-full max-w-[420px] shadow-2xl">
         <div className="flex justify-center mb-8">
           <LogoSVG width={180} showLabel />
         </div>
