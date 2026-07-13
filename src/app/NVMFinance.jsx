@@ -704,7 +704,7 @@ function TopBar({ title, user, extra, onMenuToggle }) {
 }
 
 // ADMIN — CABINETS PARTENAIRES (visible admin uniquement)
-function AdminCabinets({ cabinets, clients, onAddCabinet, onDeleteCabinet }) {
+function AdminCabinets({ cabinets, clients, onAddCabinet, onDeleteCabinet, onViewAsCabinet }) {
  const [showAdd,setShowAdd]=useState(false);
  const [newCab,setNewCab]=useState({name:"",contactName:"",email:""});
  const [confirmDelete,setConfirmDelete]=useState(null);
@@ -756,7 +756,10 @@ function AdminCabinets({ cabinets, clients, onAddCabinet, onDeleteCabinet }) {
        <div style={{fontSize:12,color:C.textLight,marginBottom:6}}>{cab.email||"(email non renseigné)"}</div>
        <div style={{fontSize:12,color:C.textMid}}>{clientCount} client{clientCount>1?"s":""} géré{clientCount>1?"s":""}</div>
      </div>
-     <Btn variant="danger" onClick={()=>setConfirmDelete(cab.id)} style={{padding:"6px 10px",fontSize:11}}>Supprimer</Btn>
+     <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end"}}>
+       <Btn small variant="primary" onClick={()=>onViewAsCabinet(cab)} style={{padding:"6px 10px",fontSize:11}}>Voir comme cabinet</Btn>
+       <Btn variant="danger" onClick={()=>setConfirmDelete(cab.id)} style={{padding:"6px 10px",fontSize:11}}>Supprimer</Btn>
+     </div>
    </div>
    </Card>
    );
@@ -6651,6 +6654,7 @@ export default function App() {
     } catch(e){console.error("Supabase save error:",e);}
   };
   const [previewClient,setPreviewClient]=useState(null);
+  const [previewCabinet,setPreviewCabinet]=useState(null);
   const [moisCourant,setMoisCourant]=useState(`${CUR_Y}-${String(CUR_M+1).padStart(2,"0")}`);
   const moisYear=parseInt(moisCourant.split("-")[0]);
   const moisIdx=parseInt(moisCourant.split("-")[1])-1;
@@ -6886,16 +6890,25 @@ export default function App() {
     );
   }
 
+  const visibleClients = previewCabinet ? clients.filter(c=>c.cabinet_id===previewCabinet.id) : clients;
+
   return (
     <div style={{display:"flex",height:"100vh",fontFamily:"'Nunito',sans-serif"}}>
       <GlobalCSS/>
       {CredentialsModal}
       {FirstLoginPopup}
-      <AdminSidebar view={view} setView={setView} onLogout={handleLogout} clientCount={clients.length} alertCount={totalAlerts} open={menuOpen} onClose={()=>setMenuOpen(false)} role={user.role}/>
+      <AdminSidebar view={view} setView={setView} onLogout={previewCabinet?()=>setPreviewCabinet(null):handleLogout} clientCount={visibleClients.length} alertCount={totalAlerts} open={menuOpen} onClose={()=>setMenuOpen(false)} role={previewCabinet?"CABINET":user.role}/>
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-        <TopBar title={ADMIN_TITLES[view]||"Admin"} user={user} onMenuToggle={()=>setMenuOpen(o=>!o)}/>
+        <TopBar title={ADMIN_TITLES[view]||"Admin"} user={user} onMenuToggle={()=>setMenuOpen(o=>!o)}
+          extra={previewCabinet?(
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:12,color:C.textMid,fontWeight:700}}>Aperçu — {previewCabinet.name}</span>
+              <Btn small variant="primary" onClick={()=>setPreviewCabinet(null)}>← Retour admin</Btn>
+            </div>
+          ):undefined}
+        />
         <div style={{flex:1,overflowY:"auto"}}>
-          {view==="clients"&&<AdminClients clients={clients} onViewAsClient={setPreviewClient} onAddClient={handleAddClient} onUpdateClient={updateClient} onDeleteClient={(id)=>{(async()=>{
+          {view==="clients"&&<AdminClients clients={visibleClients} onViewAsClient={setPreviewClient} onAddClient={handleAddClient} onUpdateClient={updateClient} onDeleteClient={(id)=>{(async()=>{
           // Récupérer l'email du client avant suppression
           const clientToDelete = clients.find(c=>c.id===id);
           const emailToDelete = clientToDelete?.email || USERS_AUTH.find(u=>u.clientId===id)?.email;
@@ -6917,12 +6930,12 @@ export default function App() {
             }).catch(e=>console.error("Erreur suppression Auth:",e));
           }
         })();}}/>}
-          {view==="acces"&&<AdminAcces clients={clients}/>}
-          {view==="saisie"&&<AdminSaisie clients={clients} onUpdateClient={updateClient}/>}
-          {view==="financier"&&<AdminFinancier clients={clients} onUpdateClient={updateClient}/>}
-          {view==="alertes"&&<AlertesView clients={clients} moisIdx={moisIdx} moisYear={moisYear}/>}
-          {view==="rapports"&&<RapportIA clients={clients} moisIdx={moisIdx} moisYear={moisYear}/>}
-          {view==="cabinets"&&user.role==="ADMIN"&&<AdminCabinets cabinets={cabinets} clients={clients} onAddCabinet={handleAddCabinet} onDeleteCabinet={handleDeleteCabinet}/>}
+          {view==="acces"&&<AdminAcces clients={visibleClients}/>}
+          {view==="saisie"&&<AdminSaisie clients={visibleClients} onUpdateClient={updateClient}/>}
+          {view==="financier"&&<AdminFinancier clients={visibleClients} onUpdateClient={updateClient}/>}
+          {view==="alertes"&&<AlertesView clients={visibleClients} moisIdx={moisIdx} moisYear={moisYear}/>}
+          {view==="rapports"&&<RapportIA clients={visibleClients} moisIdx={moisIdx} moisYear={moisYear}/>}
+          {view==="cabinets"&&user.role==="ADMIN"&&!previewCabinet&&<AdminCabinets cabinets={cabinets} clients={clients} onAddCabinet={handleAddCabinet} onDeleteCabinet={handleDeleteCabinet} onViewAsCabinet={setPreviewCabinet}/>}
         </div>
       </div>
     </div>
