@@ -6616,13 +6616,18 @@ export default function App() {
       return;
     }
     try {
-      if(cab.email){
+      // On cherche via profiles (pas cabinets.email, qui peut être vide pour les
+      // cabinets créés avant son ajout) : c'est la vraie source du compte à supprimer.
+      const {data:linkedProfiles} = await supabase.from("profiles").select("email").eq("cabinet_id",cab.id).eq("role","CABINET");
+      if(linkedProfiles?.length){
         const {data:{session}} = await supabase.auth.getSession();
-        await fetch("/api/delete-user",{
-          method:"POST",
-          headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},
-          body:JSON.stringify({email:cab.email}),
-        }).catch(e=>console.error("Erreur suppression Auth:",e));
+        for(const p of linkedProfiles){
+          await fetch("/api/delete-user",{
+            method:"POST",
+            headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},
+            body:JSON.stringify({email:p.email}),
+          }).catch(e=>console.error("Erreur suppression Auth:",e));
+        }
       }
       const {error}=await supabase.from("cabinets").delete().eq("id",cab.id);
       if(error) throw error;
