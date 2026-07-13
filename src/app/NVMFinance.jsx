@@ -6910,13 +6910,13 @@ export default function App() {
       <GlobalCSS/>
       {CredentialsModal}
       {FirstLoginPopup}
-      <AdminSidebar view={view} setView={setView} onLogout={previewCabinet?()=>setPreviewCabinet(null):handleLogout} clientCount={visibleClients.length} alertCount={totalAlerts} pendingResets={visiblePendingResets} open={menuOpen} onClose={()=>setMenuOpen(false)} role={previewCabinet?"CABINET":user.role}/>
+      <AdminSidebar view={view} setView={setView} onLogout={previewCabinet?()=>{setPreviewCabinet(null);setView("cabinets");}:handleLogout} clientCount={visibleClients.length} alertCount={totalAlerts} pendingResets={visiblePendingResets} open={menuOpen} onClose={()=>setMenuOpen(false)} role={previewCabinet?"CABINET":user.role}/>
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
         <TopBar title={ADMIN_TITLES[view]||"Admin"} user={user} onMenuToggle={()=>setMenuOpen(o=>!o)}
           extra={previewCabinet?(
             <div style={{display:"flex",alignItems:"center",gap:8}}>
               <span style={{fontSize:12,color:C.textMid,fontWeight:700}}>Aperçu — {previewCabinet.name}</span>
-              <Btn small variant="primary" onClick={()=>setPreviewCabinet(null)}>← Retour admin</Btn>
+              <Btn small variant="primary" onClick={()=>{setPreviewCabinet(null);setView("cabinets");}}>← Retour admin</Btn>
             </div>
           ):undefined}
         />
@@ -6948,7 +6948,7 @@ export default function App() {
           {view==="financier"&&<AdminFinancier clients={visibleClients} onUpdateClient={updateClient}/>}
           {view==="alertes"&&<AlertesView clients={visibleClients} moisIdx={moisIdx} moisYear={moisYear}/>}
           {view==="rapports"&&<RapportIA clients={visibleClients} moisIdx={moisIdx} moisYear={moisYear}/>}
-          {view==="cabinets"&&user.role==="ADMIN"&&!previewCabinet&&<AdminCabinets cabinets={cabinets} clients={clients} onAddCabinet={handleAddCabinet} onDeleteCabinet={handleDeleteCabinet} onViewAsCabinet={setPreviewCabinet}/>}
+          {view==="cabinets"&&user.role==="ADMIN"&&!previewCabinet&&<AdminCabinets cabinets={cabinets} clients={clients} onAddCabinet={handleAddCabinet} onDeleteCabinet={handleDeleteCabinet} onViewAsCabinet={(cab)=>{setPreviewCabinet(cab);setView("clients");}}/>}
         </div>
       </div>
     </div>
