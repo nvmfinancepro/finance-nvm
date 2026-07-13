@@ -6760,7 +6760,8 @@ export default function App() {
     }
   };
 
-  const ADMIN_TITLES={clients:`Portefeuille clients (${clients.length})`,acces:"Accès & mots de passe clients",saisie:"Saisie & Import CSV",financier:"Donnees financieres",alertes:"Centre d'alertes",rapports:"Rapports IA",cabinets:"Cabinets partenaires"};
+  const visibleClients = previewCabinet ? clients.filter(c=>c.cabinet_id===previewCabinet.id) : clients;
+  const ADMIN_TITLES={clients:`Portefeuille clients (${visibleClients.length})`,acces:"Accès & mots de passe clients",saisie:"Saisie & Import CSV",financier:"Donnees financieres",alertes:"Centre d'alertes",rapports:"Rapports IA",cabinets:"Cabinets partenaires"};
   const CLIENT_TITLES={dashboard:"Tableau de bord",alertes:"Mes alertes",ventes:"Mes ventes",achats:"Mes couts d'achat",charges:"Mes charges",salaires:"Ma masse salariale",creances:"Mes créances clients",dettes:"Mes dettes fournisseurs",resultat:"Mon resultat financier",tresorerie:"Ma tresorerie",emprunts:"Mes emprunts",investissements:"Mes investissements",is:"Mon impot (IS)",catalogue:"Mon catalogue produits", comparaison:"Comparaison de périodes", previsionnel:"Prévisionnel", planning:"Planning & équipe"};
 
   // Modal credentials nouveau client (admin)
@@ -6893,7 +6894,6 @@ export default function App() {
     );
   }
 
-  const visibleClients = previewCabinet ? clients.filter(c=>c.cabinet_id===previewCabinet.id) : clients;
   const visibleEmails = new Set(USERS_AUTH.filter(u=>u.role==="CLIENT" && visibleClients.some(c=>c.id===u.clientId)).map(u=>u.email));
   const visiblePendingResets = RESET_REQUESTS.filter(r=>r.status==="pending" && visibleEmails.has(r.email)).length;
 
