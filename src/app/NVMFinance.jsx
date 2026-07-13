@@ -6580,9 +6580,10 @@ export default function App() {
       setClients(prev=>[...prev,clientAvecId]);
       // 2. Inviter le client par email via Supabase Auth
       if(newC.email){
+        const {data:{session}} = await supabase.auth.getSession();
         const res = await fetch("/api/invite",{
           method:"POST",
-          headers:{"Content-Type":"application/json"},
+          headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},
           body:JSON.stringify({email:newC.email,clientId:data.id,name:newC.name}),
         });
         const inv = await res.json();
@@ -6760,9 +6761,10 @@ export default function App() {
           await supabase.from("imports_csv").delete().eq("client_id",id);
           // Supprimer de Supabase Auth
           if(emailToDelete) {
+            const {data:{session}} = await supabase.auth.getSession();
             fetch("/api/delete-user",{
               method:"POST",
-              headers:{"Content-Type":"application/json"},
+              headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},
               body:JSON.stringify({email:emailToDelete})
             }).catch(e=>console.error("Erreur suppression Auth:",e));
           }
