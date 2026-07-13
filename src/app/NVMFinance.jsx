@@ -628,7 +628,7 @@ function AdminSidebar({ view, setView, onLogout, clientCount, alertCount, pendin
  if(role!=="CABINET") nav.push({id:"cabinets",icon:"",label:"Cabinets partenaires"});
  return <SidebarBase role={role==="CABINET"?"Espace Cabinet":"Espace Administrateur"} onLogout={onLogout} open={open} onClose={onClose}><nav style={{flex:1,padding:"10px 8px",overflowY:"auto"}}>{nav.map(item=><NavItem key={item.id} {...item} active={view===item.id} onClick={()=>{setView(item.id);onClose&&onClose();}}/>)}</nav></SidebarBase>;
 }
-function ClientSidebar({ view, setView, onLogout, clientName, alertCount, open, onClose }) {
+function ClientSidebar({ view, setView, onLogout, clientName, alertCount, planningEnabled, open, onClose }) {
  const sections = [
  { label:"VUE GÉNÉRALE", items:[
  {id:"dashboard", icon:"", label:"Tableau de bord"},
@@ -657,9 +657,9 @@ function ClientSidebar({ view, setView, onLogout, clientName, alertCount, open, 
  {id:"comparaison",   icon:"↔", label:"Comparaison périodes"},
  {id:"previsionnel",  icon:"→", label:"Prévisionnel"},
  ]},
- { label:"MON ÉQUIPE", items:[
+ ...(planningEnabled!==false ? [{ label:"MON ÉQUIPE", items:[
  {id:"planning", icon:"", label:"Planning"},
- ]},
+ ]}] : []),
  ];
  return (
  <SidebarBase role="Espace Client" onLogout={onLogout} open={open} onClose={onClose}>
@@ -779,12 +779,12 @@ function AdminClients({ clients, onViewAsClient, onAddClient, onUpdateClient, on
  const [editError,setEditError]=useState("");
  const [confirmDelete,setConfirmDelete]=useState(null);
 
- const startEdit=(c)=>{ setEditError(""); setEditId(c.id); setEditC({name:c.name,sector:c.sector,manager:c.manager,status:c.status,email:c.email||""}); };
+ const startEdit=(c)=>{ setEditError(""); setEditId(c.id); setEditC({name:c.name,sector:c.sector,manager:c.manager,status:c.status,email:c.email||"",planningEnabled:c.planningEnabled!==false}); };
  const saveEdit=async()=>{
     if(editSaving) return;
     setEditSaving(true); setEditError("");
     // Mise à jour locale immédiate
-    onUpdateClient(editId,{name:editC.name,sector:editC.sector,manager:editC.manager,email:editC.email});
+    onUpdateClient(editId,{name:editC.name,sector:editC.sector,manager:editC.manager,email:editC.email,planningEnabled:editC.planningEnabled});
     // Sauvegarde directe Supabase (UPDATE simple sur les champs modifiables)
     try {
       const {error}=await supabase.from("clients").update({
@@ -792,6 +792,7 @@ function AdminClients({ clients, onViewAsClient, onAddClient, onUpdateClient, on
         sector:editC.sector||"",
         manager:editC.manager,
         email:editC.email||"",
+        planning_enabled:editC.planningEnabled!==false,
       }).eq("id",editId);
       if(error) throw error;
       setEditId(null);
@@ -850,6 +851,13 @@ function AdminClients({ clients, onViewAsClient, onAddClient, onUpdateClient, on
  <FormRow label="E-mail client"><input value={editC.email||""} onChange={e=>setEditC({...editC,email:e.target.value})} className="inp" type="email" placeholder="email@client.fr"/></FormRow>
  <FormRow label="Responsable NVM"><input value={editC.manager||""} onChange={e=>setEditC({...editC,manager:e.target.value})} className="inp"/></FormRow>
  <FormRow label="Secteur"><select value={editC.sector||""} onChange={e=>setEditC({...editC,sector:e.target.value})} className="inp">{SECTORS.map(s=><option key={s}>{s}</option>)}</select></FormRow>
+ </div>
+ <div style={{padding:"0 20px 12px"}}>
+   <div style={{fontSize:11,fontWeight:800,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>Outils de gestion</div>
+   <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,fontWeight:700,color:C.text}}>
+     <input type="checkbox" checked={editC.planningEnabled!==false} onChange={e=>setEditC({...editC,planningEnabled:e.target.checked})}/>
+     Accès au module Planning & équipe
+   </label>
  </div>
  {editError&&<div style={{padding:"0 20px 8px",color:C.red,fontSize:12,fontWeight:700}}>{editError}</div>}
  <div style={{padding:"0 20px 20px",display:"flex",gap:10}}>
@@ -5238,7 +5246,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
     );
   }
 
- if (view==="planning") return <PlanningView client={client} isAdminPreview={isAdminPreview}/>;
+ if (view==="planning" && client.planningEnabled!==false) return <PlanningView client={client} isAdminPreview={isAdminPreview}/>;
 
  return null;
 }
@@ -6564,7 +6572,7 @@ export default function App() {
         const {data:ud}=await supabase.from("client_users").select("*");
         if(!cd||cd.length===0) return;
         const extras=cd.map(c=>({
-          id:c.id,name:c.name,sector:c.sector,color:c.color,manager:c.manager,cabinet_id:c.cabinet_id,
+          id:c.id,name:c.name,sector:c.sector,color:c.color,manager:c.manager,cabinet_id:c.cabinet_id,planningEnabled:c.planning_enabled!==false,
           since:c.since,status:c.status,email:c.email||(ud||[]).find(u=>u.client_id===c.id)?.email||"",
           kpis:c.kpis||{ca:0,marge:0,charges:0,salaires:0,ebe:0,result:0,tresorerie:0},
           emprunts:c.emprunts||[],investissements:c.investissements||[],
@@ -6798,7 +6806,7 @@ export default function App() {
     return (
       <div style={{display:"flex",height:"100vh",fontFamily:"'Nunito',sans-serif"}}>
         <GlobalCSS/>
-        <ClientSidebar view={view} setView={setView} onLogout={()=>setPreviewClient(null)} clientName={live.name} alertCount={calcAlertes(live,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
+        <ClientSidebar view={view} setView={setView} onLogout={()=>setPreviewClient(null)} clientName={live.name} alertCount={calcAlertes(live,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length} planningEnabled={live.planningEnabled} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <TopBar
             title={`Apercu client — ${live.name}`}
@@ -6883,7 +6891,7 @@ export default function App() {
         <GlobalCSS/>
         {/* Popup première connexion — priorité absolue */}
         {user.firstLogin&&<FirstLoginModal user={user} onComplete={(u)=>setUser(u)}/>}
-        <ClientSidebar view={view} setView={setView} onLogout={handleLogout} clientName={client?.name||user.name} alertCount={client?calcAlertes(client,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length:0} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
+        <ClientSidebar view={view} setView={setView} onLogout={handleLogout} clientName={client?.name||user.name} alertCount={client?calcAlertes(client,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length:0} planningEnabled={client?.planningEnabled} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <TopBar title={CLIENT_TITLES[view]||"Dashboard"} user={user} onMenuToggle={()=>setMenuOpen(o=>!o)}/>
           <div style={{flex:1,overflowY:"auto"}}>
