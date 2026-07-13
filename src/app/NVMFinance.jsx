@@ -704,11 +704,30 @@ function TopBar({ title, user, extra, onMenuToggle }) {
 }
 
 // ADMIN — CABINETS PARTENAIRES (visible admin uniquement)
-function AdminCabinets({ cabinets, clients, onAddCabinet }) {
+function AdminCabinets({ cabinets, clients, onAddCabinet, onDeleteCabinet }) {
  const [showAdd,setShowAdd]=useState(false);
  const [newCab,setNewCab]=useState({name:"",contactName:"",email:""});
+ const [confirmDelete,setConfirmDelete]=useState(null);
+ const cabToDelete = confirmDelete ? cabinets.find(c=>c.id===confirmDelete) : null;
  return (
  <div style={{padding:24,display:"flex",flexDirection:"column",gap:20}} className="fade-up">
+
+ {confirmDelete&&cabToDelete&&(
+   <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:10000}}>
+     <div style={{background:"white",borderRadius:16,padding:"32px",width:420,boxShadow:"0 24px 60px rgba(0,0,0,0.3)"}}>
+       <div style={{fontSize:18,fontWeight:900,color:C.text,marginBottom:8}}>Supprimer ce cabinet ?</div>
+       <div style={{fontSize:13,color:C.textMid,marginBottom:20,lineHeight:1.7}}>
+         Vous êtes sur le point de supprimer <strong>{cabToDelete.name}</strong> et son compte de connexion.<br/>
+         <strong style={{color:C.red}}>Cette action est irréversible.</strong>
+       </div>
+       <div style={{display:"flex",gap:10}}>
+         <Btn variant="ghost" onClick={()=>setConfirmDelete(null)} style={{flex:1,justifyContent:"center"}}>Annuler</Btn>
+         <Btn variant="danger" onClick={()=>{onDeleteCabinet(cabToDelete);setConfirmDelete(null);}} style={{flex:1,justifyContent:"center",background:C.red,borderColor:C.red}}>Supprimer définitivement</Btn>
+       </div>
+     </div>
+   </div>
+ )}
+
  <div style={{display:"flex",justifyContent:"flex-end"}}>
  <Btn variant="success" onClick={()=>setShowAdd(!showAdd)}>+ Nouveau cabinet</Btn>
  </div>
@@ -731,8 +750,14 @@ function AdminCabinets({ cabinets, clients, onAddCabinet }) {
    const clientCount = clients.filter(c=>c.cabinet_id===cab.id).length;
    return (
    <Card key={cab.id} style={{padding:20}}>
-   <div style={{fontWeight:800,fontSize:15,color:C.text,marginBottom:6}}>{cab.name}</div>
-   <div style={{fontSize:12,color:C.textMid}}>{clientCount} client{clientCount>1?"s":""} géré{clientCount>1?"s":""}</div>
+   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+     <div>
+       <div style={{fontWeight:800,fontSize:15,color:C.text,marginBottom:4}}>{cab.name}</div>
+       <div style={{fontSize:12,color:C.textLight,marginBottom:6}}>{cab.email||"(email non renseigné)"}</div>
+       <div style={{fontSize:12,color:C.textMid}}>{clientCount} client{clientCount>1?"s":""} géré{clientCount>1?"s":""}</div>
+     </div>
+     <Btn variant="danger" onClick={()=>setConfirmDelete(cab.id)} style={{padding:"6px 10px",fontSize:11}}>Supprimer</Btn>
+   </div>
    </Card>
    );
  })}
@@ -6567,7 +6592,7 @@ export default function App() {
   },[]);
   const handleAddCabinet=async(newCab)=>{
     try {
-      const {data,error}=await supabase.from("cabinets").insert({name:newCab.name}).select().single();
+      const {data,error}=await supabase.from("cabinets").insert({name:newCab.name,email:newCab.email}).select().single();
       if(error) throw error;
       const {data:{session}} = await supabase.auth.getSession();
       const res = await fetch("/api/create-cabinet",{
@@ -6582,6 +6607,28 @@ export default function App() {
       setCabinets(prev=>[...prev,data]);
     } catch(e){
       console.error("Erreur création cabinet:",e);
+      alert("Erreur: "+e.message);
+    }
+  };
+  const handleDeleteCabinet=async(cab)=>{
+    if(clients.some(c=>c.cabinet_id===cab.id)){
+      alert("Impossible de supprimer ce cabinet : il gère encore au moins un client. Réaffectez d'abord ses clients.");
+      return;
+    }
+    try {
+      if(cab.email){
+        const {data:{session}} = await supabase.auth.getSession();
+        await fetch("/api/delete-user",{
+          method:"POST",
+          headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},
+          body:JSON.stringify({email:cab.email}),
+        }).catch(e=>console.error("Erreur suppression Auth:",e));
+      }
+      const {error}=await supabase.from("cabinets").delete().eq("id",cab.id);
+      if(error) throw error;
+      setCabinets(prev=>prev.filter(c=>c.id!==cab.id));
+    } catch(e){
+      console.error("Erreur suppression cabinet:",e);
       alert("Erreur: "+e.message);
     }
   };
@@ -6870,7 +6917,7 @@ export default function App() {
           {view==="financier"&&<AdminFinancier clients={clients} onUpdateClient={updateClient}/>}
           {view==="alertes"&&<AlertesView clients={clients} moisIdx={moisIdx} moisYear={moisYear}/>}
           {view==="rapports"&&<RapportIA clients={clients} moisIdx={moisIdx} moisYear={moisYear}/>}
-          {view==="cabinets"&&user.role==="ADMIN"&&<AdminCabinets cabinets={cabinets} clients={clients} onAddCabinet={handleAddCabinet}/>}
+          {view==="cabinets"&&user.role==="ADMIN"&&<AdminCabinets cabinets={cabinets} clients={clients} onAddCabinet={handleAddCabinet} onDeleteCabinet={handleDeleteCabinet}/>}
         </div>
       </div>
     </div>
