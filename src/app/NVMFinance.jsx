@@ -622,8 +622,7 @@ function NavItem({ icon, label, badge, badgeColor, active, onClick }) {
  </div>
  );
 }
-function AdminSidebar({ view, setView, onLogout, clientCount, alertCount, open, onClose, role }) {
- const pendingResets=RESET_REQUESTS.filter(r=>r.status==="pending").length;
+function AdminSidebar({ view, setView, onLogout, clientCount, alertCount, pendingResets, open, onClose, role }) {
  const nav=[{id:"clients",icon:"",label:"Gestion clients",badge:clientCount},{id:"acces",icon:"",label:"Accès clients",badge:pendingResets,badgeColor:C.orange},{id:"saisie",icon:"",label:"Saisie & Import CSV"},{id:"financier",icon:"",label:"Données financières"},{id:"alertes",icon:"",label:"Alertes",badge:alertCount,badgeColor:C.red},{id:"rapports",icon:"",label:"Rapports IA"}];
  // La création de cabinets partenaires reste strictement réservée à l'admin de la plateforme
  if(role!=="CABINET") nav.push({id:"cabinets",icon:"",label:"Cabinets partenaires"});
@@ -6341,8 +6340,12 @@ function AdminAcces({ clients }) {
     setResetDone(prev=>({...prev, [email]:newPass}));
   };
 
-  const clientUsers = USERS_AUTH.filter(u=>u.role==="CLIENT");
-  const pendingRequests = RESET_REQUESTS.filter(r=>r.status==="pending");
+  // USERS_AUTH et RESET_REQUESTS sont des tableaux globaux (tous les clients de la
+  // plateforme) — on les filtre ici sur les clients réellement passés en props, sinon
+  // un cabinet (ou un aperçu admin) verrait les accès de clients qui ne sont pas les siens.
+  const clientUsers = USERS_AUTH.filter(u=>u.role==="CLIENT" && clients.some(c=>c.id===u.clientId));
+  const scopedEmails = new Set(clientUsers.map(u=>u.email));
+  const pendingRequests = RESET_REQUESTS.filter(r=>r.status==="pending" && scopedEmails.has(r.email));
 
   return (
     <div style={{padding:24,display:"flex",flexDirection:"column",gap:20}} className="fade-up">
@@ -6891,13 +6894,15 @@ export default function App() {
   }
 
   const visibleClients = previewCabinet ? clients.filter(c=>c.cabinet_id===previewCabinet.id) : clients;
+  const visibleEmails = new Set(USERS_AUTH.filter(u=>u.role==="CLIENT" && visibleClients.some(c=>c.id===u.clientId)).map(u=>u.email));
+  const visiblePendingResets = RESET_REQUESTS.filter(r=>r.status==="pending" && visibleEmails.has(r.email)).length;
 
   return (
     <div style={{display:"flex",height:"100vh",fontFamily:"'Nunito',sans-serif"}}>
       <GlobalCSS/>
       {CredentialsModal}
       {FirstLoginPopup}
-      <AdminSidebar view={view} setView={setView} onLogout={previewCabinet?()=>setPreviewCabinet(null):handleLogout} clientCount={visibleClients.length} alertCount={totalAlerts} open={menuOpen} onClose={()=>setMenuOpen(false)} role={previewCabinet?"CABINET":user.role}/>
+      <AdminSidebar view={view} setView={setView} onLogout={previewCabinet?()=>setPreviewCabinet(null):handleLogout} clientCount={visibleClients.length} alertCount={totalAlerts} pendingResets={visiblePendingResets} open={menuOpen} onClose={()=>setMenuOpen(false)} role={previewCabinet?"CABINET":user.role}/>
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
         <TopBar title={ADMIN_TITLES[view]||"Admin"} user={user} onMenuToggle={()=>setMenuOpen(o=>!o)}
           extra={previewCabinet?(
