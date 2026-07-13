@@ -22,7 +22,9 @@ export async function POST(req: NextRequest) {
   );
 
   const { data: isAdmin } = await supabaseAdmin.from("admin_users").select("email").eq("email", caller.email).single();
-  if (!isAdmin) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  const { data: callerProfile } = await supabaseAdmin.from("profiles").select("role, cabinet_id").eq("id", caller.id).single();
+  const isCabinet = callerProfile?.role === "CABINET";
+  if (!isAdmin && !isCabinet) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
 
   // Trouver l'utilisateur dans Supabase Auth
   const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers();
@@ -30,6 +32,19 @@ export async function POST(req: NextRequest) {
 
   const user = users.users.find(u => u.email === email);
   if (!user) return NextResponse.json({ success: true, message: "Utilisateur non trouvé dans Auth" });
+
+  if (!isAdmin) {
+    // Un cabinet ne peut supprimer qu'un CLIENT lié à l'un de ses propres clients —
+    // jamais un ADMIN ou un autre CABINET, même en devinant son email
+    const { data: targetProfile } = await supabaseAdmin.from("profiles").select("role, client_id").eq("id", user.id).single();
+    if (targetProfile?.role !== "CLIENT" || !targetProfile.client_id) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    }
+    const { data: targetClient } = await supabaseAdmin.from("clients").select("cabinet_id").eq("id", targetProfile.client_id).single();
+    if (!targetClient || targetClient.cabinet_id !== callerProfile?.cabinet_id) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    }
+  }
 
   // Supprimer de Supabase Auth
   const { error } = await supabaseAdmin.auth.admin.deleteUser(user.id);

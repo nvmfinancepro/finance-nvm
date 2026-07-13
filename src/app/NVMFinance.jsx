@@ -391,6 +391,20 @@ function LoginPage({ onLogin }) {
           setLoading(false);
           return;
         }
+        // Sinon chercher un profil cabinet
+        const {data: cabinetProfile} = await supabase.from("profiles").select("*").eq("id", data.user.id).eq("role","CABINET").single();
+        if (cabinetProfile) {
+          onLogin({
+            id:"cab"+cabinetProfile.cabinet_id,
+            email:data.user.email,
+            role:"CABINET",
+            cabinetId:cabinetProfile.cabinet_id,
+            name:cabinetProfile.name||"Cabinet",
+            firstLogin:false
+          });
+          setLoading(false);
+          return;
+        }
       }
       // Fallback : système USERS_AUTH (mots de passe temporaires)
       const u = USERS_AUTH.find(u=>u.email===email&&u.password===pass);
@@ -608,10 +622,12 @@ function NavItem({ icon, label, badge, badgeColor, active, onClick }) {
  </div>
  );
 }
-function AdminSidebar({ view, setView, onLogout, clientCount, alertCount, open, onClose }) {
+function AdminSidebar({ view, setView, onLogout, clientCount, alertCount, open, onClose, role }) {
  const pendingResets=RESET_REQUESTS.filter(r=>r.status==="pending").length;
  const nav=[{id:"clients",icon:"",label:"Gestion clients",badge:clientCount},{id:"acces",icon:"",label:"Accès clients",badge:pendingResets,badgeColor:C.orange},{id:"saisie",icon:"",label:"Saisie & Import CSV"},{id:"financier",icon:"",label:"Données financières"},{id:"alertes",icon:"",label:"Alertes",badge:alertCount,badgeColor:C.red},{id:"rapports",icon:"",label:"Rapports IA"}];
- return <SidebarBase role="Espace Administrateur" onLogout={onLogout} open={open} onClose={onClose}><nav style={{flex:1,padding:"10px 8px",overflowY:"auto"}}>{nav.map(item=><NavItem key={item.id} {...item} active={view===item.id} onClick={()=>{setView(item.id);onClose&&onClose();}}/>)}</nav></SidebarBase>;
+ // La création de cabinets partenaires reste strictement réservée à l'admin de la plateforme
+ if(role!=="CABINET") nav.push({id:"cabinets",icon:"",label:"Cabinets partenaires"});
+ return <SidebarBase role={role==="CABINET"?"Espace Cabinet":"Espace Administrateur"} onLogout={onLogout} open={open} onClose={onClose}><nav style={{flex:1,padding:"10px 8px",overflowY:"auto"}}>{nav.map(item=><NavItem key={item.id} {...item} active={view===item.id} onClick={()=>{setView(item.id);onClose&&onClose();}}/>)}</nav></SidebarBase>;
 }
 function ClientSidebar({ view, setView, onLogout, clientName, alertCount, open, onClose }) {
  const sections = [
@@ -682,6 +698,45 @@ function TopBar({ title, user, extra, onMenuToggle }) {
  <span style={{fontSize:12,fontWeight:700,color:C.text}}>{user.name}</span>
  <Pill>{user.role}</Pill>
  </div>
+ </div>
+ </div>
+ );
+}
+
+// ADMIN — CABINETS PARTENAIRES (visible admin uniquement)
+function AdminCabinets({ cabinets, clients, onAddCabinet }) {
+ const [showAdd,setShowAdd]=useState(false);
+ const [newCab,setNewCab]=useState({name:"",contactName:"",email:""});
+ return (
+ <div style={{padding:24,display:"flex",flexDirection:"column",gap:20}} className="fade-up">
+ <div style={{display:"flex",justifyContent:"flex-end"}}>
+ <Btn variant="success" onClick={()=>setShowAdd(!showAdd)}>+ Nouveau cabinet</Btn>
+ </div>
+ {showAdd&&(
+ <Card style={{border:`2px solid ${C.primary}`}}>
+ <SectionHead title="Créer un nouveau cabinet comptable"/>
+ <div style={{padding:20,display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+ <FormRow label="Nom du cabinet *"><input value={newCab.name} onChange={e=>setNewCab({...newCab,name:e.target.value})} placeholder="Cabinet Dupont & Associés" className="inp"/></FormRow>
+ <FormRow label="Email de connexion *"><input value={newCab.email} onChange={e=>setNewCab({...newCab,email:e.target.value})} placeholder="contact@cabinet-dupont.fr" className="inp" type="email"/></FormRow>
+ <FormRow label="Nom du contact"><input value={newCab.contactName} onChange={e=>setNewCab({...newCab,contactName:e.target.value})} placeholder="Jean Dupont" className="inp"/></FormRow>
+ </div>
+ <div style={{padding:"0 20px 20px",display:"flex",gap:10}}>
+ <Btn variant="ghost" onClick={()=>setShowAdd(false)}>Annuler</Btn>
+ <Btn variant="success" onClick={()=>{if(newCab.name&&newCab.email){onAddCabinet(newCab);setNewCab({name:"",contactName:"",email:""});setShowAdd(false);}}}>Créer et inviter</Btn>
+ </div>
+ </Card>
+ )}
+ <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:16}}>
+ {cabinets.map(cab=>{
+   const clientCount = clients.filter(c=>c.cabinet_id===cab.id).length;
+   return (
+   <Card key={cab.id} style={{padding:20}}>
+   <div style={{fontWeight:800,fontSize:15,color:C.text,marginBottom:6}}>{cab.name}</div>
+   <div style={{fontSize:12,color:C.textMid}}>{clientCount} client{clientCount>1?"s":""} géré{clientCount>1?"s":""}</div>
+   </Card>
+   );
+ })}
+ {cabinets.length===0&&!showAdd&&<div style={{color:C.textMid,fontSize:13,padding:20}}>Aucun cabinet partenaire pour le moment.</div>}
  </div>
  </div>
  );
@@ -6455,6 +6510,12 @@ export default function App() {
       if(clientUser) {
         setUser({id:"c"+clientUser.client_id,email,role:"CLIENT",clientId:clientUser.client_id,name:clientUser.name||"",firstLogin:clientUser.first_login||false});
         setView("dashboard");
+        return;
+      }
+      const {data:cabinetProfile} = await supabase.from("profiles").select("*").eq("id",session.user.id).eq("role","CABINET").single();
+      if(cabinetProfile) {
+        setUser({id:"cab"+cabinetProfile.cabinet_id,email,role:"CABINET",cabinetId:cabinetProfile.cabinet_id,name:cabinetProfile.name||"Cabinet",firstLogin:false});
+        setView("clients");
       }
     })();
   },[]);
@@ -6472,7 +6533,7 @@ export default function App() {
         const {data:ud}=await supabase.from("client_users").select("*");
         if(!cd||cd.length===0) return;
         const extras=cd.map(c=>({
-          id:c.id,name:c.name,sector:c.sector,color:c.color,manager:c.manager,
+          id:c.id,name:c.name,sector:c.sector,color:c.color,manager:c.manager,cabinet_id:c.cabinet_id,
           since:c.since,status:c.status,email:c.email||(ud||[]).find(u=>u.client_id===c.id)?.email||"",
           kpis:c.kpis||{ca:0,marge:0,charges:0,salaires:0,ebe:0,result:0,tresorerie:0},
           emprunts:c.emprunts||[],investissements:c.investissements||[],
@@ -6495,6 +6556,35 @@ export default function App() {
       } catch(e){console.error("Supabase load error:",e);}
     })();
   },[]);
+
+  // Cabinets partenaires (visible admin uniquement — la RLS renvoie [] pour les autres rôles)
+  const [cabinets,setCabinets]=useState([]);
+  useEffect(()=>{
+    (async()=>{
+      const {data}=await supabase.from("cabinets").select("*").order("id");
+      setCabinets(data||[]);
+    })();
+  },[]);
+  const handleAddCabinet=async(newCab)=>{
+    try {
+      const {data,error}=await supabase.from("cabinets").insert({name:newCab.name}).select().single();
+      if(error) throw error;
+      const {data:{session}} = await supabase.auth.getSession();
+      const res = await fetch("/api/create-cabinet",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},
+        body:JSON.stringify({email:newCab.email,name:newCab.contactName,cabinetId:data.id}),
+      });
+      const inv = await res.json();
+      if(inv.error){
+        alert("Le cabinet a été créé, mais l'invitation par email a échoué : "+inv.error+"\nRéessayez l'invitation, ou supprimez le cabinet et recommencez.");
+      }
+      setCabinets(prev=>[...prev,data]);
+    } catch(e){
+      console.error("Erreur création cabinet:",e);
+      alert("Erreur: "+e.message);
+    }
+  };
 
   const saveClientToSupabase=async(client)=>{
     try {
@@ -6574,6 +6664,7 @@ export default function App() {
         manager:newClient.manager,since:newClient.since,status:newClient.status,
         email:newC.email||"",kpis:newClient.kpis,emprunts:[],investissements:[],
         tresorerie:newClient.tresorerie,is_data:newClient.is,previsionnel:newClient.previsionnel,
+        cabinet_id:user.role==="CABINET"?user.cabinetId:null,
       }).select().single();
       if(error) throw error;
       const clientAvecId={...newClient,id:data.id};
@@ -6589,11 +6680,11 @@ export default function App() {
         const inv = await res.json();
         if(inv.error){
           console.error("Erreur invitation:",inv.error);
-          // Fallback : mot de passe temporaire
-          const tempPass = generateTempPassword();
-          await supabase.from("client_users").insert({client_id:data.id,email:newC.email,password:tempPass,first_login:true});
-          USERS_AUTH.push({id:"c"+data.id,email:newC.email,password:tempPass,role:"CLIENT",clientId:data.id,name:newC.name,firstLogin:true});
-          setNewClientCredentials({name:newC.name,email:newC.email,tempPass,invited:false});
+          // Pas de filet de secours "mot de passe temporaire" : ce compte serait créé
+          // hors Supabase Auth et donc hors RLS, ce qui contournerait le cloisonnement
+          // par client/cabinet. On affiche l'erreur et on laisse réessayer.
+          alert("Le client a été créé, mais l'invitation par email a échoué : "+inv.error+"\nRéessayez l'invitation depuis l'onglet Accès clients.");
+          setNewClientCredentials(null);
         } else {
           // Invitation réussie → ajouter dans client_users
           await supabase.from("client_users").upsert({
@@ -6610,7 +6701,7 @@ export default function App() {
     }
   };
 
-  const ADMIN_TITLES={clients:`Portefeuille clients (${clients.length})`,acces:"Accès & mots de passe clients",saisie:"Saisie & Import CSV",financier:"Donnees financieres",alertes:"Centre d'alertes",rapports:"Rapports IA"};
+  const ADMIN_TITLES={clients:`Portefeuille clients (${clients.length})`,acces:"Accès & mots de passe clients",saisie:"Saisie & Import CSV",financier:"Donnees financieres",alertes:"Centre d'alertes",rapports:"Rapports IA",cabinets:"Cabinets partenaires"};
   const CLIENT_TITLES={dashboard:"Tableau de bord",alertes:"Mes alertes",ventes:"Mes ventes",achats:"Mes couts d'achat",charges:"Mes charges",salaires:"Ma masse salariale",creances:"Mes créances clients",dettes:"Mes dettes fournisseurs",resultat:"Mon resultat financier",tresorerie:"Ma tresorerie",emprunts:"Mes emprunts",investissements:"Mes investissements",is:"Mon impot (IS)",catalogue:"Mon catalogue produits", comparaison:"Comparaison de périodes", previsionnel:"Prévisionnel", planning:"Planning & équipe"};
 
   // Modal credentials nouveau client (admin)
@@ -6706,7 +6797,12 @@ export default function App() {
               if(clientUser) {
                 setTimeout(()=>{ setResetMode(false); setUser({id:"c"+clientUser.client_id,email:userEmail,role:"CLIENT",clientId:clientUser.client_id,name:"",firstLogin:false}); setView("dashboard"); },2000);
               } else {
-                setTimeout(()=>setResetMode(false),2000);
+                const {data:cabinetProfile} = await supabase.from("profiles").select("*").eq("id",sess.session.user.id).eq("role","CABINET").single();
+                if(cabinetProfile) {
+                  setTimeout(()=>{ setResetMode(false); setUser({id:"cab"+cabinetProfile.cabinet_id,email:userEmail,role:"CABINET",cabinetId:cabinetProfile.cabinet_id,name:cabinetProfile.name||"Cabinet",firstLogin:false}); setView("clients"); },2000);
+                } else {
+                  setTimeout(()=>setResetMode(false),2000);
+                }
               }
             }
           } else {
@@ -6743,7 +6839,7 @@ export default function App() {
       <GlobalCSS/>
       {CredentialsModal}
       {FirstLoginPopup}
-      <AdminSidebar view={view} setView={setView} onLogout={handleLogout} clientCount={clients.length} alertCount={totalAlerts} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
+      <AdminSidebar view={view} setView={setView} onLogout={handleLogout} clientCount={clients.length} alertCount={totalAlerts} open={menuOpen} onClose={()=>setMenuOpen(false)} role={user.role}/>
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
         <TopBar title={ADMIN_TITLES[view]||"Admin"} user={user} onMenuToggle={()=>setMenuOpen(o=>!o)}/>
         <div style={{flex:1,overflowY:"auto"}}>
@@ -6774,6 +6870,7 @@ export default function App() {
           {view==="financier"&&<AdminFinancier clients={clients} onUpdateClient={updateClient}/>}
           {view==="alertes"&&<AlertesView clients={clients} moisIdx={moisIdx} moisYear={moisYear}/>}
           {view==="rapports"&&<RapportIA clients={clients} moisIdx={moisIdx} moisYear={moisYear}/>}
+          {view==="cabinets"&&user.role==="ADMIN"&&<AdminCabinets cabinets={cabinets} clients={clients} onAddCabinet={handleAddCabinet}/>}
         </div>
       </div>
     </div>
