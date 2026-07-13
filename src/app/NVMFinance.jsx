@@ -6731,7 +6731,7 @@ export default function App() {
         manager:newClient.manager,since:newClient.since,status:newClient.status,
         email:newC.email||"",kpis:newClient.kpis,emprunts:[],investissements:[],
         tresorerie:newClient.tresorerie,is_data:newClient.is,previsionnel:newClient.previsionnel,
-        cabinet_id:user.role==="CABINET"?user.cabinetId:null,
+        cabinet_id:previewCabinet?previewCabinet.id:(user.role==="CABINET"?user.cabinetId:null),
       }).select().single();
       if(error) throw error;
       const clientAvecId={...newClient,id:data.id};
