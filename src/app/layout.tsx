@@ -3,6 +3,9 @@ import "@/styles/globals.css";
 
 export const metadata: Metadata = {
   title: "NVM Finance",
+  verification: {
+    google: "BiGXExOnRDbNP0e1Nc9X4T6drt9toOMRpyWn_G8g2Hk",
+  },
 };
 
 export const viewport: Viewport = {
