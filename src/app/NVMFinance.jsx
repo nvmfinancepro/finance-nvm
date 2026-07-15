@@ -816,7 +816,7 @@ function AdminClients({ clients, cabinets, onViewAsClient, onAddClient, onUpdate
  <Card style={{border:`2px solid ${C.primary}`}}>
  <SectionHead title="Créer un nouveau dossier client"/>
  <div style={{padding:20,display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
- {[{l:"Raison sociale *",k:"name",ph:"Acme Industries SAS"},{l:"Email accès client",k:"email",ph:"daf@acme.fr"},{l:"Responsable NVM",k:"manager",ph:"Sophie Laurent"}].map(f=>(
+ {[{l:"Raison sociale *",k:"name",ph:"Acme Industries SAS"},{l:"Email accès client",k:"email",ph:"daf@acme.fr"},{l:"Responsable du dossier",k:"manager",ph:"Sophie Laurent"}].map(f=>(
  <FormRow key={f.k} label={f.l}><input value={newC[f.k]} onChange={e=>setNewC({...newC,[f.k]:e.target.value})} placeholder={f.ph} className="inp"/></FormRow>
  ))}
  <FormRow label="Secteur"><select value={newC.sector} onChange={e=>setNewC({...newC,sector:e.target.value})} className="inp">{SECTORS.map(s=><option key={s}>{s}</option>)}</select></FormRow>
@@ -833,7 +833,7 @@ function AdminClients({ clients, cabinets, onViewAsClient, onAddClient, onUpdate
  <div style={{padding:20,display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
  <FormRow label="Raison sociale"><input value={editC.name||""} onChange={e=>setEditC({...editC,name:e.target.value})} className="inp"/></FormRow>
  <FormRow label="E-mail client"><input value={editC.email||""} onChange={e=>setEditC({...editC,email:e.target.value})} className="inp" type="email" placeholder="email@client.fr"/></FormRow>
- <FormRow label="Responsable NVM"><input value={editC.manager||""} onChange={e=>setEditC({...editC,manager:e.target.value})} className="inp"/></FormRow>
+ <FormRow label="Responsable du dossier"><input value={editC.manager||""} onChange={e=>setEditC({...editC,manager:e.target.value})} className="inp"/></FormRow>
  <FormRow label="Secteur"><select value={editC.sector||""} onChange={e=>setEditC({...editC,sector:e.target.value})} className="inp">{SECTORS.map(s=><option key={s}>{s}</option>)}</select></FormRow>
  </div>
  <div style={{padding:"0 20px 12px"}}>
@@ -1746,7 +1746,7 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
           </div>
           <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}>
             <div style={{textAlign:"right"}}>
-              <div style={{fontSize:10,color:"rgba(255,255,255,0.45)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>Conseiller NVM Finance</div>
+              <div style={{fontSize:10,color:"rgba(255,255,255,0.45)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>Conseiller {client.advisorLabel||"NVM Finance"}</div>
               <div style={{fontSize:13,fontWeight:800}}>{client.manager}</div>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.15)",borderRadius:8,padding:"4px 10px"}}>
@@ -1940,7 +1940,7 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
                     ):(
                       <div style={{padding:"32px 0",textAlign:"center",color:C.textLight,display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
                         <div style={{fontSize:13,fontWeight:700,color:C.textMid}}>Aucune donnée pour ce mois</div>
-                        <div style={{fontSize:12,maxWidth:220,lineHeight:1.5}}>Sélectionnez un mois avec des imports ou demandez à votre conseiller NVM Finance d'importer vos données.</div>
+                        <div style={{fontSize:12,maxWidth:220,lineHeight:1.5}}>Sélectionnez un mois avec des imports ou demandez à votre conseiller {client.advisorLabel||"NVM Finance"} d'importer vos données.</div>
                       </div>
                     )}
                   </div>
@@ -2087,7 +2087,7 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
 
       {!isAdminPreview&&(
         <div style={{padding:"10px 16px",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,color:C.textLight,textAlign:"center"}}>
-          Tableau de bord en lecture seule · Détail complet dans chaque onglet · Contactez votre conseiller NVM Finance
+          Tableau de bord en lecture seule · Détail complet dans chaque onglet · Contactez votre conseiller {client.advisorLabel||"NVM Finance"}
         </div>
       )}
     </div>
@@ -2136,7 +2136,7 @@ function ClientDonnees({ client, moisIdx, setMoisIdx, moisYear }) {
  <div style={{fontSize:32,marginBottom:10}}></div>
  <div style={{fontSize:14,fontWeight:700,color:C.text}}>Aucune donnée pour {MONTHS[moisIdx]} {moisYear}</div>
  {all.length>0&&<div style={{fontSize:12,marginTop:8,color:C.textMid}}>Données disponibles pour : {all.map(i=>i.mois).join(", ")}</div>}
- <div style={{fontSize:12,marginTop:6,color:C.textLight}}>Changez le mois via le sélecteur en haut ou demandez à votre conseiller NVM</div>
+ <div style={{fontSize:12,marginTop:6,color:C.textLight}}>Changez le mois via le sélecteur en haut ou demandez à votre conseiller {client.advisorLabel||"NVM Finance"}</div>
  </div>
  </Card>
  );
@@ -2520,7 +2520,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
  // ALERTES 
  if (view==="alertes") return (
  <div style={{padding:24}} className="fade-up">
- <PageHeader title="Mes alertes" sub="Points de vigilance identifiés par NVM Finance"/>
+ <PageHeader title="Mes alertes" sub={`Points de vigilance identifiés par ${client.advisorLabel||"NVM Finance"}`}/>
  <AlertesView singleClient={client} moisIdx={moisIdx} moisYear={moisYear}/>
  </div>
  );
@@ -2667,7 +2667,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
  <div style={{background:"#fffbeb",border:`1px solid ${C.orange}33`,borderRadius:10,padding:"24px",marginBottom:14}}>
  <div style={{fontSize:13,color:C.textMid,lineHeight:1.8}}>
  <strong style={{color:C.text}}>Données non disponibles pour ce mois.</strong><br/>
- Votre conseiller NVM Finance peut importer vos données de ventes pour afficher le détail de chaque produit.<br/>
+ Votre conseiller {client.advisorLabel||"NVM Finance"} peut importer vos données de ventes pour afficher le détail de chaque produit.<br/>
  Le coût d'achat estimé pour ce mois est : <strong style={{color:C.red}}>{fmt(kpis.ca-kpis.marge)}</strong> (calculé depuis vos KPIs)
  </div>
  </div>
@@ -3275,7 +3275,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
  {/* Ajustements exceptionnels */}
  {(client.tresorerie?.ajustements||[]).length>0&&(
  <Card>
- <SectionHead title="Mouvements exceptionnels enregistrés par NVM Finance"/>
+ <SectionHead title={`Mouvements exceptionnels enregistrés par ${client.advisorLabel||"NVM Finance"}`}/>
  <div style={{overflowX:"auto"}}>
  <table style={{width:"100%",borderCollapse:"collapse"}}>
  <thead><tr><Th>Mois</Th><Th>Description</Th><Th right>Montant</Th><Th>Type</Th></tr></thead>
@@ -3771,7 +3771,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
 
         {/* Paramètres */}
         <Card>
-          <SectionHead title="Parametres IS du dossier" sub="Configures par votre conseiller NVM Finance"/>
+          <SectionHead title="Parametres IS du dossier" sub={`Configures par votre conseiller ${client.advisorLabel||"NVM Finance"}`}/>
           <div style={{padding:"14px 18px",display:"flex",gap:32}}>
             <div>
               <div style={{fontSize:11,color:C.textLight,fontWeight:800,textTransform:"uppercase",marginBottom:4}}>Taux IS appliqué</div>
@@ -4068,8 +4068,8 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
             </div>
             <div style={{fontSize:12,color:C.textMid,lineHeight:1.7}}>
               {isCreances
-                ?"Ces donnees proviennent de votre export comptable (compte 411 — Clients). Votre conseiller NVM Finance les importe directement depuis votre logiciel de compta (Sage, EBP, Cegid, QuickBooks...) pour garantir leur fiabilite."
-                :"Ces donnees proviennent de votre export comptable (compte 401 — Fournisseurs). Votre conseiller NVM Finance les importe directement depuis votre logiciel de compta (Sage, EBP, Cegid, QuickBooks...) pour garantir leur fiabilite."
+                ?`Ces donnees proviennent de votre export comptable (compte 411 — Clients). Votre conseiller ${client.advisorLabel||"NVM Finance"} les importe directement depuis votre logiciel de compta (Sage, EBP, Cegid, QuickBooks...) pour garantir leur fiabilite.`
+                :`Ces donnees proviennent de votre export comptable (compte 401 — Fournisseurs). Votre conseiller ${client.advisorLabel||"NVM Finance"} les importe directement depuis votre logiciel de compta (Sage, EBP, Cegid, QuickBooks...) pour garantir leur fiabilite.`
               }
             </div>
           </div>
@@ -4631,7 +4631,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
             <div style={{fontSize:15,fontWeight:700,color:C.text,marginBottom:8}}>Données insuffisantes pour comparer</div>
             <div style={{fontSize:13,lineHeight:1.7}}>
               Il faut au minimum 2 mois de données importées pour utiliser la comparaison.<br/>
-              Votre conseiller NVM Finance peut importer plusieurs mois pour activer cette fonctionnalité.
+              Votre conseiller {client.advisorLabel||"NVM Finance"} peut importer plusieurs mois pour activer cette fonctionnalité.
             </div>
           </div>
         )}
@@ -6200,7 +6200,7 @@ function calcAlertes(client, moisIdx, moisYear) {
     level:"red", kpi:"Trésorerie négative",
     current: fmt(treso), threshold:"> 0 €",
     msg:`Votre trésorerie est négative (${fmt(treso)}). Vous êtes en situation de découvert bancaire.`,
-    action:"Contactez votre conseiller NVM Finance en urgence pour trouver une solution de financement à court terme."
+    action:`Contactez votre conseiller ${client.advisorLabel||"NVM Finance"} en urgence pour trouver une solution de financement à court terme.`
   });
 
   // ── Trésorerie < 1 mois de charges
@@ -6403,7 +6403,7 @@ function RapportIA({ clients, moisIdx, moisYear }) {
     const sectorContext = client.sector === "Bar / Tabac / Presse"
       ? "\nContexte sectoriel : activite mixte bar + tabac reglemente + presse. Marge structurellement faible : tabac 6-8%, presse 15-20%, bar 60-70%. Treso en cash importante (recettes journalieres). Charges fixes elevees : licence IV, approvisionnement tabac obligatoire, loyer. KPIs secteur : marge brute cible 20-30%, EBE cible 8-12%, charges ext max 38%."
       : "";
-    const prompt=`Tu es analyste financier senior chez NVM Finance. Rapport mensuel pour :\nClient : ${client.name} | Secteur : ${client.sector} | Periode : ${MONTHS[moisIdx]} ${moisYear}${sectorContext}\nCA HT : ${fmt(kpis.ca)} | Marge brute : ${fmt(kpis.marge)} (${pct(kpis.ca>0?kpis.marge/kpis.ca*100:0)}) | EBE : ${fmt(kpis.ebe)} | Resultat : ${fmt(kpis.result)}\nEmprunts : ${(client.emprunts||[]).length} en cours | Investissements : ${(client.investissements||[]).length}\nAlertes : ${calcAlertes(client,moisIdx,moisYear).filter(a=>a.level!=="green").map(a=>`[${a.level.toUpperCase()}] ${a.kpi}`).join(", ")||"Aucune"}\nRedige : 1. SYNTHESE 2. PERFORMANCES 3. TRESORERIE 4. POINTS D'ATTENTION 5. 3 RECOMMANDATIONS — Professionnel, concis, oriente decision.`;
+    const prompt=`Tu es analyste financier senior. Rapport mensuel pour :\nClient : ${client.name} | Secteur : ${client.sector} | Periode : ${MONTHS[moisIdx]} ${moisYear}${sectorContext}\nCA HT : ${fmt(kpis.ca)} | Marge brute : ${fmt(kpis.marge)} (${pct(kpis.ca>0?kpis.marge/kpis.ca*100:0)}) | EBE : ${fmt(kpis.ebe)} | Resultat : ${fmt(kpis.result)}\nEmprunts : ${(client.emprunts||[]).length} en cours | Investissements : ${(client.investissements||[]).length}\nAlertes : ${calcAlertes(client,moisIdx,moisYear).filter(a=>a.level!=="green").map(a=>`[${a.level.toUpperCase()}] ${a.kpi}`).join(", ")||"Aucune"}\nRedige : 1. SYNTHESE 2. PERFORMANCES 3. TRESORERIE 4. POINTS D'ATTENTION 5. 3 RECOMMANDATIONS — Professionnel, concis, oriente decision.`;
     if(!prompt?.trim()){setText("Erreur : prompt vide.");setLoading(false);return;}
     try {
       const {data:{session}} = await supabase.auth.getSession();
@@ -6428,7 +6428,7 @@ function RapportIA({ clients, moisIdx, moisYear }) {
   return (
     <div style={{padding:24}} className="fade-up">
       <Card>
-        <SectionHead title="Generation de rapport IA" sub="Rapport de gestion mensuel genere par Claude"/>
+        <SectionHead title="Generation de rapport IA" sub="Rapport de gestion mensuel genere automatiquement"/>
         <div style={{padding:16,display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
           <select value={selId} onChange={e=>setSelId(Number(e.target.value))} className="inp" style={{width:"auto"}}>{clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>
           <span style={{fontSize:13,color:C.textMid,fontWeight:700}}>{MONTHS[moisIdx]} {moisYear}</span>
@@ -6775,7 +6775,7 @@ export default function App() {
             }
           />
           <div style={{flex:1,overflowY:"auto"}}>
-            <ClientSpace client={live} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear} isAdminPreview={true}/>
+            <ClientSpace client={{...live,advisorLabel:live.cabinet_id?(cabinets.find(cab=>cab.id===live.cabinet_id)?.name||"votre cabinet comptable"):"NVM Finance"}} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear} isAdminPreview={true}/>
           </div>
         </div>
       </div>
@@ -6850,7 +6850,7 @@ export default function App() {
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <TopBar title={CLIENT_TITLES[view]||"Dashboard"} user={user} onMenuToggle={()=>setMenuOpen(o=>!o)}/>
           <div style={{flex:1,overflowY:"auto"}}>
-            {client&&<ClientSpace client={client} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear}/>}
+            {client&&<ClientSpace client={{...client,advisorLabel:client.cabinet_id?(cabinets.find(cab=>cab.id===client.cabinet_id)?.name||"votre cabinet comptable"):"NVM Finance"}} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear}/>}
           </div>
         </div>
       </div>
