@@ -935,16 +935,13 @@ function AdminSaisie({ clients, onUpdateClient }) {
  const existing=(client.imports||[]);
  const importedAt=new Date().toLocaleDateString("fr-FR");
  const newImport={id:Date.now(),type:mod,label,mois,rows,count:rows.length,importedAt};
+ // onUpdateClient sauvegarde réellement l'import (branche patch.imports) et alerte
+ // l'utilisateur + annule la mise à jour locale en cas d'échec — pas besoin de dupliquer
+ // l'écriture ici.
  onUpdateClient(client.id,{imports:[...existing,newImport]});
  setCsvPreview(null);
  setImportMsg(` ${rows.length} ligne${rows.length>1?"s":""} importée${rows.length>1?"s":""} dans "${label}" — ${mois}`);
  setTimeout(()=>setImportMsg(""),5000);
- try {
-   await supabase.from("imports_csv").upsert({
-     client_id:client.id,type:mod,label,mois,
-     rows,count:rows.length,imported_at:importedAt,
-   },{onConflict:"client_id,type,mois"});
- } catch(e){console.error("Erreur sauvegarde import:",e);}
  };
 
  const handleDownload=()=>{
@@ -5513,6 +5510,7 @@ function PlanningView({ client, isAdminPreview=false }) {
 
  // ── Save — split by month, never overwrite other months ───────
  const savePlanningDB=async(newP)=>{
+  const prevPlanning=planning;
   setPlanning(newP);
   const byMonth={};
   Object.entries(newP).forEach(([ek,dates])=>{
@@ -5523,9 +5521,15 @@ function PlanningView({ client, isAdminPreview=false }) {
     byMonth[m][ek][ds]=creneau;
    });
   });
-  await Promise.all(Object.entries(byMonth).map(([mois,p])=>
+  const results=await Promise.all(Object.entries(byMonth).map(([mois,p])=>
    supabase.from("plannings").upsert({client_id:client.id,mois,data:{planning:p}},{onConflict:"client_id,mois"})
   ));
+  const failed=results.find(r=>r.error);
+  if(failed){
+   console.error("Erreur sauvegarde planning:",failed.error);
+   setPlanning(prevPlanning);
+   alert("La sauvegarde du planning a échoué, vos derniers changements n'ont pas été enregistrés : "+failed.error.message+"\nRéessayez.");
+  }
  };
 
  // ── Week hours ────────────────────────────────────────────────
@@ -6622,35 +6626,52 @@ export default function App() {
 
   const totalAlerts=clients.reduce((s,c)=>s+calcAlertes(c,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length,0);
   const updateClient=useCallback(async(id,patch)=>{
+    const prevClient = clients.find(c=>c.id===id);
     setClients(prev=>prev.map(c=>c.id===id?{...c,...patch}:c));
     setPreviewClient(prev=>prev?.id===id?{...prev,...patch}:prev);
-    // Sauvegarder dans Supabase
+    // Sauvegarder dans Supabase — en cas d'échec, on annule la mise à jour locale
+    // optimiste et on prévient l'utilisateur au lieu de laisser croire que c'est enregistré.
     try {
-      const client = (await supabase.from("clients").select("*").eq("id",id).single()).data;
-      if(!client) return;
+      const {data:client, error:selectError} = await supabase.from("clients").select("*").eq("id",id).single();
+      if(selectError) throw selectError;
+      if(!client) throw new Error("Client introuvable");
       const updated = {...client,...patch};
-      // Sauvegarder les champs clients
-      await supabase.from("clients").upsert({
-        id,name:updated.name,sector:updated.sector||"",color:updated.color,
+      // Verrou optimiste sur updated_at : si quelqu'un d'autre a modifié ce client
+      // entre notre lecture et notre écriture, la clause .eq("updated_at",...) ne
+      // matche plus aucune ligne — on détecte le conflit au lieu d'écraser silencieusement.
+      const {data:updateResult, error:upsertError} = await supabase.from("clients").update({
+        name:updated.name,sector:updated.sector||"",color:updated.color,
         manager:updated.manager,since:updated.since,status:updated.status,email:updated.email||"",
         kpis:updated.kpis||{},emprunts:updated.emprunts||[],
         investissements:updated.investissements||[],
         tresorerie:updated.tresorerie||{soldeInitial:0,ajustements:[]},
         is_data:updated.is||{totalPrecedent:0,taux:15},
         previsionnel:updated.previsionnel||{adjustments:{}},
-      },{onConflict:"id"});
+      }).eq("id",id).eq("updated_at",client.updated_at).select();
+      if(upsertError) throw upsertError;
+      if(!updateResult||updateResult.length===0){
+        throw new Error("Ce dossier a été modifié entre-temps par quelqu'un d'autre (autre onglet, autre utilisateur) — vos changements n'ont pas été enregistrés pour éviter d'écraser les siens. Rechargez la page et réessayez.");
+      }
       // Si patch contient des imports, les sauvegarder séparément
       if(patch.imports) {
         const newImports = patch.imports.filter(i=>!i.id||i.id>999999999);
         for(const imp of newImports) {
-          await supabase.from("imports_csv").upsert({
+          const {error:impError} = await supabase.from("imports_csv").upsert({
             client_id:id,type:imp.type,label:imp.label,mois:imp.mois,
             rows:imp.rows,count:imp.count,imported_at:imp.importedAt,
           },{onConflict:"client_id,type,mois"});
+          if(impError) throw impError;
         }
       }
-    } catch(e){console.error("Supabase updateClient error:",e);}
-  },[]);
+    } catch(e){
+      console.error("Supabase updateClient error:",e);
+      if(prevClient){
+        setClients(prev=>prev.map(c=>c.id===id?prevClient:c));
+        setPreviewClient(prev=>prev?.id===id?prevClient:prev);
+      }
+      alert("La sauvegarde a échoué, vos derniers changements n'ont pas été enregistrés : "+((e&&e.message)||"erreur inconnue")+"\nRéessayez.");
+    }
+  },[clients]);
   const handleLogin=(u)=>{
     // Relire depuis USERS_AUTH pour avoir firstLogin à jour
     const fresh = USERS_AUTH.find(x=>x.id===u.id)||u;
@@ -6860,14 +6881,21 @@ export default function App() {
           // Récupérer l'email du client avant suppression
           const clientToDelete = clients.find(c=>c.id===id);
           const emailToDelete = clientToDelete?.email || USERS_AUTH.find(u=>u.clientId===id)?.email;
+          // Supprimer d'abord en base — si ça échoue, on ne touche pas à l'état local
+          const {error:deleteError} = await supabase.from("clients").delete().eq("id",id);
+          if(deleteError){
+            console.error("Erreur suppression client:",deleteError);
+            alert("La suppression a échoué : "+deleteError.message+"\nLe dossier client n'a pas été supprimé.");
+            return;
+          }
           // Supprimer du state
           setClients(prev=>prev.filter(c=>c.id!==id));
           const idx=USERS_AUTH.findIndex(u=>u.clientId===id);
           if(idx!==-1)USERS_AUTH.splice(idx,1);
-          // Supprimer de Supabase
-          await supabase.from("clients").delete().eq("id",id);
-          await supabase.from("client_users").delete().eq("client_id",id);
-          await supabase.from("imports_csv").delete().eq("client_id",id);
+          const {error:cuError} = await supabase.from("client_users").delete().eq("client_id",id);
+          if(cuError) console.error("Erreur suppression client_users:",cuError);
+          const {error:icError} = await supabase.from("imports_csv").delete().eq("client_id",id);
+          if(icError) console.error("Erreur suppression imports_csv:",icError);
           // Supprimer de Supabase Auth
           if(emailToDelete) {
             const {data:{session}} = await supabase.auth.getSession();
