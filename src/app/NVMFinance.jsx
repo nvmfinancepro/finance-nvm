@@ -108,17 +108,10 @@ const CSV_TEMPLATES = {
 const getTemplate=(type,sector)=>{ const t=CSV_TEMPLATES[type]; if(!t) return ""; return t[sector]||t.default||""; };
 
 // AUTH
-// Simulé en mémoire — en prod: base de données sécurisée
-const USERS_AUTH_INIT = [
-];
-// Mutable en mémoire pour la démo
-let USERS_AUTH = [...USERS_AUTH_INIT];
-const generateTempPassword = () => {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#";
-  return Array.from({length:10}, () => chars[Math.floor(Math.random()*chars.length)]).join("");
-};
-// Demandes de reset MP — simulées en mémoire
-let RESET_REQUESTS = [];
+// USERS_AUTH est un cache en mémoire de client_users (id/email/rôle/nom), peuplé
+// depuis Supabase au chargement — sert à afficher la liste des comptes clients dans
+// l'admin. L'authentification elle-même passe entièrement par Supabase Auth.
+let USERS_AUTH = [];
 
 const INIT_CLIENTS = [];
 const NEXUS_IMPORTS = [
@@ -376,7 +369,7 @@ function LoginPage({ onLogin }) {
           return;
         }
         // Sinon chercher dans client_users
-        const {data: clientUser} = await supabase.from("client_users").select("*").eq("email", data.user.email).single();
+        const {data: clientUser} = await supabase.from("client_users").select("id,client_id,email,first_login,created_at").eq("email", data.user.email).single();
         if (clientUser) {
           // Si connexion via Supabase Auth → firstLogin = false (mot de passe déjà défini)
           await supabase.from("client_users").update({first_login:false}).eq("email",data.user.email);
@@ -406,30 +399,20 @@ function LoginPage({ onLogin }) {
           return;
         }
       }
-      // Fallback : système USERS_AUTH (mots de passe temporaires)
-      const u = USERS_AUTH.find(u=>u.email===email&&u.password===pass);
-      if (u) onLogin(u);
-      else setErr("Identifiants incorrects. Vérifiez votre e-mail et mot de passe.");
+      setErr("Identifiants incorrects. Vérifiez votre e-mail et mot de passe.");
     } catch(e) {
-      const u = USERS_AUTH.find(u=>u.email===email&&u.password===pass);
-      if (u) onLogin(u);
-      else setErr("Identifiants incorrects. Vérifiez votre e-mail et mot de passe.");
+      setErr("Identifiants incorrects. Vérifiez votre e-mail et mot de passe.");
     }
     setLoading(false);
   };
 
-  const handleForgot = () => {
-    const u = USERS_AUTH.find(u=>u.email===forgotEmail);
-    if (!u) { setErr("Aucun compte trouvé avec cet e-mail."); return; }
-    // Enregistrer la demande — visible par l'admin
-    const already = RESET_REQUESTS.find(r=>r.email===forgotEmail&&r.status==="pending");
-    if (!already) {
-      RESET_REQUESTS.push({
-        id: Date.now(), email: forgotEmail, name: u.name,
-        date: new Date().toLocaleDateString("fr-FR"),
-        status: "pending"
-      });
-    }
+  const handleForgot = async () => {
+    setErr("");
+    await supabase.auth.resetPasswordForEmail(forgotEmail, {
+      redirectTo: (process.env.NEXT_PUBLIC_SITE_URL||"https://www.nvm-finance.fr")+"/set-password",
+    });
+    // Message générique dans tous les cas (compte existant ou non) pour ne pas
+    // laisser deviner quelles adresses ont un compte.
     setForgotSent(true);
   };
 
@@ -445,23 +428,23 @@ function LoginPage({ onLogin }) {
               <>
                 <div style={{fontSize:18,fontWeight:900,color:C.text,marginBottom:6}}>Mot de passe oublié</div>
                 <div style={{fontSize:13,color:C.textMid,marginBottom:24,lineHeight:1.6}}>
-                  Entrez votre adresse e-mail. Votre conseiller NVM Finance recevra une notification et vous enverra un nouveau mot de passe temporaire.
+                  Entrez votre adresse e-mail. Si un compte existe, vous recevrez un lien pour choisir un nouveau mot de passe.
                 </div>
                 <label style={{fontSize:11,fontWeight:800,color:C.textMid,display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.08em"}}>Adresse e-mail</label>
                 <input value={forgotEmail} onChange={e=>{setForgotEmail(e.target.value);setErr("");}} type="email" placeholder="vous@entreprise.fr" className="inp" style={{marginBottom:8}}/>
                 {err&&<div style={{color:C.red,fontSize:12,fontWeight:700,marginBottom:8}}>{err}</div>}
                 <div style={{display:"flex",gap:10,marginTop:16}}>
                   <Btn variant="ghost" onClick={()=>{setForgotMode(false);setErr("");setForgotEmail("");}} style={{flex:1,justifyContent:"center"}}>Annuler</Btn>
-                  <Btn variant="success" onClick={handleForgot} style={{flex:2,justifyContent:"center"}}>Envoyer la demande</Btn>
+                  <Btn variant="success" onClick={handleForgot} style={{flex:2,justifyContent:"center"}}>Envoyer le lien</Btn>
                 </div>
               </>
             ):(
               <>
                 <div style={{textAlign:"center",padding:"16px 0"}}>
                   <div style={{fontSize:40,marginBottom:16}}>✉</div>
-                  <div style={{fontSize:18,fontWeight:900,color:C.green,marginBottom:8}}>Demande envoyée</div>
+                  <div style={{fontSize:18,fontWeight:900,color:C.green,marginBottom:8}}>E-mail envoyé</div>
                   <div style={{fontSize:13,color:C.textMid,lineHeight:1.7,marginBottom:24}}>
-                    Votre conseiller NVM Finance a été notifié. Vous recevrez un nouveau mot de passe temporaire à <strong>{forgotEmail}</strong> dans les plus brefs délais.
+                    Si un compte existe pour <strong>{forgotEmail}</strong>, un lien de réinitialisation vient de lui être envoyé.
                   </div>
                   <Btn variant="success" onClick={()=>{setForgotMode(false);setForgotSent(false);setForgotEmail("");}} style={{width:"100%",justifyContent:"center"}}>Retour à la connexion</Btn>
                 </div>
@@ -519,13 +502,14 @@ function FirstLoginModal({ user, onComplete }) {
   ];
   const valid = rules.every(r=>r.ok);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!valid) { setErr("Veuillez respecter toutes les règles."); return; }
-    // Mettre à jour en mémoire
-    const idx = USERS_AUTH.findIndex(u=>u.id===user.id);
-    if (idx!==-1) {
-      USERS_AUTH[idx] = { ...USERS_AUTH[idx], password:newPass, firstLogin:false };
+    const {error} = await supabase.auth.updateUser({password:newPass});
+    if (error) {
+      setErr("Impossible d'enregistrer ce mot de passe ("+error.message+"). Utilisez \"Mot de passe oublié\" depuis l'écran de connexion pour recevoir un lien de réinitialisation.");
+      return;
     }
+    if (user.clientId) await supabase.from("client_users").update({first_login:false}).eq("client_id",user.clientId);
     setDone(true);
     setTimeout(()=>onComplete({ ...user, firstLogin:false }), 1800);
   };
@@ -544,7 +528,7 @@ function FirstLoginModal({ user, onComplete }) {
             </div>
 
             <div style={{padding:"12px 16px",background:C.bg,borderRadius:10,marginBottom:20,fontSize:12,color:C.textMid}}>
-              Votre mot de passe temporaire vous a été communiqué par votre conseiller NVM Finance par e-mail.
+              Choisissez le mot de passe que vous utiliserez désormais pour vous connecter.
             </div>
 
             <div style={{marginBottom:14}}>
@@ -622,8 +606,8 @@ function NavItem({ icon, label, badge, badgeColor, active, onClick }) {
  </div>
  );
 }
-function AdminSidebar({ view, setView, onLogout, clientCount, alertCount, pendingResets, open, onClose, role }) {
- const nav=[{id:"clients",icon:"",label:"Gestion clients",badge:clientCount},{id:"acces",icon:"",label:"Accès clients",badge:pendingResets,badgeColor:C.orange},{id:"saisie",icon:"",label:"Saisie & Import CSV"},{id:"financier",icon:"",label:"Données financières"},{id:"alertes",icon:"",label:"Alertes",badge:alertCount,badgeColor:C.red},{id:"rapports",icon:"",label:"Rapports IA"}];
+function AdminSidebar({ view, setView, onLogout, clientCount, alertCount, open, onClose, role }) {
+ const nav=[{id:"clients",icon:"",label:"Gestion clients",badge:clientCount},{id:"acces",icon:"",label:"Accès clients"},{id:"saisie",icon:"",label:"Saisie & Import CSV"},{id:"financier",icon:"",label:"Données financières"},{id:"alertes",icon:"",label:"Alertes",badge:alertCount,badgeColor:C.red},{id:"rapports",icon:"",label:"Rapports IA"}];
  // La création de cabinets partenaires reste strictement réservée à l'admin de la plateforme
  if(role!=="CABINET") nav.push({id:"cabinets",icon:"",label:"Cabinets partenaires"});
  return <SidebarBase role={role==="CABINET"?"Espace Cabinet":"Espace Administrateur"} onLogout={onLogout} open={open} onClose={onClose}><nav style={{flex:1,padding:"10px 8px",overflowY:"auto"}}>{nav.map(item=><NavItem key={item.id} {...item} active={view===item.id} onClick={()=>{setView(item.id);onClose&&onClose();}}/>)}</nav></SidebarBase>;
@@ -6339,84 +6323,39 @@ function AlertesView({ clients, singleClient, moisIdx, moisYear }) {
 // ADMIN — GESTION ACCÈS & MOTS DE PASSE
 // ════════════════════════════════════════════════════════
 function AdminAcces({ clients }) {
-  const [resetDone, setResetDone] = useState({});
-  const [newPassVisible, setNewPassVisible] = useState({});
+  const [sent, setSent] = useState({});
+  const [errors, setErrors] = useState({});
 
-  const handleReset = (email) => {
-    const idx = USERS_AUTH.findIndex(u=>u.email===email);
-    if (idx===-1) return;
-    const newPass = generateTempPassword();
-    USERS_AUTH[idx] = { ...USERS_AUTH[idx], password:newPass, firstLogin:true };
-    // Marquer la demande comme traitée
-    const req = RESET_REQUESTS.find(r=>r.email===email);
-    if (req) req.status = "done";
-    setResetDone(prev=>({...prev, [email]:newPass}));
+  const handleReset = async (email) => {
+    setErrors(prev=>({...prev,[email]:null}));
+    const {error} = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: (process.env.NEXT_PUBLIC_SITE_URL||"https://www.nvm-finance.fr")+"/set-password",
+    });
+    if (error) { setErrors(prev=>({...prev,[email]:error.message})); return; }
+    setSent(prev=>({...prev,[email]:true}));
   };
 
-  // USERS_AUTH et RESET_REQUESTS sont des tableaux globaux (tous les clients de la
-  // plateforme) — on les filtre ici sur les clients réellement passés en props, sinon
-  // un cabinet (ou un aperçu admin) verrait les accès de clients qui ne sont pas les siens.
+  // USERS_AUTH est un tableau global (tous les clients de la plateforme) — on le
+  // filtre ici sur les clients réellement passés en props, sinon un cabinet (ou un
+  // aperçu admin) verrait les accès de clients qui ne sont pas les siens.
   const clientUsers = USERS_AUTH.filter(u=>u.role==="CLIENT" && clients.some(c=>c.id===u.clientId));
-  const scopedEmails = new Set(clientUsers.map(u=>u.email));
-  const pendingRequests = RESET_REQUESTS.filter(r=>r.status==="pending" && scopedEmails.has(r.email));
 
   return (
     <div style={{padding:24,display:"flex",flexDirection:"column",gap:20}} className="fade-up">
-
-      {/* Demandes en attente */}
       <Card>
-        <SectionHead
-          title="Demandes de réinitialisation"
-          sub={pendingRequests.length>0?`${pendingRequests.length} demande${pendingRequests.length>1?"s":""} en attente`:"Aucune demande en attente"}
-        />
-        {pendingRequests.length===0?(
-          <div style={{padding:"32px 0",textAlign:"center",color:C.textLight}}>
-            <div style={{fontSize:32,marginBottom:10}}>✓</div>
-            <div style={{fontSize:14,fontWeight:700}}>Aucune demande de réinitialisation</div>
-            <div style={{fontSize:12,marginTop:6}}>Les demandes de vos clients apparaîtront ici</div>
-          </div>
-        ):(
-          <div style={{padding:0}}>
-            {pendingRequests.map(req=>(
-              <div key={req.id} style={{padding:"16px 20px",borderBottom:`1px solid ${C.borderLight}`,display:"flex",alignItems:"center",gap:16}}>
-                <div style={{flex:1}}>
-                  <div style={{fontWeight:800,fontSize:14,color:C.text,marginBottom:2}}>{req.name}</div>
-                  <div style={{fontSize:12,color:C.textMid}}>{req.email} · Demande le {req.date}</div>
-                </div>
-                {resetDone[req.email]?(
-                  <div style={{textAlign:"right"}}>
-                    <Pill color={C.green}>Traité</Pill>
-                    <div style={{fontSize:11,color:C.textMid,marginTop:4}}>Nouveau MP : <strong style={{fontFamily:"'Courier New',monospace",color:C.primary}}>{resetDone[req.email]}</strong></div>
-                    <div style={{fontSize:10,color:C.orange,marginTop:2}}>À communiquer au client</div>
-                  </div>
-                ):(
-                  <Btn variant="orange" small onClick={()=>handleReset(req.email)}>
-                    Générer un nouveau mot de passe
-                  </Btn>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-
-      {/* Tous les comptes clients */}
-      <Card>
-        <SectionHead title="Comptes clients actifs" sub="Gérez les accès et réinitialisez les mots de passe"/>
+        <SectionHead title="Comptes clients actifs" sub="Envoyez un lien de réinitialisation par e-mail à un client"/>
         <table style={{width:"100%",borderCollapse:"collapse"}}>
           <thead>
             <tr>
               <Th>Client</Th>
               <Th>E-mail</Th>
               <Th>Statut</Th>
-              <Th>Mot de passe temporaire</Th>
               <Th right>Actions</Th>
             </tr>
           </thead>
           <tbody>
             {clientUsers.map((u,i)=>{
               const client = clients.find(c=>c.id===u.clientId);
-              const newPass = resetDone[u.email];
               const isFirstLogin = u.firstLogin;
               return (
                 <Tr key={i}>
@@ -6427,30 +6366,24 @@ function AdminAcces({ clients }) {
                       ? <Pill color={C.orange}>1ère connexion en attente</Pill>
                       : <Pill color={C.green}>Actif</Pill>
                     }
-                  </Td>
-                  <Td>
-                    {newPass?(
-                      <div style={{display:"flex",alignItems:"center",gap:8}}>
-                        <span style={{fontFamily:"'Courier New',monospace",fontWeight:800,color:C.primary,fontSize:13}}>{newPass}</span>
-                        <Pill color={C.orange}>À communiquer</Pill>
-                      </div>
-                    ):(<span style={{color:C.textLight,fontSize:12}}>—</span>)}
+                    {errors[u.email]&&<div style={{fontSize:11,color:C.red,marginTop:4}}>{errors[u.email]}</div>}
                   </Td>
                   <Td right>
-                    <Btn small variant={newPass?"ghost":"primary"} onClick={()=>handleReset(u.email)}>
-                      {newPass?"Régénérer":"Réinitialiser MP"}
+                    <Btn small variant={sent[u.email]?"ghost":"primary"} onClick={()=>handleReset(u.email)}>
+                      {sent[u.email]?"Renvoyer le lien":"Envoyer un lien de réinitialisation"}
                     </Btn>
+                    {sent[u.email]&&<div style={{fontSize:11,color:C.green,marginTop:4}}>Lien envoyé</div>}
                   </Td>
                 </Tr>
               );
             })}
             {clientUsers.length===0&&(
-              <Tr><Td colspan="5" style={{textAlign:"center",padding:"32px",color:C.textLight}}>Aucun compte client créé</Td></Tr>
+              <Tr><Td colspan="4" style={{textAlign:"center",padding:"32px",color:C.textLight}}>Aucun compte client créé</Td></Tr>
             )}
           </tbody>
         </table>
         <div style={{padding:"12px 16px",background:"#fffbeb",borderTop:`1px solid ${C.border}`,fontSize:12,color:C.textMid}}>
-          Après réinitialisation, le nouveau mot de passe temporaire s'affiche ici. Communiquez-le au client — il devra le changer à sa prochaine connexion.
+          Le client reçoit un e-mail avec un lien sécurisé pour choisir lui-même son nouveau mot de passe.
         </div>
       </Card>
     </div>
@@ -6550,7 +6483,7 @@ export default function App() {
         setView("clients");
         return;
       }
-      const {data:clientUser} = await supabase.from("client_users").select("*").eq("email",email).single();
+      const {data:clientUser} = await supabase.from("client_users").select("id,client_id,email,first_login,created_at").eq("email",email).single();
       if(clientUser) {
         setUser({id:"c"+clientUser.client_id,email,role:"CLIENT",clientId:clientUser.client_id,name:clientUser.name||"",firstLogin:clientUser.first_login||false});
         setView("dashboard");
@@ -6574,7 +6507,7 @@ export default function App() {
         const {data:cd,error:ce}=await supabase.from("clients").select("*").order("id");
         if(ce) throw ce;
         const {data:id2}=await supabase.from("imports_csv").select("*");
-        const {data:ud}=await supabase.from("client_users").select("*");
+        const {data:ud}=await supabase.from("client_users").select("id,client_id,email,first_login,created_at");
         if(!cd||cd.length===0) return;
         const extras=cd.map(c=>({
           id:c.id,name:c.name,sector:c.sector,color:c.color,manager:c.manager,cabinet_id:c.cabinet_id,planningEnabled:c.planning_enabled!==false,
@@ -6591,7 +6524,7 @@ export default function App() {
         }));
         (ud||[]).forEach(u=>{
           if(!USERS_AUTH.find(a=>a.email===u.email)){
-            USERS_AUTH.push({id:"c"+u.client_id,email:u.email,password:u.password,
+            USERS_AUTH.push({id:"c"+u.client_id,email:u.email,
               role:"CLIENT",clientId:u.client_id,
               name:extras.find(c=>c.id===u.client_id)?.name||"",firstLogin:u.first_login});
           }
@@ -6760,7 +6693,7 @@ export default function App() {
         } else {
           // Invitation réussie → ajouter dans client_users
           await supabase.from("client_users").upsert({
-            client_id:data.id, email:newC.email, password:"", first_login:false
+            client_id:data.id, email:newC.email, first_login:false
           },{onConflict:"email"});
           setNewClientCredentials({name:newC.name,email:newC.email,tempPass:null,invited:true});
         }
@@ -6866,7 +6799,7 @@ export default function App() {
             if(adminData) {
               setTimeout(()=>{ setResetMode(false); setUser({id:"admin",email:userEmail,role:"ADMIN",name:"Administrateur NVM",firstLogin:false}); setView("clients"); },2000);
             } else {
-              const {data:clientUser} = await supabase.from("client_users").select("*").eq("email",userEmail).single();
+              const {data:clientUser} = await supabase.from("client_users").select("id,client_id,email,first_login,created_at").eq("email",userEmail).single();
               if(clientUser) {
                 setTimeout(()=>{ setResetMode(false); setUser({id:"c"+clientUser.client_id,email:userEmail,role:"CLIENT",clientId:clientUser.client_id,name:"",firstLogin:false}); setView("dashboard"); },2000);
               } else {
@@ -6907,15 +6840,12 @@ export default function App() {
     );
   }
 
-  const visibleEmails = new Set(USERS_AUTH.filter(u=>u.role==="CLIENT" && visibleClients.some(c=>c.id===u.clientId)).map(u=>u.email));
-  const visiblePendingResets = RESET_REQUESTS.filter(r=>r.status==="pending" && visibleEmails.has(r.email)).length;
-
   return (
     <div style={{display:"flex",height:"100vh",fontFamily:"'Nunito',sans-serif"}}>
       <GlobalCSS/>
       {CredentialsModal}
       {FirstLoginPopup}
-      <AdminSidebar view={view} setView={setView} onLogout={previewCabinet?()=>{setPreviewCabinet(null);setView("cabinets");}:handleLogout} clientCount={visibleClients.length} alertCount={totalAlerts} pendingResets={visiblePendingResets} open={menuOpen} onClose={()=>setMenuOpen(false)} role={previewCabinet?"CABINET":user.role}/>
+      <AdminSidebar view={view} setView={setView} onLogout={previewCabinet?()=>{setPreviewCabinet(null);setView("cabinets");}:handleLogout} clientCount={visibleClients.length} alertCount={totalAlerts} open={menuOpen} onClose={()=>setMenuOpen(false)} role={previewCabinet?"CABINET":user.role}/>
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
         <TopBar title={ADMIN_TITLES[view]||"Admin"} user={user} onMenuToggle={()=>setMenuOpen(o=>!o)}
           extra={previewCabinet?(
