@@ -41,5 +41,13 @@ export async function POST(req: NextRequest) {
   });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  // Le trigger handle_new_user ne fait plus confiance aux métadonnées d'inscription
+  // (faille d'escalade de privilèges) — c'est cette route, déjà authentifiée et
+  // autorisée ci-dessus, qui attribue explicitement le rôle et le rattachement.
+  if (data.user?.id) {
+    await supabaseAdmin.from("profiles").update({ role: "CLIENT", client_id: clientId, name }).eq("id", data.user.id);
+  }
+
   return NextResponse.json({ success: true, userId: data.user?.id });
 }
