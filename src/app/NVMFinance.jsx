@@ -6567,10 +6567,10 @@ export default function App() {
           await supabase.from("client_users").upsert({
             client_id:data.id, email:newC.email, first_login:false
           },{onConflict:"email"});
-          setNewClientCredentials({name:newC.name,email:newC.email,tempPass:null,invited:true});
+          setNewClientCredentials({name:newC.name,email:newC.email});
         }
       } else {
-        setNewClientCredentials({name:newC.name,email:"(email non renseigné)",tempPass:null,invited:false});
+        setNewClientCredentials({name:newC.name,email:"(email non renseigné)"});
       }
     } catch(e){
       console.error("Erreur création client:",e);
@@ -6588,18 +6588,14 @@ export default function App() {
       <div className="fade-up" style={{background:"white",borderRadius:16,padding:"36px 32px",width:420,boxShadow:"0 24px 60px rgba(0,0,0,0.3)"}}>
         <div style={{fontSize:18,fontWeight:900,color:C.text,marginBottom:6}}>Dossier client créé</div>
         <div style={{fontSize:13,color:C.textMid,marginBottom:20,lineHeight:1.6}}>
-          Le compte a été créé. Un e-mail d'invitation a été envoyé automatiquement à votre client.
+          {newClientCredentials.email!=="(email non renseigné)"
+            ?"Le compte a été créé. Un e-mail d'invitation a été envoyé automatiquement à votre client."
+            :"Le compte a été créé, mais aucun e-mail n'a été renseigné — ajoutez-en un depuis l'onglet Accès clients pour inviter ce client."}
         </div>
         <div style={{background:C.bg,borderRadius:10,padding:16,marginBottom:20,display:"flex",flexDirection:"column",gap:10}}>
           <div style={{fontSize:12,color:C.textMid}}>Client : <strong style={{color:C.text}}>{newClientCredentials.name}</strong></div>
           <div style={{fontSize:12,color:C.textMid}}>E-mail : <strong style={{color:C.primary}}>{newClientCredentials.email}</strong></div>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",background:"white",borderRadius:8,border:`1px solid ${C.border}`}}>
-            <div>
-              <div style={{fontSize:10,color:C.textLight,marginBottom:3,textTransform:"uppercase",fontWeight:800}}>Mot de passe temporaire</div>
-              <div style={{fontSize:18,fontWeight:900,color:C.primary,letterSpacing:"0.1em",fontFamily:"'Courier New',monospace"}}>{newClientCredentials.tempPass}</div>
-            </div>
-          </div>
-          <div style={{fontSize:11,color:C.orange,fontWeight:700}}>Le client devra changer ce mot de passe lors de sa première connexion.</div>
+          {newClientCredentials.email!=="(email non renseigné)"&&<div style={{fontSize:11,color:C.orange,fontWeight:700}}>Le client choisira lui-même son mot de passe en suivant le lien reçu par e-mail.</div>}
         </div>
         <Btn variant="success" onClick={()=>setNewClientCredentials(null)} style={{width:"100%",justifyContent:"center"}}>Compris, fermer</Btn>
       </div>
