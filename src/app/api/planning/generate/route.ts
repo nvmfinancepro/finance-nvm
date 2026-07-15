@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+
 type Employe = { prenom?: string; nom: string; poste?: string; heures_semaine: number };
 export async function POST(req: NextRequest) {
   try {
+    const authHeader = req.headers.get("authorization") || "";
+    const token = authHeader.replace("Bearer ", "");
+    if (!token) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+
+    const supabaseAuth = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
+    );
+    const { data: { user: caller } } = await supabaseAuth.auth.getUser(token);
+    if (!caller) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+
     if (!process.env.GROQ_API_KEY) {
       return NextResponse.json({ error: "GROQ_API_KEY manquante" }, { status: 500 });
     }
     const { employes, notes, mois, annee, regles } = await req.json();
-    console.log("ROUTE HIT", { employes: employes?.length, mois, annee });
     if (!employes || !mois || !annee) {
       return NextResponse.json({ error: "Paramètres manquants" }, { status: 400 });
     }
@@ -33,14 +45,12 @@ export async function POST(req: NextRequest) {
         ],
       }),
     });
-    console.log("GROQ RESPONSE STATUS:", response.status);
     if (!response.ok) {
       const err = await response.text();
       return NextResponse.json({ error: err }, { status: response.status });
     }
     const data = await response.json();
     const text: string = data.choices?.[0]?.message?.content ?? "";
-    console.log("GROQ RAW TEXT:", text.slice(0, 500));
     try {
       const cleaned = text.replace(/```json/g,"").replace(/```/g,"").trim();
       const start = cleaned.indexOf("{");

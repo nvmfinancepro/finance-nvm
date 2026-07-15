@@ -5603,7 +5603,6 @@ function PlanningView({ client, isAdminPreview=false }) {
   setAddEmpSaving(true);
   setAddEmpError("");
   try {
-   console.log("saveNewEmp: client.id=",client.id,"type=",typeof client.id);
    const{data,error}=await supabase.from("employes").insert({
     client_id:client.id,
     prenom:addEmpForm.prenom.trim(),
@@ -5640,7 +5639,6 @@ function PlanningView({ client, isAdminPreview=false }) {
 
  // ── AI generation ─────────────────────────────────────────────
  const generateIA=async()=>{
-  console.log("EMPLOYES STATE:", employes);
   if(employes.length===0){setIaError("Ajoutez d'abord des employés.");return;}
   setIaGenerating(true); setIaError(""); setIaPropositions([]);
   const planMois=vue==="semaine"?weekStart:moisNav;
@@ -5655,8 +5653,8 @@ function PlanningView({ client, isAdminPreview=false }) {
   try {
    if(!Array.isArray(employes)||employes.length===0){setIaError("Aucun employé à planifier.");setIaGenerating(false);return;}
    const payload={employes,regles:iaOpts,notes:iaNotes,priorites,contraintes,mois:parseInt(mo,10),annee:parseInt(yr,10)};
-   console.log("PLANNING PAYLOAD:", JSON.stringify(payload));
-   const r=await fetch("/api/planning/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+   const {data:{session}} = await supabase.auth.getSession();
+   const r=await fetch("/api/planning/generate",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},body:JSON.stringify(payload)});
    const d=await r.json();
    if(d.error) setIaError("Erreur IA : "+d.error);
    else if(d.propositions){setIaPropositions(d.propositions);setIaLastNote(iaNotes);}
@@ -5666,7 +5664,6 @@ function PlanningView({ client, isAdminPreview=false }) {
  };
  const stripAccents=s=>s.normalize("NFD").replace(/[̀-ͯ]/g,"");
  const applyProposition=async(prop)=>{
-  console.log("APPLYING PROPOSITION:", prop);
   const normalized={};
   for(const[k,v] of Object.entries(prop.planning)){
    const kNorm=stripAccents(k).toUpperCase();
@@ -5678,7 +5675,6 @@ function PlanningView({ client, isAdminPreview=false }) {
    }
    normalized[realKey]=normDays;
   }
-  console.log("NORMALIZED KEYS:", Object.keys(normalized));
   await savePlanningDB({...planning,...normalized}); closePanel();
  };
 
@@ -6409,11 +6405,11 @@ function RapportIA({ clients, moisIdx, moisYear }) {
       : "";
     const prompt=`Tu es analyste financier senior chez NVM Finance. Rapport mensuel pour :\nClient : ${client.name} | Secteur : ${client.sector} | Periode : ${MONTHS[moisIdx]} ${moisYear}${sectorContext}\nCA HT : ${fmt(kpis.ca)} | Marge brute : ${fmt(kpis.marge)} (${pct(kpis.ca>0?kpis.marge/kpis.ca*100:0)}) | EBE : ${fmt(kpis.ebe)} | Resultat : ${fmt(kpis.result)}\nEmprunts : ${(client.emprunts||[]).length} en cours | Investissements : ${(client.investissements||[]).length}\nAlertes : ${calcAlertes(client,moisIdx,moisYear).filter(a=>a.level!=="green").map(a=>`[${a.level.toUpperCase()}] ${a.kpi}`).join(", ")||"Aucune"}\nRedige : 1. SYNTHESE 2. PERFORMANCES 3. TRESORERIE 4. POINTS D'ATTENTION 5. 3 RECOMMANDATIONS — Professionnel, concis, oriente decision.`;
     if(!prompt?.trim()){setText("Erreur : prompt vide.");setLoading(false);return;}
-    console.log("PROMPT:", prompt);
     try {
+      const {data:{session}} = await supabase.auth.getSession();
       const res = await fetch("/api/ai", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
         body: JSON.stringify({ prompt })
       });
       const data = await res.json();
