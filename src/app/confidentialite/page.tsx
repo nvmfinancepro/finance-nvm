@@ -115,6 +115,10 @@ export default function Page() {
           <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Nathan Van Meer — Auto-entrepreneur</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>SIRET : 99486751300016 — Annecy (74000), France</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Email : nathan@nvm-finance.fr</p>
         </div>
         <div style={{marginBottom:40}}>
+          <h2 style={{fontSize:20,fontWeight:800,color:C.primary,marginBottom:16,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>Cabinets comptables partenaires</h2>
+          <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Si votre dossier est géré par un cabinet comptable partenaire utilisant NVM Finance, ce cabinet est responsable du traitement de vos données au sens du RGPD : il détermine les finalités et moyens du traitement de votre dossier et reste votre interlocuteur principal.</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>NVM Finance agit alors en tant que sous-traitant (article 28 du RGPD) : nous fournissons l'infrastructure technique d'hébergement et de traitement, sans utiliser vos données à d'autres fins que celles définies par le cabinet.</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Vous pouvez exercer vos droits auprès de votre cabinet ou directement auprès de NVM Finance (voir ci-dessous) — les deux transmettront votre demande à l'autre si nécessaire.</p>
+        </div>
+        <div style={{marginBottom:40}}>
           <h2 style={{fontSize:20,fontWeight:800,color:C.primary,marginBottom:16,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>Données collectées</h2>
           <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Nom, prénom, email, téléphone, données financières importées dans l'outil.</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Ces données sont collectées uniquement avec votre consentement.</p>
         </div>

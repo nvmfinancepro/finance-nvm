@@ -131,6 +131,10 @@ export default function Page() {
           <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Le client s'engage à fournir des données exactes.</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Le client est responsable de la légalité des données transmises.</p>
         </div>
         <div style={{marginBottom:40}}>
+          <h2 style={{fontSize:20,fontWeight:800,color:C.primary,marginBottom:16,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>Cabinets comptables partenaires</h2>
+          <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Un cabinet comptable peut souscrire à NVM Finance pour gérer, en son nom, les dossiers de ses propres clients au sein de la plateforme. Le cabinet est alors seul responsable de la relation commerciale et contractuelle avec ses clients ; NVM Finance n'intervient pas dans cette relation et n'est pas partie aux éventuels contrats entre le cabinet et ses clients.</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Le cabinet s'engage à obtenir de ses clients toute autorisation nécessaire à l'utilisation de leurs données sur la plateforme, dans les mêmes conditions que celles prévues à l'article "Obligations du client" ci-dessus.</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Les modalités tarifaires applicables aux cabinets partenaires (abonnement, nombre de dossiers inclus) font l'objet d'un accord spécifique communiqué avant souscription.</p>
+        </div>
+        <div style={{marginBottom:40}}>
           <h2 style={{fontSize:20,fontWeight:800,color:C.primary,marginBottom:16,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>Responsabilité</h2>
           <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>NVM Finance s'engage à fournir ses services avec soin et professionnalisme.</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>La responsabilité ne saurait excéder les sommes versées sur les 3 derniers mois.</p>
         </div>
