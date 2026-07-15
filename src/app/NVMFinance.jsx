@@ -770,7 +770,7 @@ function AdminCabinets({ cabinets, clients, onAddCabinet, onDeleteCabinet, onVie
 }
 
 // ADMIN — GESTION CLIENTS (avec bouton Modifier fonctionnel)
-function AdminClients({ clients, onViewAsClient, onAddClient, onUpdateClient, onDeleteClient }) {
+function AdminClients({ clients, cabinets, onViewAsClient, onAddClient, onUpdateClient, onDeleteClient }) {
  const [showAdd,setShowAdd]=useState(false);
  const [newC,setNewC]=useState({name:"",sector:SECTORS[0],manager:"",email:""});
  const [editId,setEditId]=useState(null);
@@ -878,6 +878,11 @@ function AdminClients({ clients, onViewAsClient, onAddClient, onUpdateClient, on
  </div>
  <span style={{width:9,height:9,borderRadius:"50%",background:c.status==="healthy"?C.green:c.status==="warning"?C.orange:C.red,display:"inline-block",marginTop:4}}/>
  </div>
+ {c.cabinet_id&&cabinets?.length>0&&(
+   <div style={{marginBottom:12}}>
+     <Pill color={C.orange}>Géré par {cabinets.find(cab=>cab.id===c.cabinet_id)?.name||"un cabinet"}</Pill>
+   </div>
+ )}
  <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
  {(()=>{const lk=calcMonthKpis(c,CUR_M,CUR_Y);const ca=lk.hasData?lk.ca:c.kpis.ca;const res=lk.hasData?lk.result:c.kpis.result;const treso=calcTresoEstimee(c,CUR_M,CUR_Y);
           return[["CA mensuel",fmt(ca),C.text],["Résultat",fmt(res),res>=0?C.green:C.red],["Trésorerie",fmt(treso),treso>=0?C.green:C.red],["Responsable",c.manager,C.textMid]];})().map(([l,v,col])=>(
@@ -6921,7 +6926,7 @@ export default function App() {
           ):undefined}
         />
         <div style={{flex:1,overflowY:"auto"}}>
-          {view==="clients"&&<AdminClients clients={visibleClients} onViewAsClient={setPreviewClient} onAddClient={handleAddClient} onUpdateClient={updateClient} onDeleteClient={(id)=>{(async()=>{
+          {view==="clients"&&<AdminClients clients={visibleClients} cabinets={previewCabinet?[]:cabinets} onViewAsClient={setPreviewClient} onAddClient={handleAddClient} onUpdateClient={updateClient} onDeleteClient={(id)=>{(async()=>{
           // Récupérer l'email du client avant suppression
           const clientToDelete = clients.find(c=>c.id===id);
           const emailToDelete = clientToDelete?.email || USERS_AUTH.find(u=>u.clientId===id)?.email;
