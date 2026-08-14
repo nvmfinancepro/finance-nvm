@@ -88,7 +88,7 @@ export default function Page() {
             <Logo width={70}/>
             <button onClick={()=>setMenuOpen(false)} style={{fontSize:20,cursor:"pointer",color:"#6aaca8",background:"none",border:"none",padding:4}}>✕</button>
           </div>
-          {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"},{h:"/demo",l:"On vous montre"},{h:"https://nvm-finance.vercel.app",l:"Espace client",ext:true}].map((lk,i)=>(
+          {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"},{h:"/on-vous-montre",l:"On vous montre"},{h:"https://nvm-finance.vercel.app",l:"Espace client",ext:true}].map((lk,i)=>(
             <a key={i} href={lk.h} target={lk.ext?"_blank":undefined} rel={lk.ext?"noopener noreferrer":undefined} onClick={()=>setMenuOpen(false)}
               style={{display:"block",padding:"16px 24px",fontSize:15,fontWeight:700,color:"#002e2c",textDecoration:"none",borderBottom:"1px solid #c8e8e5"}}>
               {lk.l}
@@ -154,7 +154,7 @@ export default function Page() {
               <div style={{fontSize:11,fontWeight:800,color:"rgba(255,255,255,.3)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Navigation</div>
               <a href="/" style={{display:"block",fontSize:13,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Accueil</a>
               <a href="/services" style={{display:"block",fontSize:13,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Nos offres</a>
-              <a href="/demo" style={{display:"block",fontSize:13,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>On vous montre</a>
+              <a href="/on-vous-montre" style={{display:"block",fontSize:13,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>On vous montre</a>
             </div>
             <div>
               <div style={{fontSize:11,fontWeight:800,color:"rgba(255,255,255,.3)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Contact</div>
