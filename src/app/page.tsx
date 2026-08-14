@@ -306,7 +306,7 @@ export default function SitePage() {
         <div className="nav-inner" style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 48px"}}>
           <Logo width={80}/>
           <div className="desktop-links" style={{display:"flex",gap:4,alignItems:"center"}}>
-            {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"},{h:"/demo",l:"Voir la démo"}].map((lk,i)=>(
+            {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"},{h:"/demo",l:"On vous montre"}].map((lk,i)=>(
               <a key={i} href={lk.h} className="nav-link" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8,transition:"all .2s"}}>{lk.l}</a>
             ))}
           </div>
@@ -326,7 +326,7 @@ export default function SitePage() {
             <LogoSVG width={70} showLabel={true} fillColor="#005552" brightGreen="#21C45D" labelColor="#005653"/>
             <button onClick={()=>setMenuOpen(false)} style={{fontSize:20,cursor:"pointer",color:"#6aaca8",background:"none",border:"none",padding:4}}>✕</button>
           </div>
-          {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"},{h:"/demo",l:"Voir la démo"},{h:"/auth/login",l:"Espace client",ext:true}].map((lk,i)=>(
+          {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"},{h:"/demo",l:"On vous montre"},{h:"/auth/login",l:"Espace client",ext:true}].map((lk,i)=>(
             <a key={i} href={lk.h} target={lk.ext?"_blank":undefined} rel={lk.ext?"noopener noreferrer":undefined} onClick={()=>setMenuOpen(false)}
               style={{display:"block",padding:"16px 24px",fontSize:15,fontWeight:700,color:C.text,textDecoration:"none",borderBottom:`1px solid ${C.border}`}}>
               {lk.l}
@@ -357,7 +357,7 @@ export default function SitePage() {
             <p style={{...a(.22),fontSize:14,fontWeight:800,color:C.primary,marginBottom:36}}>Mise en place en 48h · Sans engagement.</p>
             <div className="cta-btns" style={{...a(.3),display:"flex",gap:12,flexWrap:"wrap",marginBottom:40}}>
               <a href="https://calendly.com/nvmfinance-pro/30min" className="cta-main" style={{background:C.primary,color:"#fff",padding:"15px 32px",borderRadius:100,fontSize:15,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 24px rgba(0,86,83,.25)",transition:"all .2s"}}>Demander une analyse gratuite</a>
-              <a href="/demo" className="cta-outline" style={{background:"#fff",color:C.primary,padding:"15px 32px",borderRadius:100,fontSize:15,fontWeight:800,textDecoration:"none",border:`2px solid ${C.light}`,transition:"all .2s"}}>Voir la démo →</a>
+              <a href="/demo" className="cta-outline" style={{background:"#fff",color:C.primary,padding:"15px 32px",borderRadius:100,fontSize:15,fontWeight:800,textDecoration:"none",border:`2px solid ${C.light}`,transition:"all .2s"}}>On vous montre →</a>
             </div>
             <div className="stats-row" style={{...a(.4),display:"flex",gap:0,paddingTop:28,borderTop:`1px solid ${C.border}`}}>
               {[{n:"+40%",l:"Gain de rentabilité moyen constaté"},{n:"−3h",l:"Gagnées par semaine sur la gestion financière"},{n:"1 outil",l:"Pour piloter finances ET opérations"}].map((t,i)=>(
@@ -572,7 +572,7 @@ export default function SitePage() {
             </div>
             <div>
               <div style={{fontSize:11,fontWeight:800,color:"rgba(255,255,255,.3)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Navigation</div>
-              {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"},{h:"/demo",l:"Voir la démo"}].map((lk,i)=>(
+              {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"},{h:"/demo",l:"On vous montre"}].map((lk,i)=>(
                 <a key={i} href={lk.h} style={{display:"block",fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>{lk.l}</a>
               ))}
             </div>
