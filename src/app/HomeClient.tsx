@@ -572,7 +572,7 @@ export default function SitePage() {
             </div>
             <div>
               <div style={{fontSize:11,fontWeight:800,color:"rgba(255,255,255,.3)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Navigation</div>
-              {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"},{h:"/on-vous-montre",l:"On vous montre"}].map((lk,i)=>(
+              {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"},{h:"/on-vous-montre",l:"On vous montre"},{h:"/pilotage-financier-pme",l:"Guide pilotage financier"}].map((lk,i)=>(
                 <a key={i} href={lk.h} style={{display:"block",fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>{lk.l}</a>
               ))}
             </div>

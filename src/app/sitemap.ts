@@ -19,5 +19,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.7,
     },
+    {
+      url: `${base}/pilotage-financier-pme`,
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
   ];
 }
