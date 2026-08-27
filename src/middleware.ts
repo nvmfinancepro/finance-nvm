@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // Routes publiques — jamais de redirection
-const PUBLIC_EXACT = new Set(["/", "/services", "/demo", "/on-vous-montre", "/cgv", "/mentions-legales", "/confidentialite", "/set-password"]);
-const PUBLIC_PREFIX = ["/auth/", "/api/", "/_next/", "/favicon", "/site/"];
+const PUBLIC_EXACT = new Set(["/", "/services", "/demo", "/on-vous-montre", "/cgv", "/mentions-legales", "/confidentialite", "/set-password", "/robots.txt", "/sitemap.xml"]);
+const PUBLIC_PREFIX = ["/auth/", "/api/", "/_next/", "/favicon"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

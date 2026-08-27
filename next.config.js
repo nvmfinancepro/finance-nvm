@@ -7,6 +7,31 @@ const nextConfig = {
         destination: "/on-vous-montre",
         permanent: true,
       },
+      {
+        source: "/site",
+        destination: "/",
+        permanent: true,
+      },
+      {
+        source: "/site/services",
+        destination: "/services",
+        permanent: true,
+      },
+      {
+        source: "/site/cgv",
+        destination: "/cgv",
+        permanent: true,
+      },
+      {
+        source: "/site/confidentialite",
+        destination: "/confidentialite",
+        permanent: true,
+      },
+      {
+        source: "/site/mentions-legales",
+        destination: "/mentions-legales",
+        permanent: true,
+      },
     ];
   },
   experimental: {
