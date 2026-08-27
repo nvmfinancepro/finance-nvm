@@ -2,19 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Routes publiques — jamais de redirection
-const PUBLIC_EXACT = new Set(["/", "/services", "/demo", "/on-vous-montre", "/pilotage-financier-pme", "/automatisation-gestion-pme", "/cgv", "/mentions-legales", "/confidentialite", "/set-password", "/robots.txt", "/sitemap.xml"]);
-const PUBLIC_PREFIX = ["/auth/", "/api/", "/_next/", "/favicon"];
-
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // Laisser passer toutes les routes publiques sans toucher aux cookies
-  if (PUBLIC_EXACT.has(pathname) || PUBLIC_PREFIX.some(p => pathname.startsWith(p))) {
-    return NextResponse.next();
-  }
-
-  // Pour les routes protégées (/admin/*, /client/*), vérifier la session
   const response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -41,8 +29,9 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    // Exclure fichiers statiques Next.js et assets
-    "/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|mp4|webm)$).*)",
-  ],
+  // Seule /dashboard nécessite une session (admin/client sont du code mort, sans route).
+  // Le middleware ne s'exécute donc plus du tout sur les pages publiques (marketing,
+  // guides, robots.txt, sitemap.xml...), ce qui supprime son overhead d'edge function
+  // pour tout ce qui n'a pas besoin d'auth.
+  matcher: ["/dashboard", "/dashboard/:path*"],
 };

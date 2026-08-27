@@ -1,6 +1,12 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { ReviewsSection, ReviewsWidget } from "@/components/ui/GoogleReviews";
+import dynamic from "next/dynamic";
+
+// Chargé après le rendu initial : ces composants ne rendent rien tant que /api/reviews
+// n'a pas répondu (fetch côté client), donc aucun contenu SSR/LCP n'en dépend — inutile
+// de les faire peser sur le bundle JS critique de la page.
+const ReviewsSection = dynamic(() => import("@/components/ui/GoogleReviews").then(m => m.ReviewsSection), { ssr: false });
+const ReviewsWidget = dynamic(() => import("@/components/ui/GoogleReviews").then(m => m.ReviewsWidget), { ssr: false });
 
 const C = { primary:"#005653", green:"#21C45D", bg:"#ecfdf5", text:"#002e2c", mid:"#2d6b68", light:"#a7d4d0", border:"#c8e8e5" };
 
@@ -240,7 +246,6 @@ export default function SitePage() {
 
   return (
     <div style={{fontFamily:"'Nunito',sans-serif", background:"#fff", color:C.text, minHeight:"100vh", overflowX:"hidden"}}>
-      <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
       <style>{`
         *{box-sizing:border-box;}
         @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}

@@ -48,7 +48,6 @@ export default function Page() {
   }, []);
   return (
     <div style={{fontFamily:"'Nunito',sans-serif",background:"#fff",color:C.text,minHeight:"100vh"}}>
-      <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
       <style>{`
         @media(max-width:768px){
           .desktop-nav-bar{display:none!important;}

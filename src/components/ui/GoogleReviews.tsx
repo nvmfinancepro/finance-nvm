@@ -46,8 +46,12 @@ function Avatar({ src, name, size = 36 }: { src: string | null; name: string; si
       }}>{initials}</div>
     );
   }
+  // Les URLs Google Places incluent un suffixe de taille (=s128-c...) pensé pour un usage
+  // générique ; on le réécrit à ~2x la taille d'affichage réelle (36px/28px ici) au lieu
+  // des 128px par défaut, pour éviter de télécharger une image bien plus grande que nécessaire.
+  const sized = src.replace(/=s\d+-/, `=s${size * 2}-`);
   return (
-    <img src={src} alt={name} width={size} height={size} onError={() => setErr(true)}
+    <img src={sized} alt={name} width={size} height={size} loading="lazy" onError={() => setErr(true)}
       style={{ borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
   );
 }

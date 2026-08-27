@@ -106,7 +106,6 @@ export default function ServicesPage() {
 
   return (
     <div style={{fontFamily:"'Nunito',sans-serif",background:"#f8fffe",color:C.text,minHeight:"100vh"}}>
-      <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
       <style>{`
         .drawer{display:none!important;}
         .mobile-ham{display:none;}

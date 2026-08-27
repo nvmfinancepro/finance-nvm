@@ -50,7 +50,6 @@ function SetPasswordForm() {
 
   return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:`linear-gradient(135deg, ${C.primary} 0%, #003d3a 100%)`,fontFamily:"'Nunito',sans-serif"}}>
-      <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet"/>
       <div style={{background:"white",borderRadius:20,padding:"48px 40px",width:"100%",maxWidth:420,boxShadow:"0 24px 60px rgba(0,0,0,0.3)"}}>
         <div style={{textAlign:"center",marginBottom:32}}>
           <div style={{fontSize:32,fontWeight:900,color:C.primary,letterSpacing:"0.05em"}}>NVM FINANCE</div>
