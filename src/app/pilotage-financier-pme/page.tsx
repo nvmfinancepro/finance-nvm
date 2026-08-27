@@ -158,7 +158,10 @@ export default function Page() {
           <p style={pStyle}>
             Nous concevons aussi des outils de gestion pour PME dans ce même tableau de bord — planning d&apos;équipe,
             gestion des tâches, suivi des congés et du stock, automatisation de vos process opérationnels — pour que
-            le pilotage financier et l&apos;opérationnel du quotidien vivent au même endroit. Vous pouvez découvrir la
+            le pilotage financier et l&apos;opérationnel du quotidien vivent au même endroit. Ce volet fait l&apos;objet
+            de son propre guide sur l&apos;
+            <a href="/automatisation-gestion-pme" style={{ color: C.primary, fontWeight: 700 }}>automatisation de la gestion PME</a>,
+            et vous pouvez découvrir la
             <a href="/" style={{ color: C.primary, fontWeight: 700 }}> démarche complète sur notre page d&apos;accueil</a>.
           </p>
 
