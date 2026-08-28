@@ -256,6 +256,7 @@ export default function SitePage() {
         @keyframes alert-in{0%{opacity:0;transform:translateY(14px)}100%{opacity:1;transform:translateY(0)}}
         @keyframes bar-grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
         @keyframes chart-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+        @keyframes spin-slow{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
         .demo-tab{background:none;border:1.5px solid #c8e8e5;border-radius:100px;padding:9px 20px;font-family:inherit;font-size:13px;font-weight:800;color:#6aaca8;cursor:pointer;transition:all .2s;}
         .demo-tab.on{background:#005653;border-color:#005653;color:#fff;box-shadow:0 4px 16px rgba(0,86,83,.25);}
         .demo-tab:hover:not(.on){background:#f0faf8;color:#005653;}
@@ -465,46 +466,65 @@ export default function SitePage() {
         <div style={{maxWidth:1200,margin:"0 auto"}}>
           <div className="hero-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:72,alignItems:"center"}}>
 
-            {/* Kanban mockup (gauche) */}
+            {/* Plateforme mockup (gauche) : rail de modules + panneau sur-mesure */}
             <div style={{position:"relative",paddingBottom:16,paddingLeft:16}}>
               <div style={{background:"#fff",borderRadius:24,boxShadow:"0 32px 80px rgba(0,86,83,.14),0 0 0 1px rgba(0,86,83,.06)",padding:"24px 20px",animation:"float 8s ease-in-out infinite .5s"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
                   <div>
                     <div style={{fontSize:10,fontWeight:800,color:"#6aaca8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>Module Gestion</div>
-                    <div style={{fontSize:15,fontWeight:900,color:C.text}}>Kanban · Semaine</div>
+                    <div style={{fontSize:15,fontWeight:900,color:C.text}}>Votre plateforme de gestion</div>
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:6,background:C.bg,padding:"5px 12px",borderRadius:100,border:`1px solid ${C.border}`}}>
                     <div style={{width:7,height:7,borderRadius:"50%",background:C.green,animation:"pulse-dot 2s infinite"}}/>
                     <span style={{fontSize:10,fontWeight:800,color:C.primary}}>En direct</span>
                   </div>
                 </div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
-                  {([
-                    {col:"À faire",   color:"#6aaca8", bg:"#f8fffe", bd:C.border,       tasks:["Relancer devis client","Mise à jour stock été"]},
-                    {col:"En cours",  color:"#d97706", bg:"#fffbeb", bd:"#fde68a",       tasks:["Planning juillet","Recrutement saisonnier"]},
-                    {col:"Terminé",   color:"#059669", bg:"#f0fdf4", bd:"#bbf7d0",       tasks:["Rapport mai","Commande fournisseur"]},
-                  ] as {col:string;color:string;bg:string;bd:string;tasks:string[]}[]).map((col,ci)=>(
-                    <div key={ci}>
-                      <div style={{fontSize:9,fontWeight:800,textTransform:"uppercase",letterSpacing:"0.08em",color:col.color,marginBottom:8,display:"flex",alignItems:"center",gap:5}}>
-                        <div style={{width:6,height:6,borderRadius:"50%",background:col.color,flexShrink:0}}/>
-                        {col.col}
+
+                <div style={{display:"flex",gap:14}}>
+                  {/* Rail de modules (icônes) */}
+                  <div style={{display:"flex",flexDirection:"column",gap:8,flexShrink:0}}>
+                    {[
+                      <path key="a" d="M2.5 6.5L9 3l6.5 3.5M2.5 6.5v6L9 16l6.5-3.5v-6M2.5 6.5L9 10m0 0l6.5-3.5M9 10v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>,
+                      <g key="b"><rect x="2.5" y="4" width="13" height="11" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M2.5 7.5h13M6 2.5v3M12 2.5v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></g>,
+                      <path key="c" d="M9 2.5c-2.2 0-4 1.8-4 4v2.5c0 .8-.3 1.6-.9 2.2L3 12.5h12l-1.1-1.3c-.6-.6-.9-1.4-.9-2.2V6.5c0-2.2-1.8-4-4-4z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>,
+                      <path key="d" d="M2.5 5a1 1 0 011-1h3.5l1.5 1.5H14a1 1 0 011 1v7a1 1 0 01-1 1H3.5a1 1 0 01-1-1V5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>,
+                      <g key="e"><path d="M3 15V9.5M9 15V3M15 15v-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M2.5 15.5h13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></g>,
+                    ].map((icon,ii)=>(
+                      <div key={ii} style={{width:38,height:38,borderRadius:11,background:"#f8fffe",border:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"center",color:"#6aaca8"}}>
+                        <svg width="16" height="16" viewBox="0 0 18 18" fill="none">{icon}</svg>
                       </div>
-                      <div style={{display:"flex",flexDirection:"column",gap:7}}>
-                        {col.tasks.map((t,ti)=>(
-                          <div key={ti} style={{background:col.bg,borderRadius:8,padding:"9px 10px",border:`1px solid ${col.bd}`}}>
-                            <div style={{fontSize:10,fontWeight:700,color:C.text,lineHeight:1.3}}>{t}</div>
-                          </div>
-                        ))}
-                      </div>
+                    ))}
+                    <div style={{width:38,height:38,borderRadius:11,background:C.primary,boxShadow:"0 6px 16px rgba(0,86,83,.35)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff"}}>
+                      <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M9 3.5v11M3.5 9h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Panneau actif : sur-mesure */}
+                  <div style={{flex:1,background:C.bg,borderRadius:14,border:`1.5px dashed ${C.light}`,padding:"18px 16px",display:"flex",flexDirection:"column",gap:10}}>
+                    <div style={{fontSize:9,fontWeight:800,color:C.primary,textTransform:"uppercase",letterSpacing:"0.06em"}}>Nouveau module</div>
+                    <div style={{fontSize:14,fontWeight:900,color:C.text,lineHeight:1.3}}>Votre outil, sur mesure</div>
+                    <div style={{fontSize:10.5,fontWeight:600,color:C.mid,lineHeight:1.5}}>Décrivez la tâche à automatiser, on la construit dans votre plateforme.</div>
+                    <div style={{background:"#fff",borderRadius:9,border:`1px dashed ${C.border}`,padding:"9px 11px",fontSize:10,fontWeight:600,color:"#9db8b5",fontStyle:"italic"}}>
+                      Ex : suivi de mes commandes fournisseurs...
+                    </div>
+                    <div style={{alignSelf:"flex-start",background:C.primary,color:"#fff",fontSize:10,fontWeight:800,padding:"7px 14px",borderRadius:100,boxShadow:"0 4px 14px rgba(0,86,83,.25)"}}>
+                      Construire mon outil →
+                    </div>
+                    <div style={{display:"flex",alignItems:"center",gap:7,marginTop:2}}>
+                      <svg width="12" height="12" viewBox="0 0 18 18" fill="none" style={{animation:"spin-slow 3s linear infinite",flexShrink:0}}>
+                        <path d="M9 2.5v2M9 13.5v2M15.5 9h-2M4.5 9h-2M13.5 4.5l-1.4 1.4M5.9 12.1l-1.4 1.4M13.5 13.5l-1.4-1.4M5.9 5.9L4.5 4.5" stroke={C.primary} strokeWidth="1.5" strokeLinecap="round"/>
+                        <circle cx="9" cy="9" r="2.5" stroke={C.primary} strokeWidth="1.5"/>
+                      </svg>
+                      <span style={{fontSize:9.5,fontWeight:700,color:C.primary}}>Tâche automatisée en continu</span>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div style={{position:"absolute",bottom:0,right:-16,background:"#fff",borderRadius:14,boxShadow:"0 8px 28px rgba(0,86,83,.12),0 0 0 1px rgba(0,86,83,.06)",padding:"10px 14px",display:"flex",alignItems:"center",gap:10,animation:"float2 8s ease-in-out infinite 2s"}}>
                 <div style={{width:28,height:28,borderRadius:8,background:"#f0fdf4",display:"flex",alignItems:"center",justifyContent:"center"}}>
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l3 3 7-7" stroke="#059669" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </div>
-                <div><div style={{fontSize:10,fontWeight:800,color:C.primary}}>Tâche complétée</div><div style={{fontSize:9,fontWeight:600,color:"#6aaca8"}}>Rapport mai · validé</div></div>
+                <div><div style={{fontSize:10,fontWeight:800,color:C.primary}}>Chaque entreprise est différente</div><div style={{fontSize:9,fontWeight:600,color:"#6aaca8"}}>On construit l'outil qui va avec</div></div>
               </div>
             </div>
 
@@ -512,10 +532,10 @@ export default function SitePage() {
             <div>
               <div style={{display:"inline-block",background:"#fff",color:C.primary,fontSize:11,fontWeight:800,padding:"5px 14px",borderRadius:100,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16,border:`1px solid ${C.border}`}}>Outils de gestion</div>
               <h2 style={{fontSize:"clamp(26px,3vw,40px)",fontWeight:900,color:C.text,lineHeight:1.15,marginBottom:20}}>
-                Vos outils de gestion,<br/><em style={{color:C.primary,fontStyle:"normal"}}>au même endroit que vos finances.</em>
+                Un outil de gestion <em style={{color:C.primary,fontStyle:"normal"}}>sur mesure.</em>
               </h2>
               <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.75,marginBottom:32}}>
-                Planning d'équipe, gestion des tâches, suivi des congés, gestion du stock : tout est intégré dans votre espace NVM Finance. Besoin d'un outil spécifique pour votre activité ? On peut aussi vous le créer sur mesure.
+                Vous avez des tâches du quotidien que vous aimeriez faciliter ou automatiser ? On vous construit l'outil qui s'en charge, seul ou intégré à votre espace NVM Finance. Planning d'équipe, suivi des congés, gestion du stock : ces besoins courants sont déjà prêts à l'emploi, et on peut créer exactement ce qu'il vous manque.
               </p>
               <a href="/services" style={{display:"inline-flex",alignItems:"center",gap:8,background:C.primary,color:"#fff",padding:"13px 28px",borderRadius:100,fontSize:14,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 20px rgba(0,86,83,.25)",transition:"all .2s"}}>
                 Découvrir les outils de gestion →
