@@ -1,6 +1,8 @@
 "use client";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { DndContext, useDraggable, useDroppable, useSensor, useSensors, PointerSensor } from "@dnd-kit/core";
+import { calcMonthForecast, calcAnnualForecast } from "@/lib/previsionnel";
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -15,7 +17,7 @@ const C = {
  greenBg:"#ecfdf5", orangeBg:"#fffbeb", redBg:"#fef2f2",
 };
 
-// LOGO — paths exacts du SVG original
+// LOGO · paths exacts du SVG original
 const LogoSVG = ({ width=160, showLabel=false, labelColor="#005653", fillColor="#005552", brightGreen="#21C45D" }) => (
   <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:Math.round(width*0.07)}}>
     <svg viewBox="138 71 730 519" xmlns="http://www.w3.org/2000/svg" width={width} style={{display:"block"}}>
@@ -109,7 +111,7 @@ const getTemplate=(type,sector)=>{ const t=CSV_TEMPLATES[type]; if(!t) return ""
 
 // AUTH
 // USERS_AUTH est un cache en mémoire de client_users (id/email/rôle/nom), peuplé
-// depuis Supabase au chargement — sert à afficher la liste des comptes clients dans
+// depuis Supabase au chargement · sert à afficher la liste des comptes clients dans
 // l'admin. L'authentification elle-même passe entièrement par Supabase Auth.
 let USERS_AUTH = [];
 
@@ -196,9 +198,10 @@ const GlobalCSS = () => (
           .footer-grid{grid-template-columns:1fr!important;}
           .stats-row{flex-direction:column!important;}
         }
- @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+ @font-face{font-family:'Baloo 2';font-style:normal;font-weight:400 800;font-display:swap;src:url('/fonts/baloo2-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+ @font-face{font-family:'Baloo 2';font-style:normal;font-weight:400 800;font-display:swap;src:url('/fonts/baloo2-latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;}
  *{box-sizing:border-box;margin:0;padding:0;}
- body{font-family:'Nunito',sans-serif;}
+ body{font-family:'VAG Rounded Next','Baloo 2',sans-serif;}
  ::-webkit-scrollbar{width:5px;height:5px;}
  ::-webkit-scrollbar-thumb{background:${C.border};border-radius:10px;}
  input,select,textarea{outline:none;font-family:inherit;}
@@ -214,19 +217,21 @@ const GlobalCSS = () => (
 
 // MICRO COMPONENTS
 const Btn = ({ children, onClick, variant="primary", small, style={}, disabled }) => {
- const s = { primary:{background:C.primary,color:C.white,border:"none"}, ghost:{background:"transparent",color:C.primary,border:`1.5px solid ${C.border}`}, danger:{background:C.red,color:C.white,border:"none"}, success:{background:C.green,color:C.white,border:"none"}, orange:{background:C.orange,color:C.white,border:"none"} };
- return <button onClick={onClick} disabled={disabled} style={{...s[variant],padding:small?"5px 12px":"9px 18px",borderRadius:8,fontSize:small?12:13,fontWeight:800,cursor:disabled?"not-allowed":"pointer",opacity:disabled?.5:1,transition:"all .15s",display:"inline-flex",alignItems:"center",gap:6,...style}}>{children}</button>;
+ const s = { primary:{background:C.primary,color:C.white,border:"none",boxShadow:"0 4px 14px rgba(0,86,83,.22)"}, ghost:{background:C.white,color:C.primary,border:`1.5px solid ${C.border}`}, danger:{background:C.red,color:C.white,border:"none",boxShadow:"0 4px 14px rgba(220,38,38,.2)"}, success:{background:C.green,color:C.white,border:"none",boxShadow:"0 4px 14px rgba(5,150,105,.22)"}, orange:{background:C.orange,color:C.white,border:"none",boxShadow:"0 4px 14px rgba(217,119,6,.22)"} };
+ return <button onClick={onClick} disabled={disabled} style={{...s[variant],padding:small?"6px 14px":"10px 20px",borderRadius:100,fontSize:small?12:13,fontWeight:800,cursor:disabled?"not-allowed":"pointer",opacity:disabled?.5:1,transition:"all .15s",display:"inline-flex",alignItems:"center",gap:6,...style}}>{children}</button>;
 };
-const Pill = ({ children, color=C.primary, bg }) => <span style={{background:bg||color+"18",color,border:`1px solid ${color}33`,borderRadius:20,padding:"2px 10px",fontSize:11,fontWeight:800,whiteSpace:"nowrap",display:"inline-block"}}>{children}</span>;
+const Pill = ({ children, color=C.primary, bg }) => <span style={{background:bg||color+"18",color,border:`1px solid ${color}33`,borderRadius:100,padding:"3px 11px",fontSize:11,fontWeight:800,whiteSpace:"nowrap",display:"inline-block"}}>{children}</span>;
 const KpiCard = ({ label, value, sub, color=C.primary }) => (
- <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"16px 18px",position:"relative",overflow:"hidden"}}>
- <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:color}}/>
- <div style={{fontSize:10,color:C.textLight,fontWeight:800,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:6}}>{label}</div>
- <div style={{fontSize:22,fontWeight:900,color:C.text}}>{value}</div>
- {sub&&<div style={{fontSize:12,color,fontWeight:700,marginTop:4}}>{sub}</div>}
+ <div style={{background:C.white,borderRadius:20,padding:"20px 22px",position:"relative",boxShadow:"0 16px 36px rgba(0,86,83,.06)"}}>
+ <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:9}}>
+ <div style={{width:7,height:7,borderRadius:"50%",background:color,flexShrink:0}}/>
+ <div style={{fontSize:11,color:C.textLight,fontWeight:800,textTransform:"uppercase",letterSpacing:"0.08em"}}>{label}</div>
+ </div>
+ <div style={{fontSize:26,fontWeight:900,color:C.text,letterSpacing:"-0.01em"}}>{value}</div>
+ {sub&&<div style={{fontSize:12,color,fontWeight:700,marginTop:6}}>{sub}</div>}
  </div>
 );
-const Card = ({ children, style={} }) => <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,...style}}>{children}</div>;
+const Card = ({ children, style={} }) => <div style={{background:C.white,borderRadius:22,boxShadow:"0 16px 36px rgba(0,86,83,.06)",...style}}>{children}</div>;
 const SectionHead = ({ title, sub, action }) => (
  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 18px",borderBottom:`1px solid ${C.borderLight}`}}>
  <div><div style={{fontSize:14,fontWeight:800,color:C.text}}>{title}</div>{sub&&<div style={{fontSize:11,color:C.textLight,marginTop:2}}>{sub}</div>}</div>
@@ -290,7 +295,7 @@ function CSVPreviewModal({ file, rows, headers, mois, onConfirm, onCancel, error
  <div style={{padding:"16px 20px",borderBottom:`1px solid ${C.border}`,background:C.bg,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
  <div>
  <div style={{fontSize:15,fontWeight:900,color:C.text}}> Contrôle avant import</div>
- <div style={{fontSize:12,color:C.textMid,marginTop:2}}>{file?.name} — {rows.length} ligne{rows.length>1?"s":""}</div>
+ <div style={{fontSize:12,color:C.textMid,marginTop:2}}>{file?.name} · {rows.length} ligne{rows.length>1?"s":""}</div>
  </div>
  <Btn variant="ghost" small onClick={onCancel}> Fermer</Btn>
  </div>
@@ -337,7 +342,7 @@ function CSVPreviewModal({ file, rows, headers, mois, onConfirm, onCancel, error
  <div style={{padding:"14px 20px",borderTop:`1px solid ${C.border}`,display:"flex",gap:10,justifyContent:"flex-end",background:C.bg}}>
  <Btn variant="ghost" onClick={onCancel}>Annuler</Btn>
  <Btn variant={errors.length>0?"danger":"success"} onClick={()=>onConfirm(rows,selectedMois)}>
- {errors.length>0?`Importer quand même`:` Valider et importer — ${selectedMois}`}
+ {errors.length>0?`Importer quand même`:` Valider et importer · ${selectedMois}`}
  </Btn>
  </div>
  </div>
@@ -612,9 +617,9 @@ function AdminSidebar({ view, setView, onLogout, clientCount, alertCount, open, 
  if(role!=="CABINET") nav.push({id:"cabinets",icon:"",label:"Cabinets partenaires"});
  return <SidebarBase role={role==="CABINET"?"Espace Cabinet":"Espace Administrateur"} onLogout={onLogout} open={open} onClose={onClose}><nav style={{flex:1,padding:"10px 8px",overflowY:"auto"}}>{nav.map(item=><NavItem key={item.id} {...item} active={view===item.id} onClick={()=>{setView(item.id);onClose&&onClose();}}/>)}</nav></SidebarBase>;
 }
-function ClientSidebar({ view, setView, onLogout, clientName, alertCount, planningEnabled, open, onClose }) {
+function ClientSidebar({ view, setView, onLogout, clientName, alertCount, planningEnabled, congesEnabled, pointageEnabled, notesFraisEnabled, tachesEnabled, equipeTachesEnabled, open, onClose }) {
  const sections = [
- { label:"VUE GÉNÉRALE", items:[
+ { label:"VUE D'ENSEMBLE", items:[
  {id:"dashboard", icon:"", label:"Tableau de bord"},
  {id:"alertes", icon:"", label:"Mes alertes", badge:alertCount, badgeColor:C.red},
  ]},
@@ -623,6 +628,7 @@ function ClientSidebar({ view, setView, onLogout, clientName, alertCount, planni
  {id:"achats", icon:"−", label:"Mes coûts d'achat"},
  {id:"charges", icon:"≡", label:"Mes charges"},
  {id:"salaires", icon:"≡", label:"Ma masse salariale"},
+ {id:"catalogue", icon:"≡", label:"Mon catalogue produits"},
  {id:"creances", icon:">", label:"Mes créances clients"},
  {id:"dettes", icon:"<", label:"Mes dettes fournisseurs"},
  ]},
@@ -634,29 +640,45 @@ function ClientSidebar({ view, setView, onLogout, clientName, alertCount, planni
  {id:"emprunts", icon:"", label:"Mes emprunts"},
  {id:"investissements",icon:"", label:"Mes investissements"},
  ]},
- { label:"CATALOGUE", items:[
- {id:"catalogue", icon:"≡", label:"Mon catalogue produits"},
+ { label:"OUTILS FINANCIERS", items:[
+ {id:"roi", icon:"", label:"Calculateur ROI"},
+ {id:"embauche", icon:"", label:"Simulateur d'embauche"},
+ ]},
+ { label:"MON ÉQUIPE", items:[
+ ...(planningEnabled!==false ? [{id:"planning", icon:"", label:"Planning"}] : []),
+ ...(congesEnabled!==false ? [{id:"conges", icon:"", label:"Congés & absences"}] : []),
+ ...(pointageEnabled!==false ? [{id:"pointage", icon:"", label:"Pointage"}] : []),
+ ...(notesFraisEnabled!==false ? [{id:"notesfrais", icon:"", label:"Notes de frais"}] : []),
+ ...(tachesEnabled!==false ? [{id:"taches", icon:"", label:"Tâches"}] : []),
+ ...(equipeTachesEnabled!==false ? [{id:"equipetaches", icon:"", label:"Gestion d'équipe & Tâches"}] : []),
  ]},
  { label:"ANALYSE", items:[
  {id:"comparaison",   icon:"↔", label:"Comparaison périodes"},
  {id:"previsionnel",  icon:"→", label:"Prévisionnel"},
  ]},
- ...(planningEnabled!==false ? [{ label:"MON ÉQUIPE", items:[
- {id:"planning", icon:"", label:"Planning"},
- ]}] : []),
  ];
+ // Repli/dépli par section · tout ouvert par défaut (comportement identique à avant tant qu'on ne clique pas),
+ // état mémorisé par section pour ne pas perdre la préférence en changeant de vue.
+ const [collapsed,setCollapsed]=useState({});
+ const toggleSection=label=>setCollapsed(prev=>({...prev,[label]:!prev[label]}));
  return (
  <SidebarBase role="Espace Client" onLogout={onLogout} open={open} onClose={onClose}>
  <div style={{padding:"6px 14px 10px",borderBottom:"1px solid rgba(255,255,255,0.1)",textAlign:"center"}}>
  <div style={{fontSize:12,color:"rgba(255,255,255,0.8)",fontWeight:800}}>{clientName}</div>
  </div>
  <nav style={{flex:1,overflowY:"auto",padding:"8px 6px"}}>
- {sections.map(sec=>(
- <div key={sec.label} style={{marginBottom:8}}>
- <div style={{fontSize:9,color:"rgba(255,255,255,0.35)",fontWeight:800,letterSpacing:"0.12em",padding:"8px 10px 4px"}}>{sec.label}</div>
- {sec.items.map(item=><NavItem key={item.id} {...item} active={view===item.id} onClick={()=>{setView(item.id);onClose&&onClose();}}/>)}
- </div>
- ))}
+ {sections.map(sec=>{
+  const isCollapsed=!!collapsed[sec.label];
+  return (
+  <div key={sec.label} style={{marginBottom:8}}>
+  <div onClick={()=>toggleSection(sec.label)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",padding:"8px 10px 4px"}}>
+  <span style={{fontSize:9,color:"rgba(255,255,255,0.35)",fontWeight:800,letterSpacing:"0.12em"}}>{sec.label}</span>
+  <span style={{fontSize:9,color:"rgba(255,255,255,0.35)"}}>{isCollapsed?"▸":"▾"}</span>
+  </div>
+  {!isCollapsed&&sec.items.map(item=><NavItem key={item.id} {...item} active={view===item.id} onClick={()=>{setView(item.id);onClose&&onClose();}}/>)}
+  </div>
+  );
+ })}
  </nav>
  </SidebarBase>
  );
@@ -686,7 +708,7 @@ function TopBar({ title, user, extra, onMenuToggle }) {
  );
 }
 
-// ADMIN — CABINETS PARTENAIRES (visible admin uniquement)
+// ADMIN · CABINETS PARTENAIRES (visible admin uniquement)
 function AdminCabinets({ cabinets, clients, onAddCabinet, onDeleteCabinet, onViewAsCabinet }) {
  const [showAdd,setShowAdd]=useState(false);
  const [newCab,setNewCab]=useState({name:"",contactName:"",email:""});
@@ -753,36 +775,23 @@ function AdminCabinets({ cabinets, clients, onAddCabinet, onDeleteCabinet, onVie
  );
 }
 
-// ADMIN — GESTION CLIENTS (avec bouton Modifier fonctionnel)
+// ADMIN · GESTION CLIENTS (avec bouton Modifier fonctionnel)
 function AdminClients({ clients, cabinets, onViewAsClient, onAddClient, onUpdateClient, onDeleteClient }) {
  const [showAdd,setShowAdd]=useState(false);
  const [newC,setNewC]=useState({name:"",sector:SECTORS[0],manager:"",email:""});
  const [editId,setEditId]=useState(null);
  const [editC,setEditC]=useState({});
  const [editSaving,setEditSaving]=useState(false);
- const [editError,setEditError]=useState("");
  const [confirmDelete,setConfirmDelete]=useState(null);
 
- const startEdit=(c)=>{ setEditError(""); setEditId(c.id); setEditC({name:c.name,sector:c.sector,manager:c.manager,status:c.status,email:c.email||"",planningEnabled:c.planningEnabled!==false}); };
+ const startEdit=(c)=>{ setEditId(c.id); setEditC({name:c.name,sector:c.sector,manager:c.manager,status:c.status,email:c.email||"",planningEnabled:c.planningEnabled!==false,congesEnabled:c.congesEnabled!==false,pointageEnabled:c.pointageEnabled!==false,notesFraisEnabled:c.notesFraisEnabled!==false,tachesEnabled:c.tachesEnabled!==false,equipeTachesEnabled:c.equipeTachesEnabled!==false}); };
  const saveEdit=async()=>{
     if(editSaving) return;
-    setEditSaving(true); setEditError("");
-    // Mise à jour locale immédiate
-    onUpdateClient(editId,{name:editC.name,sector:editC.sector,manager:editC.manager,email:editC.email,planningEnabled:editC.planningEnabled});
-    // Sauvegarde directe Supabase (UPDATE simple sur les champs modifiables)
-    try {
-      const {error}=await supabase.from("clients").update({
-        name:editC.name,
-        sector:editC.sector||"",
-        manager:editC.manager,
-        email:editC.email||"",
-        planning_enabled:editC.planningEnabled!==false,
-      }).eq("id",editId);
-      if(error) throw error;
-      setEditId(null);
-    } catch(e){
-      setEditError("Erreur lors de la sauvegarde : "+((e&&e.message)||"inconnue"));
-    }
+    setEditSaving(true);
+    // Écriture unique via onUpdateClient (verrou optimiste + rollback + alerte déjà gérés là-bas) —
+    // ne pas dupliquer avec un second appel Supabase direct en parallèle.
+    await onUpdateClient(editId,{name:editC.name,sector:editC.sector,manager:editC.manager,email:editC.email,planningEnabled:editC.planningEnabled,congesEnabled:editC.congesEnabled,pointageEnabled:editC.pointageEnabled,notesFraisEnabled:editC.notesFraisEnabled,tachesEnabled:editC.tachesEnabled,equipeTachesEnabled:editC.equipeTachesEnabled});
+    setEditId(null);
     setEditSaving(false);
   };
 
@@ -829,7 +838,7 @@ function AdminClients({ clients, cabinets, onViewAsClient, onAddClient, onUpdate
  )}
  {editId&&(
  <Card style={{border:`2px solid ${C.orange}`}}>
- <SectionHead title={`Modifier — ${editC.name}`}/>
+ <SectionHead title={`Modifier · ${editC.name}`}/>
  <div style={{padding:20,display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
  <FormRow label="Raison sociale"><input value={editC.name||""} onChange={e=>setEditC({...editC,name:e.target.value})} className="inp"/></FormRow>
  <FormRow label="E-mail client"><input value={editC.email||""} onChange={e=>setEditC({...editC,email:e.target.value})} className="inp" type="email" placeholder="email@client.fr"/></FormRow>
@@ -842,10 +851,29 @@ function AdminClients({ clients, cabinets, onViewAsClient, onAddClient, onUpdate
      <input type="checkbox" checked={editC.planningEnabled!==false} onChange={e=>setEditC({...editC,planningEnabled:e.target.checked})}/>
      Accès au module Planning & équipe
    </label>
+   <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,fontWeight:700,color:C.text,marginTop:8}}>
+     <input type="checkbox" checked={editC.congesEnabled!==false} onChange={e=>setEditC({...editC,congesEnabled:e.target.checked})}/>
+     Accès au module Congés & absences
+   </label>
+   <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,fontWeight:700,color:C.text,marginTop:8}}>
+     <input type="checkbox" checked={editC.pointageEnabled!==false} onChange={e=>setEditC({...editC,pointageEnabled:e.target.checked})}/>
+     Accès au module Pointage
+   </label>
+   <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,fontWeight:700,color:C.text,marginTop:8}}>
+     <input type="checkbox" checked={editC.notesFraisEnabled!==false} onChange={e=>setEditC({...editC,notesFraisEnabled:e.target.checked})}/>
+     Accès au module Notes de frais
+   </label>
+   <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,fontWeight:700,color:C.text,marginTop:8}}>
+     <input type="checkbox" checked={editC.tachesEnabled!==false} onChange={e=>setEditC({...editC,tachesEnabled:e.target.checked})}/>
+     Accès au module Tâches
+   </label>
+   <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,fontWeight:700,color:C.text,marginTop:8}}>
+     <input type="checkbox" checked={editC.equipeTachesEnabled!==false} onChange={e=>setEditC({...editC,equipeTachesEnabled:e.target.checked})}/>
+     Accès au module Gestion d'équipe & Tâches
+   </label>
  </div>
- {editError&&<div style={{padding:"0 20px 8px",color:C.red,fontSize:12,fontWeight:700}}>{editError}</div>}
  <div style={{padding:"0 20px 20px",display:"flex",gap:10}}>
- <Btn variant="ghost" onClick={()=>{setEditId(null);setEditError("");}}>Annuler</Btn>
+ <Btn variant="ghost" onClick={()=>setEditId(null)}>Annuler</Btn>
  <Btn variant="orange" onClick={saveEdit} disabled={editSaving}>{editSaving?"Enregistrement...":"Enregistrer les modifications"}</Btn>
  </div>
  </Card>
@@ -889,7 +917,7 @@ function AdminClients({ clients, cabinets, onViewAsClient, onAddClient, onUpdate
  );
 }
 
-// ADMIN — SAISIE CSV
+// ADMIN · SAISIE CSV
 function AdminSaisie({ clients, onUpdateClient }) {
  const [selId,setSelId]=useState(clients[0]?.id||"");
  const [mod,setMod]=useState("ventes_produits");
@@ -911,10 +939,10 @@ function AdminSaisie({ clients, onUpdateClient }) {
  ventes_produits:"Ventes par produit / service selon le secteur",
  autres_ventes:"Subventions, cessions, prestations accessoires",
  charges:"Charges fixes et variables avec TVA recuperable",
- salaires:"Cout total employeur — salaires bruts, cotisations, net",
+ salaires:"Cout total employeur · salaires bruts, cotisations, net",
  catalogue:"Tarifs, marges et references produits",
- creances_clients:"Factures emises non encore encaissees — suivi delais paiement client",
- dettes_fournisseurs:"Factures recues non encore payees — suivi echeances fournisseurs",
+ creances_clients:"Factures emises non encore encaissees · suivi delais paiement client",
+ dettes_fournisseurs:"Factures recues non encore payees · suivi echeances fournisseurs",
  };
 
 
@@ -936,11 +964,11 @@ function AdminSaisie({ clients, onUpdateClient }) {
  const importedAt=new Date().toLocaleDateString("fr-FR");
  const newImport={id:Date.now(),type:mod,label,mois,rows,count:rows.length,importedAt};
  // onUpdateClient sauvegarde réellement l'import (branche patch.imports) et alerte
- // l'utilisateur + annule la mise à jour locale en cas d'échec — pas besoin de dupliquer
+ // l'utilisateur + annule la mise à jour locale en cas d'échec · pas besoin de dupliquer
  // l'écriture ici.
  onUpdateClient(client.id,{imports:[...existing,newImport]});
  setCsvPreview(null);
- setImportMsg(` ${rows.length} ligne${rows.length>1?"s":""} importée${rows.length>1?"s":""} dans "${label}" — ${mois}`);
+ setImportMsg(` ${rows.length} ligne${rows.length>1?"s":""} importée${rows.length>1?"s":""} dans "${label}" · ${mois}`);
  setTimeout(()=>setImportMsg(""),5000);
  };
 
@@ -982,7 +1010,7 @@ function AdminSaisie({ clients, onUpdateClient }) {
 
  <Card>
  <SectionHead
- title={`${CSV_MODULES.find(m=>m.id===mod)?.label} — Import CSV`}
+ title={`${CSV_MODULES.find(m=>m.id===mod)?.label} · Import CSV`}
  sub={HINTS[mod]}
  action={
  <div style={{display:"flex",gap:8,alignItems:"center"}}>
@@ -1002,7 +1030,7 @@ function AdminSaisie({ clients, onUpdateClient }) {
  <span style={{fontSize:12,color:C.textLight}}>Toutes les lignes importées seront rattachées à ce mois</span>
  </div>
 
- {/* Zone d'import fichier — input visible stylisé */}
+ {/* Zone d'import fichier · input visible stylisé */}
  <div style={{border:`2px dashed ${C.border}`,borderRadius:12,padding:"32px 20px",textAlign:"center",background:C.bg}}>
  <div style={{fontSize:32,marginBottom:10}}></div>
  <div style={{fontSize:14,fontWeight:800,color:C.text,marginBottom:6}}>Sélectionnez votre fichier CSV</div>
@@ -1046,7 +1074,7 @@ function AdminSaisie({ clients, onUpdateClient }) {
  {(client?.imports||[]).filter(imp=>imp.type===mod).length>0&&(
  <div style={{borderTop:`1px solid ${C.borderLight}`,padding:16}}>
  <div style={{fontSize:12,fontWeight:800,color:C.textMid,marginBottom:10}}>
- Imports enregistrés — {CSV_MODULES.find(m=>m.id===mod)?.label}
+ Imports enregistrés · {CSV_MODULES.find(m=>m.id===mod)?.label}
  </div>
  {(client.imports||[]).filter(imp=>imp.type===mod).sort((a,b)=>a.mois>b.mois?-1:1).map(imp=>(
  <div key={imp.id} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 12px",background:C.bg,borderRadius:8,marginBottom:6}}>
@@ -1075,7 +1103,7 @@ function AdminSaisie({ clients, onUpdateClient }) {
 }
 
 
-// ADMIN — DONNÉES FINANCIÈRES
+// ADMIN · DONNÉES FINANCIÈRES
 function AdminFinancier({ clients, onUpdateClient }) {
  const [selId,setSelId]=useState(clients[0]?.id||1);
  const [tab,setTab]=useState("emprunts");
@@ -1112,7 +1140,7 @@ function EmpruntsForm({ client, onUpdate }) {
  const [form,setForm]=useState({libelle:"",capital:"",taux:"",duree:"",dateDebut:"",assurance:""});
  const [saved,setSaved]=useState("");
  const calcAmort=(e)=>{ const rows=[]; let restant=e.capital; const mens=e.capital*(e.taux/100)/(1-Math.pow(1+e.taux/100,-e.duree)); for(let i=0;i<Math.min(e.duree,12);i++){const int=Math.round(restant*e.taux/100*100)/100;const cap=Math.round((mens-int)*100)/100;restant=Math.max(0,Math.round((restant-cap)*100)/100);rows.push({mois:MONTHS[i%12],interets:int,capitalRembourse:cap,capitalRestant:restant,assurance:e.assurance,sortie:Math.round((mens+e.assurance)*100)/100});} return rows; };
- const addEmprunt=()=>{ if(!form.libelle||!form.capital) return; const newE={id:Date.now(),libelle:form.libelle,capital:parseFloat(form.capital)||0,taux:parseFloat(form.taux)||0,duree:parseInt(form.duree)||60,dateDebut:form.dateDebut||"2025-01-01",assurance:parseFloat(form.assurance)||0}; onUpdate(client.id,{emprunts:[...(client.emprunts||[]),newE]}); setForm({libelle:"",capital:"",taux:"",duree:"",dateDebut:"",assurance:""}); setShowAdd(false); setSaved(" Emprunt ajouté — visible côté client"); setTimeout(()=>setSaved(""),4000); };
+ const addEmprunt=()=>{ if(!form.libelle||!form.capital) return; const newE={id:Date.now(),libelle:form.libelle,capital:parseFloat(form.capital)||0,taux:parseFloat(form.taux)||0,duree:parseInt(form.duree)||60,dateDebut:form.dateDebut||"2025-01-01",assurance:parseFloat(form.assurance)||0}; onUpdate(client.id,{emprunts:[...(client.emprunts||[]),newE]}); setForm({libelle:"",capital:"",taux:"",duree:"",dateDebut:"",assurance:""}); setShowAdd(false); setSaved(" Emprunt ajouté · visible côté client"); setTimeout(()=>setSaved(""),4000); };
  return (
  <div style={{display:"flex",flexDirection:"column",gap:16}}>
  {saved&&<div style={{padding:"10px 16px",background:C.greenBg,border:`1px solid ${C.green}33`,borderRadius:8,fontSize:13,color:C.green,fontWeight:700}}>{saved}</div>}
@@ -1148,18 +1176,18 @@ function EmpruntsForm({ client, onUpdate }) {
 // INVESTISSEMENTS
 function InvestissementsForm({ client, onUpdate }) {
  const [showAdd,setShowAdd]=useState(false);
- const [form,setForm]=useState({libelle:"",dateAchat:"",dateMEP:"",montantHT:"",tauxTVA:"20",duree:""});
+ const [form,setForm]=useState({libelle:"",dateAchat:"",dateMEP:"",montantHT:"",tauxTVA:"20",duree:"",gainMensuel:""});
  const [saved,setSaved]=useState("");
- const addInv=()=>{ if(!form.libelle||!form.montantHT) return; const newI={id:Date.now(),libelle:form.libelle,dateAchat:form.dateAchat,dateMEP:form.dateMEP,montantHT:parseFloat(form.montantHT)||0,tauxTVA:parseFloat(form.tauxTVA)||20,duree:parseInt(form.duree)||36}; onUpdate(client.id,{investissements:[...(client.investissements||[]),newI]}); setForm({libelle:"",dateAchat:"",dateMEP:"",montantHT:"",tauxTVA:"20",duree:""}); setShowAdd(false); setSaved(" Investissement ajouté"); setTimeout(()=>setSaved(""),4000); };
+ const addInv=()=>{ if(!form.libelle||!form.montantHT) return; const newI={id:Date.now(),libelle:form.libelle,dateAchat:form.dateAchat,dateMEP:form.dateMEP,montantHT:parseFloat(form.montantHT)||0,tauxTVA:parseFloat(form.tauxTVA)||20,duree:parseInt(form.duree)||36,gainMensuel:parseFloat(form.gainMensuel)||0}; onUpdate(client.id,{investissements:[...(client.investissements||[]),newI]}); setForm({libelle:"",dateAchat:"",dateMEP:"",montantHT:"",tauxTVA:"20",duree:"",gainMensuel:""}); setShowAdd(false); setSaved(" Investissement ajouté"); setTimeout(()=>setSaved(""),4000); };
  return (
  <div style={{display:"flex",flexDirection:"column",gap:16}}>
  {saved&&<div style={{padding:"10px 16px",background:C.greenBg,border:`1px solid ${C.green}33`,borderRadius:8,fontSize:13,color:C.green,fontWeight:700}}>{saved}</div>}
  <div style={{display:"flex",justifyContent:"flex-end"}}><Btn variant="success" small onClick={()=>setShowAdd(!showAdd)}>+ Ajouter un investissement</Btn></div>
  {showAdd&&(
  <Card style={{border:`2px solid ${C.primary}`}}>
- <SectionHead title="Nouvel investissement" sub="TVA, TTC, amortissement et report N+1 calculés automatiquement"/>
+ <SectionHead title="Nouvel investissement" sub="TVA, TTC, amortissement et retour sur investissement calculés automatiquement"/>
  <div style={{padding:20,display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14}}>
- {[{l:"Libellé",k:"libelle",ph:"Matériel informatique"},{l:"Date d'achat",k:"dateAchat",t:"date"},{l:"Date mise en service",k:"dateMEP",t:"date"},{l:"Montant HT (€)",k:"montantHT",ph:"12000",t:"number"},{l:"Taux TVA (%)",k:"tauxTVA",ph:"20",t:"number"},{l:"Durée amortissement (mois)",k:"duree",ph:"36",t:"number"}].map(f=>(
+ {[{l:"Libellé",k:"libelle",ph:"Camion, four, machine..."},{l:"Date d'achat",k:"dateAchat",t:"date"},{l:"Date mise en service",k:"dateMEP",t:"date"},{l:"Montant HT (€)",k:"montantHT",ph:"12000",t:"number"},{l:"Taux TVA (%)",k:"tauxTVA",ph:"20",t:"number"},{l:"Durée amortissement (mois)",k:"duree",ph:"36",t:"number"},{l:"Gain mensuel estimé (€)",k:"gainMensuel",ph:"800",t:"number"}].map(f=>(
  <FormRow key={f.k} label={f.l}><input type={f.t||"text"} value={form[f.k]} onChange={e=>setForm({...form,[f.k]:e.target.value})} placeholder={f.ph||""} className="inp"/></FormRow>
  ))}
  </div>
@@ -1169,9 +1197,14 @@ function InvestissementsForm({ client, onUpdate }) {
  {(client.investissements||[]).length===0&&!showAdd&&<div style={{textAlign:"center",padding:"40px 0",color:C.textLight,fontSize:13}}>Aucun investissement enregistré</div>}
  {(client.investissements||[]).map(inv=>{
  const tvaE=Math.round(inv.montantHT*inv.tauxTVA/100);const ttc=inv.montantHT+tvaE;const amortM=Math.round(inv.montantHT/(inv.duree||36));const moisE=Math.min(inv.duree,CUR_M+1);const vnc=Math.max(0,inv.montantHT-amortM*moisE);const pctF=Math.round(moisE/inv.duree*100);
+ const gainM=inv.gainMensuel||0;const paybackM=gainM>0?Math.ceil(inv.montantHT/gainM):null;const rentable=paybackM!==null?paybackM<=inv.duree:null;
  return (
  <Card key={inv.id}>
- <SectionHead title={inv.libelle} sub={`Achat : ${inv.dateAchat} · MEP : ${inv.dateMEP} · ${inv.duree} mois`}/>
+ <SectionHead title={inv.libelle} sub={`Achat : ${inv.dateAchat} · MEP : ${inv.dateMEP} · ${inv.duree} mois`} action={
+ paybackM===null?<Pill color={C.textLight}>Gain non renseigné</Pill>
+ :rentable?<Pill color={C.green}>Rentable en {paybackM} mois</Pill>
+ :<Pill color={C.red}>Non rentable ({paybackM} mois {'>'} {inv.duree})</Pill>
+ }/>
  <div style={{padding:16,display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12}}>
  <KpiCard label="Montant HT" value={fmt(inv.montantHT)} color={C.primary}/><KpiCard label="TVA récup." value={fmt(tvaE)} color={C.green}/><KpiCard label="TTC" value={fmt(ttc)} color={C.textMid}/><KpiCard label="Amort./mois" value={fmt(amortM)} color={C.orange}/><KpiCard label="VNC" value={fmt(vnc)} color={vnc>0?C.text:C.green}/>
  </div>
@@ -1179,12 +1212,364 @@ function InvestissementsForm({ client, onUpdate }) {
  <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:C.textMid,marginBottom:6}}><span>Avancement : {moisE}/{inv.duree} mois</span><span>{pctF}% amorti</span></div>
  <div style={{height:10,borderRadius:5,background:C.borderLight,overflow:"hidden"}}><div style={{height:"100%",width:`${pctF}%`,background:pctF>=100?C.green:C.primary,borderRadius:5}}/></div>
  {moisE<inv.duree&&<div style={{marginTop:8,fontSize:11,color:C.orange}}>Report N+1 : {inv.duree-moisE} mois restants · {fmt((inv.duree-moisE)*amortM)}</div>}
+ {gainM>0&&<div style={{marginTop:8,fontSize:11,color:C.textMid}}>Gain mensuel estimé : {fmt(gainM)} · Retour sur investissement : {paybackM} mois</div>}
  </div>
  </Card>
  );
  })}
  </div>
  );
+}
+
+// CALCULATEUR ROI · simulation de rentabilité, indépendante des investissements déjà enregistrés
+function ROICalculator() {
+ const [montant,setMontant]=useState("");
+ const [gainMensuel,setGainMensuel]=useState("");
+ const [duree,setDuree]=useState("36");
+ const [loyer,setLoyer]=useState("");
+ const [showHelper,setShowHelper]=useState(false);
+ const [heures,setHeures]=useState("");
+ const [coutHoraire,setCoutHoraire]=useState("");
+ const [ventesSupp,setVentesSupp]=useState("");
+ const [margeVente,setMargeVente]=useState("");
+ const gainParTemps=Math.round((parseFloat(heures)||0)*(parseFloat(coutHoraire)||0)*4.33);
+ const gainParVentes=Math.round((parseFloat(ventesSupp)||0)*(parseFloat(margeVente)||0));
+ const applyGain=v=>{ setGainMensuel(String(v)); setShowHelper(false); };
+ const m=parseFloat(montant)||0;
+ const g=parseFloat(gainMensuel)||0;
+ const d=parseInt(duree)||36;
+ const l=parseFloat(loyer)||0;
+ const hasInputs=m>0&&g>0;
+ const paybackM=hasInputs?Math.ceil(m/g):null;
+ const rentable=paybackM!==null?paybackM<=d:null;
+ const hasLocation=hasInputs&&l>0;
+ const gainNetAchat=g*d-m;
+ const coutLocation=l*d;
+ const gainNetLocation=g*d-coutLocation;
+ const bascule=l>0?Math.ceil(m/l):null;
+ const achatPlusAvantageux=gainNetAchat>=gainNetLocation;
+ return (
+ <div style={{padding:24}} className="fade-up">
+ <div style={{marginBottom:20}}>
+ <div style={{fontSize:18,fontWeight:900,color:C.text}}>Calculateur ROI</div>
+ <div style={{fontSize:12,color:C.textLight,marginTop:2}}>Simulez la rentabilité d'un investissement (machine, camion, four...) avant de vous décider</div>
+ </div>
+ <Card>
+ <SectionHead title="Votre investissement" sub="Renseignez les valeurs, le résultat se met à jour automatiquement"/>
+ <div style={{padding:20,display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:14}}>
+ <FormRow label="Montant de l'investissement HT (€)"><input type="number" value={montant} onChange={e=>setMontant(e.target.value)} placeholder="15000" className="inp"/></FormRow>
+ <FormRow label="Gain mensuel estimé (€)">
+ <input type="number" value={gainMensuel} onChange={e=>setGainMensuel(e.target.value)} placeholder="800" className="inp"/>
+ <div onClick={()=>setShowHelper(!showHelper)} style={{marginTop:6,fontSize:11,fontWeight:700,color:C.primary,cursor:"pointer",textDecoration:"underline"}}>Je ne sais pas comment l'estimer</div>
+ </FormRow>
+ <FormRow label="Durée de vie prévue (mois)"><input type="number" value={duree} onChange={e=>setDuree(e.target.value)} placeholder="36" className="inp"/></FormRow>
+ <FormRow label="Loyer mensuel en location (€)"><input type="number" value={loyer} onChange={e=>setLoyer(e.target.value)} placeholder="450" className="inp"/></FormRow>
+ </div>
+ <div style={{padding:"0 20px 20px",fontSize:11,color:C.textLight}}>Le gain mensuel est ce que l'investissement rapporte ou fait économiser chaque mois. Remplissez le loyer mensuel uniquement si une option de location existe pour comparer avec l'achat.</div>
+ {showHelper&&(
+ <div style={{margin:"0 20px 20px",padding:16,background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
+ <div>
+ <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:2}}>Par le temps gagné</div>
+ <div style={{fontSize:11,color:C.textLight,marginBottom:10}}>Heures économisées chaque semaine grâce à cet investissement</div>
+ <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+ <FormRow label="Heures gagnées / semaine"><input type="number" value={heures} onChange={e=>setHeures(e.target.value)} placeholder="5" className="inp"/></FormRow>
+ <FormRow label="Coût horaire (€)"><input type="number" value={coutHoraire} onChange={e=>setCoutHoraire(e.target.value)} placeholder="25" className="inp"/></FormRow>
+ </div>
+ {gainParTemps>0&&<Btn small variant="success" onClick={()=>applyGain(gainParTemps)}>Utiliser {fmt(gainParTemps)}/mois</Btn>}
+ </div>
+ <div>
+ <div style={{fontSize:12,fontWeight:800,color:C.text,marginBottom:2}}>Par le CA additionnel</div>
+ <div style={{fontSize:11,color:C.textLight,marginBottom:10}}>Ventes ou clients en plus rendus possibles chaque mois</div>
+ <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+ <FormRow label="Ventes en plus / mois"><input type="number" value={ventesSupp} onChange={e=>setVentesSupp(e.target.value)} placeholder="40" className="inp"/></FormRow>
+ <FormRow label="Marge par vente (€)"><input type="number" value={margeVente} onChange={e=>setMargeVente(e.target.value)} placeholder="15" className="inp"/></FormRow>
+ </div>
+ {gainParVentes>0&&<Btn small variant="success" onClick={()=>applyGain(gainParVentes)}>Utiliser {fmt(gainParVentes)}/mois</Btn>}
+ </div>
+ </div>
+ )}
+ </Card>
+ <Card style={{marginTop:16}}>
+ <SectionHead title="Résultat de l'achat" action={
+ !hasInputs?null
+ :rentable?<Pill color={C.green}>Rentable en {paybackM} mois</Pill>
+ :<Pill color={C.red}>Non rentable ({paybackM} mois {'>'} {d})</Pill>
+ }/>
+ <div style={{padding:20}}>
+ {!hasInputs?(
+ <div style={{textAlign:"center",padding:"20px 0",color:C.textLight,fontSize:13}}>Renseignez le montant et le gain mensuel pour voir le résultat</div>
+ ):(
+ <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14}}>
+ <KpiCard label="Retour sur investissement" value={`${paybackM} mois`} color={rentable?C.green:C.red}/>
+ <KpiCard label="Gain cumulé sur la durée" value={fmt(g*d)} color={C.primary}/>
+ <KpiCard label="Gain net estimé" value={fmt(gainNetAchat)} sub="Gain cumulé − montant investi" color={gainNetAchat>=0?C.green:C.red}/>
+ </div>
+ )}
+ </div>
+ </Card>
+ {hasLocation&&(
+ <Card style={{marginTop:16}}>
+ <SectionHead title="Achat vs location" sub={`Comparaison sur ${d} mois`} action={
+ <Pill color={achatPlusAvantageux?C.primary:C.orange}>{achatPlusAvantageux?"Achat plus avantageux":"Location plus avantageuse"}</Pill>
+ }/>
+ <div style={{padding:20,display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
+ <div>
+ <div style={{fontSize:12,fontWeight:800,color:C.textMid,marginBottom:10,textTransform:"uppercase",letterSpacing:.5}}>Achat</div>
+ <div style={{display:"flex",flexDirection:"column",gap:10}}>
+ <KpiCard label="Coût total" value={fmt(m)} color={C.text}/>
+ <KpiCard label="Gain net sur la période" value={fmt(gainNetAchat)} color={gainNetAchat>=0?C.green:C.red}/>
+ </div>
+ </div>
+ <div>
+ <div style={{fontSize:12,fontWeight:800,color:C.textMid,marginBottom:10,textTransform:"uppercase",letterSpacing:.5}}>Location</div>
+ <div style={{display:"flex",flexDirection:"column",gap:10}}>
+ <KpiCard label="Coût total" value={fmt(coutLocation)} color={C.text}/>
+ <KpiCard label="Gain net sur la période" value={fmt(gainNetLocation)} color={gainNetLocation>=0?C.green:C.red}/>
+ </div>
+ </div>
+ </div>
+ {bascule&&bascule<=d&&<div style={{padding:"0 20px 20px",fontSize:12,color:C.textMid}}>Point de bascule : à partir du <strong>{bascule}ᵉ mois</strong> de location, vous auriez déjà payé l'équivalent du prix d'achat.</div>}
+ </Card>
+ )}
+ </div>
+ );
+}
+
+// SIMULATEUR D'EMBAUCHE · coût réel d'un recrutement (brut + charges patronales) vs CA
+// supplémentaire nécessaire pour l'amortir, avec les mêmes taux de cotisations que le reste de l'outil
+function SimulateurEmbauche({ tauxMargeDefaut="" }) {
+ const [brut,setBrut]=useState("");
+ const [tauxMarge,setTauxMarge]=useState(tauxMargeDefaut?String(tauxMargeDefaut):"");
+ const [caSupp,setCaSupp]=useState("");
+ const TAUX_COT_PAT=0.46, TAUX_COT_SAL=0.21;
+ const b=parseFloat(brut)||0;
+ const tm=parseFloat(tauxMarge)||0;
+ const cs=parseFloat(caSupp)||0;
+ const hasInputs=b>0;
+ const cotPatMontant=Math.round(b*TAUX_COT_PAT);
+ const coutTotalEmployeur=b+cotPatMontant;
+ const netVerse=Math.round(b*(1-TAUX_COT_SAL));
+ const caNecessaire=tm>0?Math.round(coutTotalEmployeur/(tm/100)):null;
+ const hasCaSupp=cs>0;
+ const margeGeneree=tm>0?Math.round(cs*(tm/100)):0;
+ const surplus=margeGeneree-coutTotalEmployeur;
+ const rentable=hasCaSupp&&tm>0?margeGeneree>=coutTotalEmployeur:null;
+ return (
+ <div style={{padding:24}} className="fade-up">
+ <div style={{marginBottom:20}}>
+ <div style={{fontSize:18,fontWeight:900,color:C.text}}>Simulateur d'embauche</div>
+ <div style={{fontSize:12,color:C.textLight,marginTop:2}}>Calculez le coût réel d'un recrutement et le CA qu'il doit générer pour être rentable</div>
+ </div>
+ <Card>
+ <SectionHead title="Le poste envisagé" sub="Renseignez le salaire brut, le résultat se met à jour automatiquement"/>
+ <div style={{padding:20,display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14}}>
+ <FormRow label="Salaire brut mensuel (€)"><input type="number" value={brut} onChange={e=>setBrut(e.target.value)} placeholder="2200" className="inp"/></FormRow>
+ <FormRow label="Taux de marge sur CA (%)"><input type="number" value={tauxMarge} onChange={e=>setTauxMarge(e.target.value)} placeholder="40" className="inp"/></FormRow>
+ <FormRow label="CA supplémentaire attendu / mois (€)"><input type="number" value={caSupp} onChange={e=>setCaSupp(e.target.value)} placeholder="3000" className="inp"/></FormRow>
+ </div>
+ <div style={{padding:"0 20px 20px",fontSize:11,color:C.textLight}}>Cotisations patronales estimées à {Math.round(TAUX_COT_PAT*100)}% du brut (moyenne PME) · le CA supplémentaire attendu est facultatif, à remplir si ce poste doit générer directement plus de ventes.</div>
+ </Card>
+ <Card style={{marginTop:16}}>
+ <SectionHead title="Coût réel de l'embauche"/>
+ <div style={{padding:20}}>
+ {!hasInputs?(
+ <div style={{textAlign:"center",padding:"20px 0",color:C.textLight,fontSize:13}}>Renseignez le salaire brut pour voir le coût complet</div>
+ ):(
+ <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14}}>
+ <KpiCard label="Coût total employeur" value={fmt(coutTotalEmployeur)} sub={`${fmt(coutTotalEmployeur*12)}/an`} color={C.red}/>
+ <KpiCard label="Salaire net versé" value={fmt(netVerse)} sub="Perçu par le salarié" color={C.text}/>
+ <KpiCard label="Cotisations patronales" value={fmt(cotPatMontant)} sub="À votre charge en plus du brut" color={C.orange}/>
+ </div>
+ )}
+ </div>
+ </Card>
+ {hasInputs&&tm>0&&(
+ <Card style={{marginTop:16}}>
+ <SectionHead title="CA supplémentaire nécessaire" sub="Pour que ce poste s'autofinance, sans compter sa productivité indirecte"/>
+ <div style={{padding:20}}>
+ <KpiCard label={`CA mensuel à générer (marge à ${tm}%)`} value={fmt(caNecessaire)} sub={`Soit ${fmt(caNecessaire*12)} sur l'année`} color={C.primary}/>
+ </div>
+ </Card>
+ )}
+ {hasInputs&&hasCaSupp&&tm>0&&(
+ <Card style={{marginTop:16}}>
+ <SectionHead title="Rentabilité de ce recrutement" action={
+ rentable?<Pill color={C.green}>Rentable dès le 1ᵉʳ mois</Pill>:<Pill color={C.red}>Déficitaire</Pill>
+ }/>
+ <div style={{padding:20,display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:14}}>
+ <KpiCard label="Marge générée par le CA attendu" value={fmt(margeGeneree)} color={C.green}/>
+ <KpiCard label={surplus>=0?"Excédent mensuel":"Manque mensuel"} value={fmt(Math.abs(surplus))} color={surplus>=0?C.green:C.red}/>
+ </div>
+ <div style={{padding:"0 20px 20px",fontSize:11,color:C.textLight}}>{rentable?"Le CA supplémentaire attendu suffit à couvrir le coût total du poste dès le premier mois.":"Le CA supplémentaire attendu ne couvre pas encore le coût total du poste : le recrutement doit s'appuyer sur d'autres bénéfices (gain de temps, qualité, capacité) ou monter en charge progressivement."}</div>
+ </Card>
+ )}
+ </div>
+ );
+}
+
+// PRÉVISIONNEL TRÉSORERIE 90 JOURS · méthode "13-week cash flow forecast" (standard des trésoriers/DAF) :
+// projection semaine par semaine, basée sur les vraies dates d'échéance des créances/dettes importées
+// et les échéances réelles des emprunts. Charges et salaires sont des estimations mensuelles récurrentes
+// (positionnées à une date standard) puisque le modèle ne stocke pas leur date d'échéance exacte.
+function empruntDatesEcheances(e) {
+ const dates=[];
+ if(!e.dateDebut) return dates;
+ const start=new Date(e.dateDebut);
+ for(let k=0;k<(e.duree||0);k++){
+ const d=new Date(start.getFullYear(),start.getMonth()+k,start.getDate());
+ dates.push(d);
+ }
+ return dates;
+}
+function TresorerieForecast90j({ client, embedded=false }) {
+ const [hov,setHov]=useState(null);
+ const today=new Date(); today.setHours(0,0,0,0);
+ const startingBalance=calcTresoEstimee(client,CUR_M,CUR_Y) ?? (client.tresorerie?.soldeInitial||0);
+ const emprunts=client.emprunts||[];
+ const empruntEcheances=emprunts.flatMap(e=>{
+ const mensualite=Math.round(e.capital*(e.taux/100)/(1-Math.pow(1+e.taux/100,-e.duree))+(e.assurance||0));
+ return empruntDatesEcheances(e).map(date=>({libelle:e.libelle,date,montant:mensualite}));
+ });
+ const imports=client.imports||[];
+ const creancesRows=imports.filter(i=>i.type==="creances_clients").flatMap(i=>i.rows);
+ const dettesRows=imports.filter(i=>i.type==="dettes_fournisseurs").flatMap(i=>i.rows);
+ const chargesMensuelles=client.kpis?.charges||0;
+ const salairesMensuels=client.kpis?.salaires||0;
+
+ const horizonEnd=new Date(today); horizonEnd.setDate(today.getDate()+91);
+ // Occurrences mensuelles récurrentes (charges le 5, salaires le 28) sur les mois couverts par l'horizon
+ const recurrences=[];
+ let cursor=new Date(today.getFullYear(),today.getMonth(),1);
+ while(cursor<horizonEnd){
+ if(chargesMensuelles>0) recurrences.push({type:"charges",date:new Date(cursor.getFullYear(),cursor.getMonth(),5),montant:chargesMensuelles});
+ if(salairesMensuels>0) recurrences.push({type:"salaires",date:new Date(cursor.getFullYear(),cursor.getMonth(),28),montant:salairesMensuels});
+ cursor=new Date(cursor.getFullYear(),cursor.getMonth()+1,1);
+ }
+
+ const weeks=Array.from({length:13},(_,w)=>{
+ const start=new Date(today); start.setDate(today.getDate()+w*7);
+ const end=new Date(today); end.setDate(today.getDate()+(w+1)*7);
+ return {start,end};
+ });
+ const inRange=(d,start,end)=>d>=start&&d<end;
+ const parseEch=s=>{ if(!s) return null; const d=new Date(s); return isNaN(d)?null:d; };
+
+ let cumul=Math.round(startingBalance||0);
+ let pointBas=cumul, pointBasDate=today;
+ const rows=weeks.map((wk,i)=>{
+ const encClients=creancesRows.filter(r=>{const d=parseEch(r.date_echeance);return d&&inRange(d,wk.start,wk.end);}).reduce((s,r)=>s+parseFloat(r.montant_ttc||0),0);
+ const decFourn=dettesRows.filter(r=>{const d=parseEch(r.date_echeance);return d&&inRange(d,wk.start,wk.end);}).reduce((s,r)=>s+parseFloat(r.montant_ttc||0),0);
+ const decEmprunts=empruntEcheances.filter(e=>inRange(e.date,wk.start,wk.end)).reduce((s,e)=>s+e.montant,0);
+ const decRecurrent=recurrences.filter(r=>inRange(r.date,wk.start,wk.end)).reduce((s,r)=>s+r.montant,0);
+ const encaissements=Math.round(encClients);
+ const decaissements=Math.round(decFourn+decEmprunts+decRecurrent);
+ const soldeNet=encaissements-decaissements;
+ cumul+=soldeNet;
+ if(cumul<pointBas){ pointBas=cumul; pointBasDate=wk.end; }
+ return {semaine:i+1,start:wk.start,end:wk.end,encaissements,decaissements,soldeNet,soldeCumule:cumul};
+ });
+ const soldeFinal=rows[rows.length-1]?.soldeCumule??startingBalance;
+ const ruptures=rows.filter(r=>r.soldeCumule<0);
+ const dfmt=d=>d.toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"});
+
+ const minV=Math.min(startingBalance,...rows.map(r=>r.soldeCumule),0);
+ const maxV=Math.max(startingBalance,...rows.map(r=>r.soldeCumule),1);
+ const span=maxV-minV||1;
+ const pts=[{x:0,y:startingBalance},...rows.map((r,i)=>({x:i+1,y:r.soldeCumule}))];
+ const CW=1080; // largeur du viewBox : la carte est pleine largeur (pas une colonne 1/2), il faut plus d'unités pour garder le même ratio d'échelle que les autres graphiques (~1.3x) et éviter que polices/traits paraissent surdimensionnés
+ const toXY=(x,y)=>[x*(CW/13),80-((y-minV)/span)*70];
+ const path="M"+pts.map(p=>toXY(p.x,p.y).join(",")).join(" L");
+ const zeroY=80-((0-minV)/span)*70;
+
+ const content = (
+ <>
+ <div style={{marginBottom:20,marginTop:embedded?36:0}}>
+ <div style={{fontSize:18,fontWeight:900,color:C.text}}>Prévisionnel trésorerie 90 jours</div>
+ <div style={{fontSize:12,color:C.textLight,marginTop:2}}>Projection semaine par semaine à partir de vos créances, dettes et emprunts réels · méthode des 13 semaines glissantes</div>
+ </div>
+ {ruptures.length>0&&(
+ <div style={{padding:"12px 16px",background:C.redBg,border:`1px solid ${C.red}33`,borderRadius:10,marginBottom:16,fontSize:13,color:C.red,fontWeight:700}}>
+  Rupture de trésorerie prévue à partir de la semaine {ruptures[0].semaine} (autour du {dfmt(ruptures[0].end)}) · solde estimé {fmt(ruptures[0].soldeCumule)}
+ </div>
+ )}
+ <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:20}}>
+ <KpiCard label="Solde actuel estimé" value={fmt(startingBalance)} color={C.primary}/>
+ <KpiCard label="Solde prévu à 90 jours" value={fmt(soldeFinal)} color={soldeFinal>=0?C.green:C.red}/>
+ <KpiCard label="Point le plus bas prévu" value={fmt(pointBas)} sub={`Vers le ${dfmt(pointBasDate)}`} color={pointBas>=0?C.text:C.red}/>
+ <KpiCard label="Semaines à risque" value={ruptures.length} color={ruptures.length>0?C.red:C.green}/>
+ </div>
+ <Card>
+ <SectionHead title="Évolution du solde cumulé" sub="Survolez un point pour le détail de la semaine"/>
+ <div style={{padding:16}}>
+ <svg viewBox={`0 0 ${CW} 92`} width="100%" style={{display:"block",overflow:"visible"}} onMouseLeave={()=>setHov(null)}>
+ <defs>
+ <linearGradient id="tresoAreaGrad" x1="0" y1="0" x2="0" y2="1">
+ <stop offset="0%" stopColor={soldeFinal>=0?C.primary:C.red} stopOpacity="0.14"/>
+ <stop offset="100%" stopColor={soldeFinal>=0?C.primary:C.red} stopOpacity="0"/>
+ </linearGradient>
+ </defs>
+ <line x1="0" y1={zeroY} x2={CW} y2={zeroY} stroke={C.borderLight} strokeWidth="1" strokeDasharray="3,3"/>
+ <path d={`${path} L${toXY(13,minV)[0]},80 L0,80 Z`} fill="url(#tresoAreaGrad)"/>
+ <path d={path} fill="none" stroke={soldeFinal>=0?C.primary:C.red} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"/>
+ {/* Zones de survol, une par point */}
+ {pts.map((p,i)=>{
+ const [x]=toXY(p.x,p.y);
+ const [xPrev]=i>0?toXY(pts[i-1].x,pts[i-1].y):[x-(CW/13)/2];
+ const [xNext]=i<pts.length-1?toXY(pts[i+1].x,pts[i+1].y):[x+(CW/13)/2];
+ const xStart=(xPrev+x)/2, xEnd=(x+xNext)/2;
+ return <rect key={i} x={xStart} y={-6} width={xEnd-xStart} height={98} fill="transparent" style={{cursor:"crosshair"}} onMouseEnter={()=>setHov(i)}/>;
+ })}
+ {pts.map((p,i)=>{const [x,y]=toXY(p.x,p.y);return (
+ <g key={i}>
+ {hov===i&&<line x1={x} y1={-4} x2={x} y2={84} stroke={p.y<0?C.red:C.primary} strokeWidth="1" strokeDasharray="3,2" opacity="0.45"/>}
+ <circle cx={x} cy={y} r={hov===i?5.5:(i===0?3:2.5)} fill={p.y<0?C.red:C.primary} stroke="white" strokeWidth={hov===i?1.5:0}/>
+ </g>
+ );})}
+ {hov!=null&&(()=>{
+ const [x,y]=toXY(pts[hov].x,pts[hov].y);
+ const label=hov===0?"Aujourd'hui":`Semaine ${rows[hov-1].semaine} · ${dfmt(rows[hov-1].end)}`;
+ const val=fmt(pts[hov].y);
+ const TW=118,TH=38;
+ const tx=Math.min(CW-TW-2,Math.max(2,x-TW/2)), ty=Math.max(-2,y-TH-10);
+ return (
+ <g pointerEvents="none">
+ <rect x={tx} y={ty} width={TW} height={TH} rx={8} fill={C.primaryDark}/>
+ <text x={tx+10} y={ty+15} fontSize="10" fontWeight="800" fill="white" fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{label}</text>
+ <text x={tx+10} y={ty+29} fontSize="11" fontWeight="900" fill="white" fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{val}</text>
+ </g>
+ );
+ })()}
+ </svg>
+ <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:C.textLight,marginTop:4}}><span>Aujourd'hui</span><span>+90 jours</span></div>
+ </div>
+ </Card>
+ <Card style={{marginTop:16}}>
+ <SectionHead title="Détail semaine par semaine" sub="Encaissements clients, décaissements fournisseurs/emprunts/charges/salaires"/>
+ <div style={{overflowX:"auto"}}>
+ <table style={{width:"100%",borderCollapse:"collapse"}}>
+ <thead><tr><Th>Semaine</Th><Th right>Encaissements</Th><Th right>Décaissements</Th><Th right>Solde net</Th><Th right>Solde cumulé</Th></tr></thead>
+ <tbody>
+ {rows.map(r=>(
+ <Tr key={r.semaine} style={r.soldeCumule<0?{background:C.redBg}:{}}>
+ <Td bold>S{r.semaine} · {dfmt(r.start)}–{dfmt(r.end)}</Td>
+ <Td right mono color={C.green}>{fmt(r.encaissements)}</Td>
+ <Td right mono color={C.red}>{fmt(r.decaissements)}</Td>
+ <Td right mono color={r.soldeNet>=0?C.green:C.red}>{r.soldeNet>=0?"+":""}{fmt(r.soldeNet)}</Td>
+ <Td right mono bold color={r.soldeCumule>=0?C.text:C.red}>{fmt(r.soldeCumule)}</Td>
+ </Tr>
+ ))}
+ </tbody>
+ </table>
+ </div>
+ </Card>
+ <div style={{marginTop:12,fontSize:11,color:C.textLight,lineHeight:1.6}}>
+ Inclus : encaissements clients et décaissements fournisseurs (dates d'échéance réelles de vos factures importées), échéances d'emprunts (dates réelles).
+ Charges et salaires sont estimés sur une base mensuelle récurrente (charges le 5, salaires le 28 de chaque mois) faute de date d'échéance précise enregistrée. TVA et IS ne sont pas inclus.
+ </div>
+ </>
+ );
+ if(embedded) return content;
+ return <div style={{padding:24}} className="fade-up">{content}</div>;
 }
 
 // TRÉSORERIE
@@ -1222,7 +1607,7 @@ function TresorerieForm({ client, onUpdate }) {
  {ajustements.length>0&&<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr><Th>Mois</Th><Th>Libellé</Th><Th right>Montant</Th><Th>Type</Th></tr></thead><tbody>{ajustements.map(a=><Tr key={a.id}><Td>{a.mois}</Td><Td bold>{a.libelle}</Td><Td right mono color={a.type==="encaissement"?C.green:C.red}>{a.type==="encaissement"?"+":"–"}{fmt(a.montant)}</Td><Td><Pill color={a.type==="encaissement"?C.green:C.red}>{a.type==="encaissement"?"Encaissement":"Décaissement"}</Pill></Td></Tr>)}</tbody></table></div>}
  </Card>
  <Card>
- <SectionHead title="Tableau consolidé — calcul automatique"/>
+ <SectionHead title="Tableau consolidé · calcul automatique"/>
  <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr><Th>Mois</Th><Th right>Encaissements</Th><Th right>Décaissements</Th><Th right>Solde mensuel</Th><Th right>Solde cumulé</Th></tr></thead><tbody>{rows.map((r,i)=><Tr key={i}><Td bold>{r.mois}</Td><Td right mono color={C.green}>{fmt(r.encaissements)}</Td><Td right mono color={C.red}>{fmt(r.decaissements)}</Td><Td right><Pill color={r.solde>=0?C.green:C.red} bg={(r.solde>=0?C.green:C.red)+"15"}>{fmt(r.solde)}</Pill></Td><Td right mono bold color={r.soldeCumul>=0?C.text:C.red}>{fmt(r.soldeCumul)}</Td></Tr>)}</tbody></table></div>
  </Card>
  </div>
@@ -1249,7 +1634,7 @@ function ISForm({ client, onUpdate }) {
  <div style={{padding:20,display:"grid",gridTemplateColumns:"1fr 1fr",gap:24}}>
  <div style={{display:"flex",flexDirection:"column",gap:16}}>
  <FormRow label="IS payé N-1"><input type="number" value={isData.totalPrecedent||""} onChange={e=>setIsData({...isData,totalPrecedent:parseFloat(e.target.value)||0})} className="inp" placeholder="Ex: 8500"/></FormRow>
- <FormRow label="Taux IS"><select value={isData.taux} onChange={e=>setIsData({...isData,taux:parseFloat(e.target.value)})} className="inp"><option value={15}>15% — Taux réduit PME</option><option value={25}>25% — Taux normal</option></select></FormRow>
+ <FormRow label="Taux IS"><select value={isData.taux} onChange={e=>setIsData({...isData,taux:parseFloat(e.target.value)})} className="inp"><option value={15}>15% · Taux réduit PME</option><option value={25}>25% · Taux normal</option></select></FormRow>
  <Btn variant="success" onClick={save}> Enregistrer</Btn>
  </div>
  <div>
@@ -1267,7 +1652,7 @@ function ISForm({ client, onUpdate }) {
 }
 
 // 
-// HELPERS — KPIs par mois depuis imports
+// HELPERS · KPIs par mois depuis imports
 // 
 function getMonthKey(moisIdx, year) {
  return `${year}-${String(moisIdx+1).padStart(2,"0")}`;
@@ -1332,7 +1717,7 @@ function BarChart({ data, color=C.primary, height=80 }) {
  return (
  <g key={i}>
  <rect x={x} y={y} width={bw} height={h} rx={3} fill={col} opacity={0.85}/>
- <text x={x+bw/2} y={H+14} textAnchor="middle" fontSize={9} fill={C.textLight} fontFamily="Nunito,sans-serif">{d.l}</text>
+ <text x={x+bw/2} y={H+14} textAnchor="middle" fontSize={9} fill={C.textLight} fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{d.l}</text>
  </g>
  );
  })}
@@ -1358,7 +1743,7 @@ function LineChart({ data, color=C.primary, height=80 }) {
  {xs.map((x,i)=>(
  <g key={i}>
  <circle cx={x} cy={ys[i]} r={3} fill={color}/>
- <text x={x} y={H+14} textAnchor="middle" fontSize={9} fill={C.textLight} fontFamily="Nunito,sans-serif">{data[i].l}</text>
+ <text x={x} y={H+14} textAnchor="middle" fontSize={9} fill={C.textLight} fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{data[i].l}</text>
  </g>
  ))}
  </svg>
@@ -1366,10 +1751,10 @@ function LineChart({ data, color=C.primary, height=80 }) {
 }
 
 // 
-// CLIENT DASHBOARD — Pro avec graphiques
+// CLIENT DASHBOARD · Pro avec graphiques
 // 
-function BarChart2({data, c1=C.primary, c2=C.green, h=90, label1="V1", label2="V2", labelUnit=""}) {
-  const W=500, pad=8;
+function BarChart2({data, c1=C.primary, c2=C.green, h=90, W=500, label1="V1", label2="V2", labelUnit=""}) {
+  const pad=8;
   const [hov, setHov] = useState(null);
   const max=Math.max(...data.map(d=>Math.max(d.v1,d.v2||0)),1);
   const n=data.length;
@@ -1388,7 +1773,7 @@ function BarChart2({data, c1=C.primary, c2=C.green, h=90, label1="V1", label2="V
               <rect x={x} y={h-4-h1} width={bw} height={h1} rx={2} fill={c1} opacity={hov===i||d.active?1:0.55}/>
               {d.v2!=null&&<rect x={x+bw+1} y={h-4-h2} width={bw} height={h2} rx={2} fill={c2} opacity={hov===i||d.active?1:0.55}/>}
               {(hov===i||d.active)&&<rect x={x-1} y={0} width={bw*2+3} height={h+2} fill="none" stroke={c1} strokeWidth={1} rx={2} opacity={0.35}/>}
-              <text x={x+bw} y={h+14} textAnchor="middle" fontSize={8} fill={d.active?C.text:C.textLight} fontWeight={d.active?700:400} fontFamily="Nunito,sans-serif">{d.l}</text>
+              <text x={x+bw} y={h+14} textAnchor="middle" fontSize={8} fill={d.active?C.text:C.textLight} fontWeight={d.active?700:400} fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{d.l}</text>
             </g>
           );
         })}
@@ -1403,9 +1788,9 @@ function BarChart2({data, c1=C.primary, c2=C.green, h=90, label1="V1", label2="V
           return (
             <g pointerEvents="none">
               <rect x={tx} y={ty} width={TW} height={TH(d)} rx={6} fill={C.primaryDark}/>
-              <text x={tx+8} y={ty+14} fontSize={10} fontWeight={800} fill="white" fontFamily="Nunito,sans-serif">{d.l}</text>
-              <text x={tx+8} y={ty+28} fontSize={9} fill="rgba(255,255,255,0.8)" fontFamily="Nunito,sans-serif">{label1}: {labelUnit?d.v1.toLocaleString("fr-FR")+labelUnit:fmt(d.v1)}</text>
-              {d.v2!=null&&<text x={tx+8} y={ty+41} fontSize={9} fill="rgba(255,255,255,0.8)" fontFamily="Nunito,sans-serif">{label2}: {labelUnit?d.v2.toLocaleString("fr-FR")+labelUnit:fmt(d.v2)}</text>}
+              <text x={tx+8} y={ty+14} fontSize={10} fontWeight={800} fill="white" fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{d.l}</text>
+              <text x={tx+8} y={ty+28} fontSize={9} fill="rgba(255,255,255,0.8)" fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{label1}: {labelUnit?d.v1.toLocaleString("fr-FR")+labelUnit:fmt(d.v1)}</text>
+              {d.v2!=null&&<text x={tx+8} y={ty+41} fontSize={9} fill="rgba(255,255,255,0.8)" fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{label2}: {labelUnit?d.v2.toLocaleString("fr-FR")+labelUnit:fmt(d.v2)}</text>}
             </g>
           );
         })()}
@@ -1414,7 +1799,62 @@ function BarChart2({data, c1=C.primary, c2=C.green, h=90, label1="V1", label2="V
 }
 
 
-function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMoisIdx, moisYear }) {
+// Résumé "Mon équipe" sur le tableau de bord · comptages légers sur les 3 nouveaux modules,
+// cliquables pour y accéder directement. Masqué si le client n'a déclaré aucun employé.
+function EquipeSnapshot({ client, setView, isAdminPreview }) {
+ const congesOn=client.congesEnabled!==false, pointageOn=client.pointageEnabled!==false, notesFraisOn=client.notesFraisEnabled!==false, tachesOn=client.tachesEnabled!==false;
+ const [counts,setCounts]=useState({loading:true, enAttente:0, congesMois:0, pointesAujourdhui:0, totalEmployes:0, tachesEnCours:0});
+
+ useEffect(()=>{
+  (async()=>{
+   try {
+    const n=new Date();
+    const moisActuel=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}`;
+    const todayStr=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}-${String(n.getDate()).padStart(2,"0")}`;
+    const [empR,notesR,congesR,pointagesR,tachesR]=await Promise.all([
+     supabase.from("employes").select("id",{count:"exact",head:true}).eq("client_id",client.id),
+     notesFraisOn?supabase.from("notes_frais").select("id",{count:"exact",head:true}).eq("client_id",client.id).eq("statut","en_attente"):Promise.resolve({count:0}),
+     congesOn?supabase.from("planning_contraintes").select("id",{count:"exact",head:true}).eq("client_id",client.id).eq("type","conge").eq("statut","en_attente"):Promise.resolve({count:0}),
+     pointageOn?supabase.from("pointages").select("id",{count:"exact",head:true}).eq("client_id",client.id).eq("date",todayStr):Promise.resolve({count:0}),
+     tachesOn?supabase.from("taches").select("id",{count:"exact",head:true}).eq("client_id",client.id).neq("statut","termine"):Promise.resolve({count:0}),
+    ]);
+    setCounts({
+     loading:false,
+     enAttente:notesR.count||0,
+     congesMois:congesR.count||0,
+     pointesAujourdhui:pointagesR.count||0,
+     totalEmployes:empR.count||0,
+     tachesEnCours:tachesR.count||0,
+    });
+   } catch(e){ console.error("EquipeSnapshot load:",e); setCounts(c=>({...c,loading:false})); }
+  })();
+ },[client.id]);
+
+ if(counts.loading||counts.totalEmployes===0) return null;
+ if(!congesOn&&!pointageOn&&!notesFraisOn&&!tachesOn) return null;
+
+ return (
+  <div>
+   <div style={{fontSize:11,fontWeight:800,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10}}>Mon équipe</div>
+   <div style={{display:"grid",gridTemplateColumns:`repeat(${[notesFraisOn,congesOn,pointageOn,tachesOn].filter(Boolean).length},1fr)`,gap:14}}>
+    {notesFraisOn&&<div onClick={()=>!isAdminPreview&&setView&&setView("notesfrais")} style={{cursor:(!isAdminPreview&&setView)?"pointer":"default"}}>
+     <KpiCard label="Notes de frais" value={counts.enAttente} sub={counts.enAttente>0?"en attente de validation":"aucune en attente"} color={counts.enAttente>0?C.orange:C.green}/>
+    </div>}
+    {congesOn&&<div onClick={()=>!isAdminPreview&&setView&&setView("conges")} style={{cursor:(!isAdminPreview&&setView)?"pointer":"default"}}>
+     <KpiCard label="Congés" value={counts.congesMois} sub={counts.congesMois>0?"demande(s) en attente":"aucune en attente"} color={counts.congesMois>0?C.orange:C.green}/>
+    </div>}
+    {pointageOn&&<div onClick={()=>!isAdminPreview&&setView&&setView("pointage")} style={{cursor:(!isAdminPreview&&setView)?"pointer":"default"}}>
+     <KpiCard label="Pointés aujourd'hui" value={counts.pointesAujourdhui} sub={`sur ${counts.totalEmployes} employé(s)`} color={C.green}/>
+    </div>}
+    {tachesOn&&<div onClick={()=>!isAdminPreview&&setView&&setView("taches")} style={{cursor:(!isAdminPreview&&setView)?"pointer":"default"}}>
+     <KpiCard label="Tâches" value={counts.tachesEnCours} sub={counts.tachesEnCours>0?"en cours":"aucune en cours"} color={counts.tachesEnCours>0?C.orange:C.green}/>
+    </div>}
+   </div>
+  </div>
+ );
+}
+
+function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMoisIdx, moisYear, setView }) {
   const kpis        = calcMonthKpis(client, moisIdx, moisYear);
   const emprunts    = client.emprunts||[];
   const investissements = client.investissements||[];
@@ -1473,11 +1913,11 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
   // Graphique barres double (CA + Marge ou autre)
   // ── Tooltip : rendu SVG inline, positionné localement dans chaque graphique
   const [tooltip, setTooltip] = useState(null);
-  const Tooltip = () => null; // plus utilisé — tooltips dans le SVG directement
+  const Tooltip = () => null; // plus utilisé · tooltips dans le SVG directement
 
-  // ── BarChart2 — défini en top-level (function BarChart2)
+  // ── BarChart2 · défini en top-level (function BarChart2)
 
-  // ── LineAreaChart — tooltip SVG inline
+  // ── LineAreaChart · tooltip SVG inline
   const LineAreaChart = ({data, color=C.primary, h=80, showZero=false, labelFn}) => {
     const [hov, setHov] = useState(null);
     if(data.length<2) return null;
@@ -1521,7 +1961,7 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
               fill={hov===i||data[i].active?color:"white"} stroke={color} strokeWidth={1.5}/>
             <text x={x} y={h+14} textAnchor="middle" fontSize={8}
               fill={data[i].active||hov===i?C.text:C.textLight}
-              fontWeight={data[i].active?700:400} fontFamily="Nunito,sans-serif">{data[i].l}</text>
+              fontWeight={data[i].active?700:400} fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{data[i].l}</text>
           </g>
         ))}
         {/* Tooltip SVG */}
@@ -1532,8 +1972,8 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
           return (
             <g pointerEvents="none">
               <rect x={tx} y={ty} width={TW} height={38} rx={6} fill={C.primaryDark}/>
-              <text x={tx+8} y={ty+14} fontSize={10} fontWeight={800} fill="white" fontFamily="Nunito,sans-serif">{data[hov].l}</text>
-              <text x={tx+8} y={ty+28} fontSize={9} fill="rgba(255,255,255,0.85)" fontFamily="Nunito,sans-serif">{val}</text>
+              <text x={tx+8} y={ty+14} fontSize={10} fontWeight={800} fill="white" fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{data[hov].l}</text>
+              <text x={tx+8} y={ty+28} fontSize={9} fill="rgba(255,255,255,0.85)" fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{val}</text>
             </g>
           );
         })()}
@@ -1541,7 +1981,7 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
     );
   };
 
-  // ── SaisonnaliteChart — tooltip SVG inline
+  // ── SaisonnaliteChart · tooltip SVG inline
   const SaisonnaliteChart = ({data, h=70}) => {
     const [hov, setHov] = useState(null);
     const max=Math.max(...data.map(d=>d.coef),1.5);
@@ -1552,7 +1992,7 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
     return (
       <svg viewBox={`0 0 ${W} ${h+22}`} width="100%" style={{display:"block"}} onMouseLeave={()=>setHov(null)}>
         <line x1={0} y1={h-4-base} x2={W} y2={h-4-base} stroke={C.border} strokeWidth={1.5} strokeDasharray="5,3"/>
-        <text x={W-2} y={h-4-base-4} textAnchor="end" fontSize={8} fill={C.textMid} fontFamily="Nunito,sans-serif">moyenne (1.0)</text>
+        <text x={W-2} y={h-4-base-4} textAnchor="end" fontSize={8} fill={C.textMid} fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">moyenne (1.0)</text>
         {data.map((d,i)=>{
           const barH=Math.round((d.coef/max)*(h-4));
           const x=pad+i*(bw+pad);
@@ -1561,10 +2001,10 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
             <g key={i} style={{cursor:"crosshair"}} onMouseEnter={()=>setHov(i)} onMouseLeave={()=>setHov(null)}>
               <rect x={x} y={0} width={bw} height={h+4} fill="transparent"/>
               <rect x={x} y={h-4-barH} width={bw} height={barH} rx={2} fill={col} opacity={hov===i?1:0.75}/>
-              {hov!==i&&<text x={x+bw/2} y={h-4-barH-3} textAnchor="middle" fontSize={7}
-                fill={col} fontWeight={700} fontFamily="Nunito,sans-serif">{d.coef>0?d.coef.toFixed(2):""}</text>}
+              {hov!==i&&<text x={x+bw/2} y={h-4-barH-3} textAnchor="middle" fontSize={8}
+                fill={col} fontWeight={700} fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{d.coef>0?d.coef.toFixed(2):""}</text>}
               <text x={x+bw/2} y={h+14} textAnchor="middle" fontSize={8}
-                fill={hov===i?C.text:C.textLight} fontWeight={hov===i?700:400} fontFamily="Nunito,sans-serif">{d.l}</text>
+                fill={hov===i?C.text:C.textLight} fontWeight={hov===i?700:400} fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{d.l}</text>
             </g>
           );
         })}
@@ -1580,9 +2020,9 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
           return (
             <g pointerEvents="none">
               <rect x={tx} y={ty} width={TW} height={56} rx={6} fill={C.primaryDark}/>
-              <text x={tx+8} y={ty+14} fontSize={10} fontWeight={800} fill="white" fontFamily="Nunito,sans-serif">{d.l} — {d.coef.toFixed(2)}x</text>
-              <text x={tx+8} y={ty+28} fontSize={9} fill="rgba(255,255,255,0.8)" fontFamily="Nunito,sans-serif">CA : {fmt(d.ca)}</text>
-              <text x={tx+8} y={ty+42} fontSize={9} fill={col} fontWeight={700} fontFamily="Nunito,sans-serif">{interp}</text>
+              <text x={tx+8} y={ty+14} fontSize={10} fontWeight={800} fill="white" fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{d.l} · {d.coef.toFixed(2)}x</text>
+              <text x={tx+8} y={ty+28} fontSize={9} fill="rgba(255,255,255,0.8)" fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">CA : {fmt(d.ca)}</text>
+              <text x={tx+8} y={ty+42} fontSize={9} fill={col} fontWeight={700} fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{interp}</text>
             </g>
           );
         })()}
@@ -1590,7 +2030,7 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
     );
   };
 
-  // ── WaterfallChart — calcul propre sans espace blanc
+  // ── WaterfallChart · calcul propre sans espace blanc
   const WaterfallChart = ({h=110}) => {
     const [hov, setHov] = useState(null);
     const raw=[
@@ -1673,14 +2113,14 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
               {/* Barre */}
               <rect x={x} y={it.barTop} width={bw} height={it.barH} rx={3} fill={col} opacity={0.9}/>
 
-              {/* Valeur — dans la barre si assez grande, sinon au-dessus */}
+              {/* Valeur · dans la barre si assez grande, sinon au-dessus */}
               {it.v > 0 && (it.barH >= 16
                 ? <text x={x+bw/2} y={it.barTop+it.barH/2+4} textAnchor="middle"
-                    fontSize={8} fill="white" fontWeight={800} fontFamily="Nunito,sans-serif">
+                    fontSize={8} fill="white" fontWeight={800} fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">
                     {fmt(it.v)}
                   </text>
                 : <text x={x+bw/2} y={it.barTop-4} textAnchor="middle"
-                    fontSize={7.5} fill={col} fontWeight={800} fontFamily="Nunito,sans-serif">
+                    fontSize={8} fill={col} fontWeight={800} fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">
                     {fmt(it.v)}
                   </text>
               )}
@@ -1689,7 +2129,7 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
               <text x={x+bw/2} y={h+18} textAnchor="middle" fontSize={9}
                 fill={it.type==="total" ? C.text : C.textMid}
                 fontWeight={it.type==="total"?800:500}
-                fontFamily="Nunito,sans-serif">{it.l}</text>
+                fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{it.l}</text>
             </g>
           );
         })}
@@ -1704,8 +2144,8 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
           return (
             <g pointerEvents="none">
               <rect x={tx} y={ty} width={TW} height={42} rx={6} fill={C.primaryDark}/>
-              <text x={tx+8} y={ty+15} fontSize={10} fontWeight={800} fill="white" fontFamily="Nunito,sans-serif">{it.desc}</text>
-              <text x={tx+8} y={ty+30} fontSize={9} fill={col} fontWeight={700} fontFamily="Nunito,sans-serif">{`${it.type==="neg"?"– ":""}${fmt(it.v)}`}</text>
+              <text x={tx+8} y={ty+15} fontSize={10} fontWeight={800} fill="white" fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{it.desc}</text>
+              <text x={tx+8} y={ty+30} fontSize={9} fill={col} fontWeight={700} fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{`${it.type==="neg"?"– ":""}${fmt(it.v)}`}</text>
             </g>
           );
         })()}
@@ -1731,42 +2171,42 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
       {/* Bandeau aperçu admin */}
       {isAdminPreview&&(
         <div style={{padding:"10px 18px",background:C.primary,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <span style={{fontSize:13,color:"white",fontWeight:700}}>Mode aperçu — {client.name}</span>
+          <span style={{fontSize:13,color:"white",fontWeight:700}}>Mode aperçu · {client.name}</span>
           <Btn small variant="ghost" style={{color:"white",borderColor:"rgba(255,255,255,0.4)"}} onClick={onExitPreview}>← Retour admin</Btn>
         </div>
       )}
 
       {/* ── HEADER avec sélecteur de mois ── */}
-      <div style={{background:`linear-gradient(135deg,${C.primaryDark} 0%,${C.primary} 60%,${C.primaryLight} 100%)`,borderRadius:14,padding:"24px 28px",color:"white"}}>
+      <div style={{background:`linear-gradient(135deg,${C.primaryDark} 0%,${C.primary} 60%,${C.primaryLight} 100%)`,borderRadius:20,padding:"26px 30px",color:"white",boxShadow:"0 20px 44px rgba(0,86,83,.22)"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:18}}>
           <div>
-            <div style={{fontSize:24,fontWeight:900}}>{client.name}</div>
+            <div style={{fontSize:22,fontWeight:900,letterSpacing:"-0.01em"}}>{client.name}</div>
             <div style={{fontSize:12,color:"rgba(255,255,255,0.6)",marginTop:4}}>{client.sector} · Tableau de bord · {MONTHS[moisIdx]} {moisYear}</div>
-            {kpis.hasData&&<span style={{marginTop:6,display:"inline-block",background:"rgba(255,255,255,0.15)",borderRadius:20,padding:"2px 10px",fontSize:10,fontWeight:800}}>Données réelles du mois</span>}
+            {kpis.hasData&&<span style={{marginTop:6,display:"inline-block",background:"rgba(255,255,255,0.15)",borderRadius:20,padding:"2px 10px",fontSize:11,fontWeight:800}}>Données réelles du mois</span>}
           </div>
           <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}>
             <div style={{textAlign:"right"}}>
-              <div style={{fontSize:10,color:"rgba(255,255,255,0.45)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>Conseiller {client.advisorLabel||"NVM Finance"}</div>
+              <div style={{fontSize:11,color:"rgba(255,255,255,0.45)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>Conseiller {client.advisorLabel||"NVM Finance"}</div>
               <div style={{fontSize:13,fontWeight:800}}>{client.manager}</div>
             </div>
-            <div style={{display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.15)",borderRadius:8,padding:"4px 10px"}}>
-              <Btn small variant="ghost" style={{color:"white",borderColor:"rgba(255,255,255,0.3)",padding:"2px 8px"}} onClick={()=>setMoisIdx(m=>m-1)}>‹</Btn>
-              <span style={{fontSize:13,fontWeight:800,minWidth:90,textAlign:"center"}}>{MONTHS[moisIdx]} {moisYear}</span>
-              <Btn small variant="ghost" style={{color:"white",borderColor:"rgba(255,255,255,0.3)",padding:"2px 8px"}} onClick={()=>setMoisIdx(m=>m+1)}>›</Btn>
+            <div style={{display:"flex",alignItems:"center",gap:6,background:C.white,borderRadius:100,padding:"4px 6px"}}>
+              <Btn small variant="ghost" style={{padding:"2px 8px",border:"none"}} onClick={()=>setMoisIdx(m=>m-1)}>‹</Btn>
+              <span style={{fontSize:13,fontWeight:800,minWidth:90,textAlign:"center",color:C.text}}>{MONTHS[moisIdx]} {moisYear}</span>
+              <Btn small variant="ghost" style={{padding:"2px 8px",border:"none"}} onClick={()=>setMoisIdx(m=>m+1)}>›</Btn>
             </div>
           </div>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
+        <div style={{display:"flex"}}>
           {[
             {l:"CA mensuel",v:fmt(kpis.ca),sub:kpis.ca>avgCA?"Au-dessus de la moyenne":"En dessous de la moyenne"},
             {l:"Résultat net",v:fmt(kpis.result),sub:kpis.result>=0?"Bénéficiaire":"Déficitaire"},
             {l:"Trésorerie",v:fmt(treso),sub:treso>=0?"Position saine":"Position tendue"},
             {l:"EBE",v:fmt(kpis.ebe),sub:`${pct(kpis.ca>0?kpis.ebe/kpis.ca*100:0)} du CA`},
           ].map((it,i)=>(
-            <div key={i} style={{background:"rgba(255,255,255,0.12)",borderRadius:10,padding:"12px 14px"}}>
-              <div style={{fontSize:10,color:"rgba(255,255,255,0.55)",marginBottom:4,textTransform:"uppercase",letterSpacing:"0.06em"}}>{it.l}</div>
-              <div style={{fontSize:20,fontWeight:900}}>{it.v}</div>
-              <div style={{fontSize:10,color:"rgba(255,255,255,0.5)",marginTop:3}}>{it.sub}</div>
+            <div key={i} style={{flex:1,paddingRight:20,marginRight:20,borderRight:i<3?"1px solid rgba(255,255,255,0.18)":"none"}}>
+              <div style={{fontSize:11,color:"rgba(255,255,255,0.55)",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.08em"}}>{it.l}</div>
+              <div style={{fontSize:26,fontWeight:900,letterSpacing:"-0.01em"}}>{it.v}</div>
+              <div style={{fontSize:12,color:"rgba(255,255,255,0.55)",marginTop:4}}>{it.sub}</div>
             </div>
           ))}
         </div>
@@ -1774,14 +2214,16 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
 
       {/* Alertes */}
       {alertes.length>0&&alertes.slice(0,2).map((a,i)=>(
-        <div key={i} style={{padding:"10px 16px",background:a.level==="red"?C.redBg:C.orangeBg,border:`1px solid ${a.level==="red"?C.red:C.orange}44`,borderLeft:`4px solid ${a.level==="red"?C.red:C.orange}`,borderRadius:8,display:"flex",gap:12,alignItems:"center"}}>
+        <div key={i} style={{padding:"14px 20px",background:a.level==="red"?C.redBg:C.orangeBg,borderLeft:`4px solid ${a.level==="red"?C.red:C.orange}`,borderRadius:16,boxShadow:"0 16px 36px rgba(0,86,83,.06)",display:"flex",gap:12,alignItems:"center"}}>
           <Pill color={a.level==="red"?C.red:C.orange}>{a.level==="red"?"CRITIQUE":"VIGILANCE"}</Pill>
           <span style={{fontSize:13,fontWeight:700,color:C.text}}>{a.kpi}</span>
           <span style={{fontSize:12,color:C.textMid,flex:1}}>{a.msg}</span>
           <span style={{fontSize:12,fontWeight:800,color:a.level==="red"?C.red:C.orange,whiteSpace:"nowrap"}}>{a.current}</span>
         </div>
       ))}
-      {alertes.length>2&&<div style={{fontSize:12,color:C.textMid,textAlign:"center"}}>+{alertes.length-2} autre{alertes.length-3>0?"s":""} alerte{alertes.length-3>0?"s":""} — voir l'onglet <strong>Mes alertes</strong></div>}
+      {alertes.length>2&&<div style={{fontSize:12,color:C.textMid,textAlign:"center"}}>+{alertes.length-2} autre{alertes.length-3>0?"s":""} alerte{alertes.length-3>0?"s":""} · voir l'onglet <strong>Mes alertes</strong></div>}
+
+      <EquipeSnapshot client={client} setView={setView} isAdminPreview={isAdminPreview}/>
 
       {/* ── KPIs PERFORMANCE ── */}
       <div>
@@ -1803,15 +2245,15 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
         </div>
       </div>
 
-      {/* ── G1 — CA & Marge + Saisonnalité côte à côte ── */}
+      {/* ── G1 · CA & Marge + Saisonnalité côte à côte ── */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
         <Card>
-          <SectionHead title="CA & Marge brute — 12 mois glissants" sub="Évolution mensuelle du chiffre d'affaires et de la marge"/>
+          <SectionHead title="CA & Marge brute · 12 mois glissants" sub="Évolution mensuelle du chiffre d'affaires et de la marge"/>
           <div style={{padding:"14px 20px 12px"}}>
             <Legend items={[{l:"CA HT",c:C.primary},{l:"Marge brute",c:C.green}]}/>
             <BarChart2
               data={months12.map(m=>({l:m.l,v1:m.ca,v2:m.marge,active:m.mi===moisIdx&&m.yr===moisYear}))}
-              c1={C.primary} c2={C.green} h={110} label1="CA HT" label2="Marge brute"
+              c1={C.primary} c2={C.green} h={100} label1="CA HT" label2="Marge brute"
             />
             <div style={{display:"flex",justifyContent:"space-between",marginTop:8,fontSize:11,color:C.textMid}}>
               <span>Moy. CA : <strong style={{color:C.primary}}>{fmt(Math.round(avgCA))}</strong></span>
@@ -1821,11 +2263,11 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
         </Card>
 
         <Card>
-          <SectionHead title="Coefficient de saisonnalité — CA" sub="Vert = mois fort · Orange = mois faible · Survol pour détail"/>
+          <SectionHead title="Coefficient de saisonnalité · CA" sub="Vert = mois fort · Orange = mois faible · Survol pour détail"/>
           <div style={{padding:"14px 20px 12px"}}>
             {months12.filter(m=>m.hasData).length<4&&(
               <div style={{padding:"8px 12px",background:"#fffbeb",border:`1px solid ${C.orange}44`,borderRadius:8,marginBottom:12,fontSize:12,color:C.textMid}}>
-                ⚠ Données insuffisantes — il faut au moins 4 mois pour un coefficient fiable. Importez davantage de données mensuelles.
+                ⚠ Données insuffisantes, il faut au moins 4 mois pour un coefficient fiable. Importez davantage de données mensuelles.
               </div>
             )}
             <div style={{display:"flex",gap:14,marginBottom:10,fontSize:11}}>
@@ -1836,7 +2278,7 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
                 </div>
               ))}
             </div>
-            <SaisonnaliteChart data={saisonnalite} h={90}/>
+            <SaisonnaliteChart data={saisonnalite} h={100}/>
             <div style={{marginTop:8,padding:"7px 10px",background:C.bg,borderRadius:6,fontSize:11,color:C.textMid}}>
               Fort : <strong style={{color:C.green}}>{saisonnalite.reduce((a,b)=>b.coef>a.coef?b:a,saisonnalite[0]).l}</strong> ({saisonnalite.reduce((a,b)=>b.coef>a.coef?b:a,saisonnalite[0]).coef.toFixed(2)}x) ·
               Faible : <strong style={{color:C.orange}}>{saisonnalite.filter(s=>s.coef>0).reduce((a,b)=>b.coef<a.coef?b:a,saisonnalite[0]).l}</strong>
@@ -1845,12 +2287,12 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
         </Card>
       </div>
 
-      {/* ── G2 — Cascade + Volumes côte à côte ── */}
+      {/* ── G2 · Cascade + Volumes côte à côte ── */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
         <Card>
-          <SectionHead title="Cascade du résultat" sub="Du CA au résultat net — survol pour le détail"/>
+          <SectionHead title="Cascade du résultat" sub="Du CA au résultat net · survol pour le détail"/>
           <div style={{padding:"14px 20px 12px"}}>
-            <WaterfallChart h={120}/>
+            <WaterfallChart h={110}/>
             <div style={{marginTop:8,display:"flex",justifyContent:"space-between",fontSize:11}}>
               <span style={{color:C.primary,fontWeight:700}}>CA : {fmt(kpis.ca)}</span>
               <span style={{color:kpis.result>=0?C.green:C.red,fontWeight:700}}>Résultat : {fmt(kpis.result)}</span>
@@ -1884,7 +2326,7 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
                         <div style={{display:"flex",alignItems:"center",gap:6}}>
                           <span style={{color,fontWeight:800,fontSize:12}}>{icon}</span>
                           <span style={{color:C.text,fontWeight:600}}>{p.label}</span>
-                          {(!ok||p.val<0)&&<span style={{color:C.textLight,fontSize:10}}>— {p.tip}</span>}
+                          {(!ok||p.val<0)&&<span style={{color:C.textLight,fontSize:10}}>{p.tip}</span>}
                         </div>
                         <span style={{color,fontWeight:700}}>{p.pct.toFixed(1)}% du CA</span>
                       </div>
@@ -1950,7 +2392,7 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
             // Secteurs produits : volumes vendus
             return (
               <>
-                <SectionHead title="Volumes vendus — 12 mois" sub="Nombre d'unités vendues par mois"/>
+                <SectionHead title="Volumes vendus · 12 mois" sub="Nombre d'unités vendues par mois"/>
                 <div style={{padding:"14px 20px 12px"}}>
                   <Legend items={[{l:"Quantités (unités)",c:"#8b5cf6"}]}/>
                   <BarChart2
@@ -1969,10 +2411,10 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
         </Card>
       </div>
 
-      {/* ── G3 — EBE + Trésorerie ── */}
+      {/* ── G3 · EBE + Trésorerie ── */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
         <Card>
-          <SectionHead title="EBE & Résultat — 12 mois" sub="Tendance de rentabilité"/>
+          <SectionHead title="EBE & Résultat · 12 mois" sub="Tendance de rentabilité"/>
           <div style={{padding:"14px 20px 12px"}}>
             <Legend items={[{l:"EBE",c:C.primary,round:true}]}/>
             <LineAreaChart
@@ -1987,7 +2429,7 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
         </Card>
 
         <Card>
-          <SectionHead title="Trésorerie cumulée — 12 mois" sub="Évolution du solde de trésorerie"/>
+          <SectionHead title="Trésorerie cumulée · 12 mois" sub="Évolution du solde de trésorerie"/>
           <div style={{padding:"14px 20px 12px"}}>
             <Legend items={[{l:"Solde cumulé",c:treso>=0?C.green:C.red,round:true}]}/>
             <LineAreaChart
@@ -1996,7 +2438,7 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
             />
             <div style={{marginTop:4,fontSize:11,color:C.textMid,display:"flex",justifyContent:"space-between"}}>
               <span>Solde initial : <strong>{fmt(treso)}</strong></span>
-              <span>Solde {tresoData[tresoData.length-1]?.available?"estimé":"indisponible"} : <strong style={{color:tresoData[tresoData.length-1]?.available?(tresoData[tresoData.length-1]?.cumul>=0?C.green:C.red):C.textLight}}>{tresoData[tresoData.length-1]?.available?fmt(tresoData[tresoData.length-1]?.cumul||0):"—"}</strong></span>
+              <span>Solde {tresoData[tresoData.length-1]?.available?"estimé":"indisponible"} : <strong style={{color:tresoData[tresoData.length-1]?.available?(tresoData[tresoData.length-1]?.cumul>=0?C.green:C.red):C.textLight}}>{tresoData[tresoData.length-1]?.available?fmt(tresoData[tresoData.length-1]?.cumul||0):"N/A"}</strong></span>
             </div>
           </div>
         </Card>
@@ -2006,7 +2448,7 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
       {/* ── RÉPARTITION CHARGES + FINANCEMENT ── */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
         <Card>
-          <SectionHead title="Répartition des charges" sub={`Structure des coûts — ${MONTHS[moisIdx]} ${moisYear}`}/>
+          <SectionHead title="Répartition des charges" sub={`Structure des coûts · ${MONTHS[moisIdx]} ${moisYear}`}/>
           <div style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
             {[
               {l:"Coûts d'achat",        v:kpis.ca-kpis.marge, c:C.orange},
@@ -2096,7 +2538,7 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
 
 
 // 
-// CLIENT DONNÉES DÉTAILLÉES — avec switch mois
+// CLIENT DONNÉES DÉTAILLÉES · avec switch mois
 // 
 function ClientDonnees({ client, moisIdx, setMoisIdx, moisYear }) {
  const [tab,setTab]=useState("synthese");
@@ -2159,8 +2601,8 @@ function ClientDonnees({ client, moisIdx, setMoisIdx, moisYear }) {
  {/* Header + switch mois */}
  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
  <div>
- <div style={{fontSize:16,fontWeight:900,color:C.text}}>Données financières — {client.name}</div>
- {kpis.hasData?<div style={{fontSize:11,color:C.green,fontWeight:700,marginTop:3}}>Donnees reelles importées pour ce mois</div>:<div style={{fontSize:11,color:C.textLight,marginTop:3}}>Données estimées — aucun import pour ce mois</div>}
+ <div style={{fontSize:16,fontWeight:900,color:C.text}}>Données financières · {client.name}</div>
+ {kpis.hasData?<div style={{fontSize:11,color:C.green,fontWeight:700,marginTop:3}}>Donnees reelles importées pour ce mois</div>:<div style={{fontSize:11,color:C.textLight,marginTop:3}}>Données estimées · aucun import pour ce mois</div>}
  </div>
  <div style={{display:"flex",alignItems:"center",gap:8,background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"6px 12px"}}>
  <Btn small variant="ghost" onClick={()=>setMoisIdx(m=>m-1)}>‹</Btn>
@@ -2227,7 +2669,7 @@ function ClientDonnees({ client, moisIdx, setMoisIdx, moisYear }) {
  {tab==="compte_resultat"&&(
  <div style={{display:"flex",flexDirection:"column",gap:16}}>
  <Card>
- <SectionHead title={`Compte de résultat — ${MONTHS[moisIdx]} ${moisYear}`} sub={kpis.hasData?"Données réelles du mois":"Données estimées"}/>
+ <SectionHead title={`Compte de résultat · ${MONTHS[moisIdx]} ${moisYear}`} sub={kpis.hasData?"Données réelles du mois":"Données estimées"}/>
  <table style={{width:"100%",borderCollapse:"collapse"}}>
  <tbody>
  {[
@@ -2386,7 +2828,7 @@ function ClientDonnees({ client, moisIdx, setMoisIdx, moisYear }) {
  <KpiCard label="Point bas" value={fmt(minC)} color={minC>=0?C.text:C.red}/>
  </div>
  <Card>
- <SectionHead title={`Trésorerie — Janv. à ${MONTHS[moisIdx]} ${moisYear}`}/>
+ <SectionHead title={`Trésorerie · Janv. à ${MONTHS[moisIdx]} ${moisYear}`}/>
  <div style={{overflowX:"auto"}}>
  <table style={{width:"100%",borderCollapse:"collapse"}}>
  <thead><tr><Th>Mois</Th><Th right>Encaissements</Th><Th right>Décaissements</Th><Th right>Emprunts</Th><Th right>Solde mois</Th><Th right>Solde cumulé</Th></tr></thead>
@@ -2452,7 +2894,7 @@ function getPrevKpis(client, moisIdx, moisYear) {
  return calcMonthKpis(client, pm, py);
 }
 
-function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPreview=false }) {
+function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPreview=false, setView }) {
  // Tous les hooks doivent être déclarés inconditionnellement (règle React)
  const [moisPrev,  setMoisPrev]  = useState(CUR_M);
  const [adjPrev,   setAdjPrev]   = useState(() => client.previsionnel?.adjustments || {});
@@ -2470,6 +2912,10 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
  const treso = calcTresoEstimee(client, moisIdx, moisYear);
  const isD = client.is||{totalPrecedent:0,taux:15};
  const provIS = Math.max(0,Math.round((kpis.ebe)*isD.taux/100));
+ // Seuil de rentabilité : CA minimum pour couvrir les charges fixes, via le taux de marge sur coûts variables
+ const chargesFixesMensuelles = kpis.charges + kpis.salaires + chargeEmprunt + amort;
+ const tauxMargeCA = kpis.ca>0 ? kpis.marge/kpis.ca : 0;
+ const seuilRentabilite = tauxMargeCA>0 ? Math.round(chargesFixesMensuelles/tauxMargeCA) : null;
 
  // Header commun avec sélecteur de mois
  const PageHeader = ({ title, sub, hidePicker=false }) => (
@@ -2478,8 +2924,8 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
  <div style={{fontSize:18,fontWeight:900,color:C.text}}>{title}</div>
  {sub&&<div style={{fontSize:12,color:C.textLight,marginTop:2}}>{sub}</div>}
  {kpis.hasData
- ? <div style={{fontSize:11,color:C.green,fontWeight:700,marginTop:3}}>Donnees reelles — {MONTHS[moisIdx]} {moisYear}</div>
- : <div style={{fontSize:11,color:C.orange,fontWeight:700,marginTop:3}}>Estimations — aucun import pour ce mois</div>
+ ? <div style={{fontSize:11,color:C.green,fontWeight:700,marginTop:3}}>Donnees reelles · {MONTHS[moisIdx]} {moisYear}</div>
+ : <div style={{fontSize:11,color:C.orange,fontWeight:700,marginTop:3}}>Estimations · aucun import pour ce mois</div>
  }
  </div>
  {!hidePicker&&<MoisPicker moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear}/>}
@@ -2506,7 +2952,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
  );
  return list.map(imp=>(
  <Card key={imp.id} style={{marginBottom:14}}>
- <SectionHead title={`${imp.label} — ${MONTHS[moisIdx]} ${moisYear}`} sub={`${imp.count} ligne${imp.count>1?"s":""} · Importé le ${imp.importedAt}`}/>
+ <SectionHead title={`${imp.label} · ${MONTHS[moisIdx]} ${moisYear}`} sub={`${imp.count} ligne${imp.count>1?"s":""} · Importé le ${imp.importedAt}`}/>
  <div style={{overflowX:"auto"}}>
  <table style={{width:"100%",borderCollapse:"collapse"}}>
  <thead><tr>{Object.keys(imp.rows[0]||{}).map(h=><Th key={h}>{h.replace(/_/g," ")}</Th>)}</tr></thead>
@@ -2527,7 +2973,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
 
  // DASHBOARD 
  if (view==="dashboard") return (
- <ClientDashboard client={client} isAdminPreview={false} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear}/>
+ <ClientDashboard client={client} isAdminPreview={false} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear} setView={setView}/>
  );
 
  // VENTES 
@@ -2586,7 +3032,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
  </div>
  {detailAchats.length>0?(
  <Card style={{marginBottom:14}}>
- <SectionHead title="Détail par produit — coût vs marge" sub="Pour chaque produit : ce que vous payez vs ce que vous gagnez"/>
+ <SectionHead title="Détail par produit · coût vs marge" sub="Pour chaque produit : ce que vous payez vs ce que vous gagnez"/>
  {(()=>{
    const cols=[
      {label:"Produit",       flex:"2 0 0",   align:"left"},
@@ -2636,7 +3082,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
              <div style={{flex:cols[2].flex,padding:"12px 14px",textAlign:"right",fontFamily:"'Courier New',monospace",fontSize:13}}>{fmt(r.ca)}</div>
              <div style={{flex:cols[3].flex,padding:"12px 14px",textAlign:"right",fontFamily:"'Courier New',monospace",fontSize:13,color:C.red}}>{fmt(r.cout)}</div>
              <div style={{flex:cols[4].flex,padding:"12px 14px",textAlign:"right",fontFamily:"'Courier New',monospace",fontSize:13,color:C.green}}>{fmt(r.marge)}</div>
-             <div style={{flex:cols[5].flex,padding:"12px 14px",textAlign:"right",fontSize:13,fontWeight:800,color:col,fontFamily:"'Nunito',sans-serif",display:"flex",alignItems:"center",justifyContent:"flex-end",gap:6}}>
+             <div style={{flex:cols[5].flex,padding:"12px 14px",textAlign:"right",fontSize:13,fontWeight:800,color:col,fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif",display:"flex",alignItems:"center",justifyContent:"flex-end",gap:6}}>
                <div style={{width:32,height:5,borderRadius:3,background:C.borderLight,flexShrink:0}}>
                  <div style={{height:"100%",width:`${Math.min(100,tx)}%`,background:col,borderRadius:3}}/>
                </div>
@@ -2652,7 +3098,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
          <div style={{flex:cols[2].flex,padding:"12px 14px",textAlign:"right",fontFamily:"'Courier New',monospace",fontSize:13,fontWeight:900}}>{fmt(totalCa)}</div>
          <div style={{flex:cols[3].flex,padding:"12px 14px",textAlign:"right",fontFamily:"'Courier New',monospace",fontSize:13,fontWeight:900,color:C.red}}>{fmt(totalCout)}</div>
          <div style={{flex:cols[4].flex,padding:"12px 14px",textAlign:"right",fontFamily:"'Courier New',monospace",fontSize:13,fontWeight:900,color:C.green}}>{fmt(totalCa-totalCout)}</div>
-         <div style={{flex:cols[5].flex,padding:"12px 14px",textAlign:"right",fontSize:13,fontWeight:900,color:txTotal>=40?C.green:txTotal>=25?C.orange:C.red,fontFamily:"'Nunito',sans-serif",display:"flex",alignItems:"center",justifyContent:"flex-end",gap:6}}>
+         <div style={{flex:cols[5].flex,padding:"12px 14px",textAlign:"right",fontSize:13,fontWeight:900,color:txTotal>=40?C.green:txTotal>=25?C.orange:C.red,fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif",display:"flex",alignItems:"center",justifyContent:"flex-end",gap:6}}>
            <div style={{width:32,height:5,borderRadius:3,background:C.borderLight,flexShrink:0}}>
              <div style={{height:"100%",width:`${Math.min(100,txTotal)}%`,background:txTotal>=40?C.green:txTotal>=25?C.orange:C.red,borderRadius:3}}/>
            </div>
@@ -2798,7 +3244,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
       <div style={{padding:24}} className="fade-up">
         <PageHeader title="Ma masse salariale" sub="Cout total, decaissements reels et decalage URSSAF"/>
 
-        {/* 1. KPIs — basés sur les vrais imports si disponibles, sinon estimation */}
+        {/* 1. KPIs · basés sur les vrais imports si disponibles, sinon estimation */}
         {(()=>{
           const realBrut  = salRows.length>0 ? salRows.reduce((s,r)=>s+parseFloat(r.salaire_brut||0),0) : kpis.salaires*0.83;
           const realNet   = salRows.length>0 ? salRows.reduce((s,r)=>s+parseFloat(r.salaire_net||0),0) : kpis.salaires*0.75;
@@ -2810,8 +3256,8 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
             <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:20}}>
               <KpiCard label="Cout total employeur" value={fmt(Math.round(realTotal))} sub={`${pct(kpis.ca>0?realTotal/kpis.ca*100:0)} du CA · ${source}`} color={C.red}/>
               <KpiCard label="Salaires nets verses" value={fmt(Math.round(realNet))} sub="Payes CE mois aux employes" color={C.green}/>
-              <KpiCard label="Cotisations salariales" value={fmt(Math.round(realCotSal))} sub="Generees ce mois — payees M+1" color={C.orange}/>
-              <KpiCard label="Cotisations patronales" value={fmt(Math.round(realCotPat))} sub="Generees ce mois — payees M+1" color={C.red}/>
+              <KpiCard label="Cotisations salariales" value={fmt(Math.round(realCotSal))} sub="Generees ce mois · payees M+1" color={C.orange}/>
+              <KpiCard label="Cotisations patronales" value={fmt(Math.round(realCotPat))} sub="Generees ce mois · payees M+1" color={C.red}/>
             </div>
           );
         })()}
@@ -2819,7 +3265,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
         {/* 2. Detail par employe */}
         {salRows.length>0?(
           <Card style={{marginBottom:16}}>
-            <SectionHead title={`Detail par employe — ${MONTHS[moisIdx]} ${moisYear}`} sub={`${salRows.length} employe${salRows.length>1?"s":""}`}/>
+            <SectionHead title={`Detail par employe · ${MONTHS[moisIdx]} ${moisYear}`} sub={`${salRows.length} employe${salRows.length>1?"s":""}`}/>
             <div style={{overflowX:"auto"}}>
               <table style={{width:"100%",borderCollapse:"collapse"}}>
                 <thead><tr>
@@ -2857,7 +3303,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
 
         {/* 3. Tableau decaissements reels 6 mois */}
         <Card style={{marginBottom:16}}>
-          <SectionHead title="Tableau des decaissements reels — 6 mois" sub="Ce qui sort effectivement de votre compte, avec le decalage URSSAF"/>
+          <SectionHead title="Tableau des decaissements reels · 6 mois" sub="Ce qui sort effectivement de votre compte, avec le decalage URSSAF"/>
           <div style={{overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
               <thead><tr>
@@ -2892,20 +3338,20 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
             </table>
           </div>
           <div style={{padding:"12px 16px",background:"#fffbeb",borderTop:`1px solid ${C.border}`,fontSize:12,color:C.textMid}}>
-            <strong style={{color:C.text}}>Comment lire :</strong> Les colonnes cotisations affichent les montants du mois precedent — payes ce mois. La derniere colonne indique ce qui sera paye le mois prochain.
+            <strong style={{color:C.text}}>Comment lire :</strong> Les colonnes cotisations affichent les montants du mois precedent · payes ce mois. La derniere colonne indique ce qui sera paye le mois prochain.
           </div>
         </Card>
 
         {/* 4. Decomposition du cout salarial */}
         <Card style={{marginBottom:16}}>
-          <SectionHead title="Decomposition du cout salarial — pour 100 de cout employeur"/>
+          <SectionHead title="Decomposition du cout salarial · pour 100 de cout employeur"/>
           <div style={{padding:20}}>
             {[
               {label:"Cout total employeur",   val:kpis.salaires,pct2:100,color:C.red,    desc:"Ce que vous deboursez reellement"},
               {label:"Salaire brut",            val:salBrut,      pct2:83, color:"#6366f1",desc:"Base de calcul des cotisations"},
-              {label:"Salaire net verse",       val:netSal,       pct2:75, color:C.green,  desc:"Ce que l employe recoit — paye CE mois"},
+              {label:"Salaire net verse",       val:netSal,       pct2:75, color:C.green,  desc:"Ce que l employe recoit · paye CE mois"},
               {label:"Cotis. salariales (21%)", val:Math.round(kpis.salaires*0.21),pct2:21,color:C.orange,desc:"Versees a l URSSAF en M+1"},
-              {label:"Cotis. patronales (46%)", val:Math.round(kpis.salaires*0.46),pct2:46,color:C.red,   desc:"A votre charge — versees en M+1"},
+              {label:"Cotis. patronales (46%)", val:Math.round(kpis.salaires*0.46),pct2:46,color:C.red,   desc:"A votre charge · versees en M+1"},
             ].map((r,i)=>(
               <div key={i} style={{display:"flex",alignItems:"center",gap:14,marginBottom:12}}>
                 <div style={{width:200,flexShrink:0,fontSize:12,fontWeight:700,color:C.text}}>{r.label}</div>
@@ -2917,7 +3363,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
               </div>
             ))}
             <div style={{marginTop:12,padding:"10px 14px",background:C.bg,borderRadius:8,fontSize:12,color:C.textMid,textAlign:"center",borderTop:`1px solid ${C.border}`}}>
-              Pour 100 de cout employeur : <strong style={{color:C.green}}>75 net</strong> + <strong style={{color:C.orange}}>21 cotis. salariales</strong> + <strong style={{color:C.red}}>46 cotis. patronales</strong> — les 67 de cotisations payees en M+1
+              Pour 100 de cout employeur : <strong style={{color:C.green}}>75 net</strong> + <strong style={{color:C.orange}}>21 cotis. salariales</strong> + <strong style={{color:C.red}}>46 cotis. patronales</strong> · les 67 de cotisations payees en M+1
             </div>
           </div>
         </Card>
@@ -2945,7 +3391,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
                 </div>
               </div>
               <div style={{background:"white",border:`2px solid ${C.primary}`,borderRadius:10,padding:"14px 16px"}}>
-                <div style={{fontSize:11,fontWeight:800,color:C.primary,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>CE mois — {MONTHS[moisIdx]} {moisYear}</div>
+                <div style={{fontSize:11,fontWeight:800,color:C.primary,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>CE mois · {MONTHS[moisIdx]} {moisYear}</div>
                 <div style={{fontSize:12,fontWeight:700,color:C.text,marginBottom:8}}>Ce qui sort de votre compte :</div>
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
                   <div style={{display:"flex",justifyContent:"space-between",padding:"6px 10px",background:C.green+"12",border:`1px solid ${C.green}33`,borderRadius:6}}>
@@ -3004,7 +3450,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
  <KpiCard label="Résultat net" value={fmt(kpis.result)} sub={kpis.result>=0?"Bénéfice":"Déficit"} color={kpis.result>=0?C.green:C.red}/>
  </div>
  <Card style={{marginBottom:16}}>
- <SectionHead title="Cascade du résultat — étape par étape" sub="Lisez de haut en bas : chaque ligne explique ce qui est déduit"/>
+ <SectionHead title="Cascade du résultat · étape par étape" sub="Lisez de haut en bas : chaque ligne explique ce qui est déduit"/>
  <table style={{width:"100%",borderCollapse:"collapse"}}>
  <tbody>
  {[
@@ -3036,6 +3482,9 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
  {l:"Taux d'EBE",v:pct(kpis.ca>0?kpis.ebe/kpis.ca*100:0),c:kpis.ebe>=0?C.primary:C.red,desc:"EBE / CA"},
  {l:"Taux de résultat net",v:pct(kpis.ca>0?kpis.result/kpis.ca*100:0),c:kpis.result>=0?C.green:C.red,desc:"Résultat / CA"},
  {l:"CAF (Capacité d'autofinancement)",v:fmt(kpis.result+amort),c:C.primary,desc:"Résultat + Amortissements"},
+ {l:"Seuil de rentabilité",v:seuilRentabilite!=null?fmt(seuilRentabilite):"—",
+ c:seuilRentabilite==null?C.textLight:(kpis.ca>=seuilRentabilite?C.green:C.orange),
+ desc:seuilRentabilite==null?"Pas assez de données pour ce mois":(kpis.ca>=seuilRentabilite?`Atteint · ${fmt(kpis.ca-seuilRentabilite)} au-dessus`:`Il manque ${fmt(seuilRentabilite-kpis.ca)} de CA ce mois`)},
  ].map((r,i)=>(
  <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 16px",borderBottom:`1px solid ${C.borderLight}`}}>
  <div><div style={{fontSize:13,fontWeight:700,color:C.text}}>{r.l}</div><div style={{fontSize:11,color:C.textLight}}>{r.desc}</div></div>
@@ -3138,7 +3587,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
  {/* KPIs synthèse */}
  <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:20}}>
  <KpiCard label="Solde de départ" value={fmt(treso)} sub="Trésorerie initiale" color={treso>=0?C.green:C.red}/>
- <KpiCard label={`Solde estimé — ${MONTHS[moisIdx]}`} value={fmt(soldeCeMois)} sub={soldeCeMois>=0?"Position saine":"Decouviert"} color={soldeCeMois>=0?C.green:C.red}/>
+ <KpiCard label={`Solde estimé · ${MONTHS[moisIdx]}`} value={fmt(soldeCeMois)} sub={soldeCeMois>=0?"Position saine":"Decouviert"} color={soldeCeMois>=0?C.green:C.red}/>
  <KpiCard label="Point le plus bas" value={fmt(minC)} sub={minC<0?"Tresorerie négative":""} color={minC>=0?C.text:C.red}/>
  <KpiCard label="Point le plus haut" value={fmt(maxC)} color={C.green}/>
  </div>
@@ -3149,7 +3598,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
  {/* ENTRÉES */}
  <Card>
  <div style={{padding:"14px 18px",borderBottom:`1px solid ${C.borderLight}`,background:"#ecfdf5"}}>
- <div style={{fontSize:14,fontWeight:900,color:C.green}}>Entrées — {MONTHS[moisIdx]} {moisYear}</div>
+ <div style={{fontSize:14,fontWeight:900,color:C.green}}>Entrées · {MONTHS[moisIdx]} {moisYear}</div>
  <div style={{fontSize:12,color:C.textMid,marginTop:2}}>Tout ce qui rentre sur votre compte</div>
  </div>
  <div style={{padding:0}}>
@@ -3175,7 +3624,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
  {/* SORTIES */}
  <Card>
  <div style={{padding:"14px 18px",borderBottom:`1px solid ${C.borderLight}`,background:"#fef2f2"}}>
- <div style={{fontSize:14,fontWeight:900,color:C.red}}>Sorties — {MONTHS[moisIdx]} {moisYear}</div>
+ <div style={{fontSize:14,fontWeight:900,color:C.red}}>Sorties · {MONTHS[moisIdx]} {moisYear}</div>
  <div style={{fontSize:12,color:C.textMid,marginTop:2}}>Tout ce qui sort de votre compte</div>
  </div>
  <div style={{padding:0}}>
@@ -3183,9 +3632,9 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
  {label:"Charges fournisseurs", montant:Math.round(k2.charges*0.95), desc:"Loyer, publicité, livraisons, abonnements…", icon:"·", when:"Ce mois"},
  {label:"Salaires nets versés", montant:netSalaire, desc:`${fmt(salBrut)} brut × 75% net`, icon:"≡", when:"Ce mois"},
  {label:"Cotisations salariales", montant:cotSal, desc:"Retenues sur salaire → URSSAF", icon:"·", when:"Ce mois"},
- {label:"Cotisations patronales (M-1)", montant:cotPatPrevMois, desc:`Cotisations de ${MONTHS[moisIdx>0?moisIdx-1:11]} payées ce mois — décalage 1 mois`,icon:"↩", when:"Décalé M+1"},
+ {label:"Cotisations patronales (M-1)", montant:cotPatPrevMois, desc:`Cotisations de ${MONTHS[moisIdx>0?moisIdx-1:11]} payées ce mois · décalage 1 mois`,icon:"↩", when:"Décalé M+1"},
  {label:"TVA nette à reverser (M-1)", montant:tvaReverserCeMois, desc:`TVA collectée de ${MONTHS[moisIdx>0?moisIdx-1:11]} reversée ce mois`,icon:"·", when:"Décalé M+1"},
- {label:"Remboursements emprunts", montant:empMens, desc:`${emprunts.length} emprunt(s) — capital + intérêts + assurance`,icon:"", when:"Ce mois"},
+ {label:"Remboursements emprunts", montant:empMens, desc:`${emprunts.length} emprunt(s) · capital + intérêts + assurance`,icon:"", when:"Ce mois"},
  ...(ajDec>0?[{label:"Sorties exceptionnelles",montant:ajDec,desc:ajM.filter(a=>a.type==="decaissement").map(a=>a.libelle).join(", "),icon:"!",when:"Exceptionnel"}]:[]),
  ].map((r,i,arr)=>(
  <div key={i} style={{padding:"12px 16px",borderBottom:i<arr.length-1?`1px solid ${C.borderLight}`:"",display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
@@ -3210,7 +3659,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
  {/* Solde du mois */}
  <div style={{background:soldeM>=0?C.greenBg:C.redBg,border:`2px solid ${soldeM>=0?C.green:C.red}44`,borderRadius:12,padding:"16px 24px",marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
  <div>
- <div style={{fontSize:14,fontWeight:900,color:soldeM>=0?C.green:C.red}}>Solde net — {MONTHS[moisIdx]} {moisYear}</div>
+ <div style={{fontSize:14,fontWeight:900,color:soldeM>=0?C.green:C.red}}>Solde net · {MONTHS[moisIdx]} {moisYear}</div>
  <div style={{fontSize:12,color:C.textMid,marginTop:2}}>Entrées {fmt(encTotal)} – Sorties {fmt(decTotal)}</div>
  </div>
  <div style={{fontSize:28,fontWeight:900,color:soldeM>=0?C.green:C.red}}>{soldeM>=0?"+":""}{fmt(soldeM)}</div>
@@ -3241,7 +3690,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
 
  {/* Tableau historique */}
  <Card style={{marginBottom:16}}>
- <SectionHead title={`Historique mensuel — ${moisYear}`} sub="Encaissements et décaissements mois par mois"/>
+ <SectionHead title={`Historique mensuel · ${moisYear}`} sub="Encaissements et décaissements mois par mois"/>
  <div style={{overflowX:"auto"}}>
  <table style={{width:"100%",borderCollapse:"collapse"}}>
  <thead>
@@ -3299,12 +3748,13 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
  </div>
  </Card>
  )}
+ <TresorerieForecast90j client={client} embedded/>
  </div>
  );
  }
 
 
- // EMPRUNTS 
+ // EMPRUNTS
  if (view==="emprunts") return (
  <div style={{padding:24}} className="fade-up">
  <PageHeader title="Mes emprunts" sub="Tableau de remboursement de tous vos crédits"/>
@@ -3377,14 +3827,21 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
  {investissements.length===0&&<Card><div style={{textAlign:"center",padding:"40px",color:C.textLight}}><div style={{fontSize:36,marginBottom:12}}></div><div style={{fontWeight:700,fontSize:14}}>Aucun investissement enregistré</div></div></Card>}
  {investissements.map(inv=>{
  const am=Math.round(inv.montantHT/(inv.duree||36));const me=Math.min(inv.duree,moisIdx+1);const vnc=Math.max(0,inv.montantHT-am*me);const tva=Math.round(inv.montantHT*inv.tauxTVA/100);const pctF=Math.round(me/inv.duree*100);
+ const gainM=inv.gainMensuel||0;const paybackM=gainM>0?Math.ceil(inv.montantHT/gainM):null;const rentable=paybackM!==null?paybackM<=inv.duree:null;
  return (
  <Card key={inv.id} style={{marginBottom:16}}>
  <div style={{height:4,background:C.orange}}/>
  <div style={{padding:"16px 20px"}}>
  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>
  <div><div style={{fontSize:16,fontWeight:900,color:C.text}}>{inv.libelle}</div><div style={{fontSize:12,color:C.textLight,marginTop:2}}>Acheté le {inv.dateAchat} · Mis en service le {inv.dateMEP} · Amorti sur {inv.duree} mois</div></div>
+ <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
  <Pill color={pctF>=100?C.green:C.orange}>{pctF>=100?"Amorti":pctF+"% amorti"}</Pill>
+ {paybackM===null?<Pill color={C.textLight}>Gain non renseigné</Pill>
+ :rentable?<Pill color={C.green}>Rentable en {paybackM} mois</Pill>
+ :<Pill color={C.red}>Non rentable ({paybackM} mois {'>'} {inv.duree})</Pill>}
  </div>
+ </div>
+ {gainM>0&&<div style={{marginBottom:12,fontSize:12,color:C.textMid,background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 12px"}}>Gain mensuel estimé : <strong>{fmt(gainM)}</strong> · Retour sur investissement : <strong>{paybackM} mois</strong> {rentable?"· rentabilisé avant la fin de l'amortissement":"· plus long que la durée d'amortissement"}</div>}
  <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:14,marginBottom:16}}>
  <KpiCard label="Prix d'achat HT" value={fmt(inv.montantHT)} color={C.primary}/>
  <KpiCard label="TVA récupérée" value={fmt(tva)} sub={`${inv.tauxTVA}% de TVA`} color={C.green}/>
@@ -3396,7 +3853,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
  <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:C.textMid,marginBottom:6}}><span>Amortissement : {me} mois sur {inv.duree}</span><span style={{fontWeight:800,color:pctF>=100?C.green:C.orange}}>{pctF}% amorti · {fmt(vnc)} de valeur résiduelle</span></div>
  <div style={{height:12,borderRadius:6,background:C.borderLight}}><div style={{height:"100%",width:`${pctF}%`,background:pctF>=100?C.green:C.orange,borderRadius:6}}/></div>
  </div>
- {me<inv.duree&&<div style={{fontSize:12,color:C.orange,fontWeight:700,marginTop:6}}>{inv.duree-me} mois restants — encore {fmt((inv.duree-me)*am)} à amortir</div>}
+ {me<inv.duree&&<div style={{fontSize:12,color:C.orange,fontWeight:700,marginTop:6}}>{inv.duree-me} mois restants · encore {fmt((inv.duree-me)*am)} à amortir</div>}
  </div>
  <div style={{borderTop:`1px solid ${C.borderLight}`,overflowX:"auto"}}>
  <table style={{width:"100%",borderCollapse:"collapse"}}>
@@ -3410,7 +3867,11 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
  </div>
  );
 
- // CATALOGUE 
+ // CALCULATEUR ROI
+ if (view==="roi") return <ROICalculator/>;
+ if (view==="embauche") return <SimulateurEmbauche tauxMargeDefaut={kpis.ca>0?Math.round(kpis.marge/kpis.ca*100):""}/>;
+
+ // CATALOGUE
  if (view==="catalogue") {
  const catRows = imports.filter(i=>i.type==="catalogue").flatMap(i=>i.rows);
  return (
@@ -3515,7 +3976,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
 
         {/* Cascade du calcul */}
         <Card style={{marginBottom:16}}>
-          <SectionHead title="Calcul de votre IS — etape par etape" sub={`Base : donnees de ${MONTHS[moisIdx]} ${moisYear} annualisees`}/>
+          <SectionHead title="Calcul de votre IS · etape par etape" sub={`Base : donnees de ${MONTHS[moisIdx]} ${moisYear} annualisees`}/>
           <table style={{width:"100%",borderCollapse:"collapse"}}>
             <tbody>
               {[
@@ -3525,7 +3986,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
                 {l:"x 12 (annualisation)",     v:null,        bold:false, desc:"Extrapolation sur 12 mois", extra:`= ${fmt((kpis.ebe-amort)*12)}`},
                 {l:`Taux IS (${isD.taux}%)`,   v:null,        bold:false, desc:`Taux applicable`, extra:isD.taux+"%"},
                 {l:"= IS annuel estimé",        v:isAnnuelEstime, bold:true, c:C.orange, sep:true, desc:"Impot a payer sur l'annee"},
-                {l:"Acomptes N-1 (base calcul)",v:-isN1,      bold:false, desc:"IS payé l'année précédente — base des acomptes"},
+                {l:"Acomptes N-1 (base calcul)",v:-isN1,      bold:false, desc:"IS payé l'année précédente · base des acomptes"},
                 {l:"= Solde estimé (mai N+1)",  v:soldeDu,    bold:true, c:soldeDu>0?C.red:C.green, sep:true, desc:"A payer en régularisation"},
               ].map((r,i)=>(
                 <Tr key={i} style={{borderBottom:r.sep?`2px solid ${C.border}`:`1px solid ${C.borderLight}`,background:r.sep?C.bg:""}}>
@@ -3714,7 +4175,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
 
     return (
       <div style={{padding:24}} className="fade-up">
-        <PageHeader title="Ma TVA" sub={`Opérations de ${MONTHS_FR[moisIdx]} ${moisYear} — versement à l'État le ${dateLimit}`}/>
+        <PageHeader title="Ma TVA" sub={`Opérations de ${MONTHS_FR[moisIdx]} ${moisYear} · versement à l'État le ${dateLimit}`}/>
 
         {/* Bloc décalage Oct → Nov */}
         <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:0,marginBottom:16,alignItems:"stretch"}}>
@@ -3740,8 +4201,8 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
 
         {/* 3 KPIs */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:20}}>
-          <KpiCard label={`TVA collectée — ${MONTHS_FR[moisIdx]}`} value={fmt(tvaCollectee)} sub="Sur ventes & autres recettes" color={C.primary}/>
-          <KpiCard label={`TVA déductible — ${MONTHS_FR[moisIdx]}`} value={fmt(tvaDeductible)} sub="Sur charges récupérables" color={C.green}/>
+          <KpiCard label={`TVA collectée · ${MONTHS_FR[moisIdx]}`} value={fmt(tvaCollectee)} sub="Sur ventes & autres recettes" color={C.primary}/>
+          <KpiCard label={`TVA déductible · ${MONTHS_FR[moisIdx]}`} value={fmt(tvaDeductible)} sub="Sur charges récupérables" color={C.green}/>
           <KpiCard label={`À verser en ${MONTHS_FR[verseMi]}`} value={fmt(Math.abs(soldeMois))} sub={`Avant le ${dateLimit}`} color={soldeMois>0?C.red:C.green}/>
         </div>
         <Card>
@@ -3790,7 +4251,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
           </div>
         </Card>
         <Card style={{marginTop:16}}>
-          <SectionHead title="Historique TVA — 12 mois" sub="Collectée vs déductible vs solde"/>
+          <SectionHead title="Historique TVA · 12 mois" sub="Collectée vs déductible vs solde"/>
           <div style={{padding:"14px 20px 12px"}}>
             <div style={{display:"flex",gap:16,marginBottom:10,fontSize:11,color:C.textMid}}>
               <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:10,height:10,borderRadius:2,background:C.primary,display:"inline-block"}}></span>Collectée</span>
@@ -3799,7 +4260,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
             </div>
             <BarChart2
               data={tva12hist.map(m=>({l:m.l,v1:m.coll,v2:m.ded,active:m.actif}))}
-              c1={C.primary} c2={C.green} h={100}
+              c1={C.primary} c2={C.green} h={100} W={1080}
               label1="TVA collectée" label2="TVA déductible" labelUnit=" €"
             />
             <div style={{marginTop:12,display:"flex",justifyContent:"space-between",fontSize:11,color:C.textMid}}>
@@ -3875,7 +4336,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
       const retard60 = rows.filter(r=>parseInt(r.jours_retard||0)>60);
       if (retard60.length>0) anomalies.push({
         niveau:"rouge", titre:"Factures > 60 jours de retard",
-        detail:`${retard60.length} facture${retard60.length>1?"s":""} totalisant ${fmt(retard60.reduce((s,r)=>s+parseFloat(r.montant_ttc||0),0))} — risque d'impaye eleve.`,
+        detail:`${retard60.length} facture${retard60.length>1?"s":""} totalisant ${fmt(retard60.reduce((s,r)=>s+parseFloat(r.montant_ttc||0),0))} · risque d'impaye eleve.`,
         action:isCreances?"Envoyez une mise en demeure et envisagez un contentieux.":"Contactez votre fournisseur pour negocier un echeancier.",
       });
       // Même entité concentre > 40% du total
@@ -3886,7 +4347,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
       },{});
       Object.entries(byTiers).forEach(([tiers,montant])=>{
         if(totalTTC>0&&montant/totalTTC>0.4) anomalies.push({
-          niveau:"orange", titre:`Concentration excessive — ${tiers}`,
+          niveau:"orange", titre:`Concentration excessive · ${tiers}`,
           detail:`${tiers} represente ${Math.round(montant/totalTTC*100)}% de vos ${isCreances?"creances":"dettes"} (${fmt(montant)}). Dependance trop elevee.`,
           action:isCreances?"Diversifiez votre portefeuille clients pour reduire le risque.":"Diversifiez vos fournisseurs pour reduire la dependance.",
         });
@@ -3912,7 +4373,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
       <div style={{padding:24}} className="fade-up">
         <PageHeader
           title={isCreances?"Mes creances clients":"Mes dettes fournisseurs"}
-          sub={isCreances?"Factures emises non encore encaissees — balance agee clients":"Factures recues non encore payees — balance agee fournisseurs"}
+          sub={isCreances?"Factures emises non encore encaissees · balance agee clients":"Factures recues non encore payees · balance agee fournisseurs"}
         />
 
         {/* Contexte et bonne pratique */}
@@ -3923,8 +4384,8 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
             </div>
             <div style={{fontSize:12,color:C.textMid,lineHeight:1.7}}>
               {isCreances
-                ?`Ces donnees proviennent de votre export comptable (compte 411 — Clients). Votre conseiller ${client.advisorLabel||"NVM Finance"} les importe directement depuis votre logiciel de compta (Sage, EBP, Cegid, QuickBooks...) pour garantir leur fiabilite.`
-                :`Ces donnees proviennent de votre export comptable (compte 401 — Fournisseurs). Votre conseiller ${client.advisorLabel||"NVM Finance"} les importe directement depuis votre logiciel de compta (Sage, EBP, Cegid, QuickBooks...) pour garantir leur fiabilite.`
+                ?`Ces donnees proviennent de votre export comptable (compte 411 · Clients). Votre conseiller ${client.advisorLabel||"NVM Finance"} les importe directement depuis votre logiciel de compta (Sage, EBP, Cegid, QuickBooks...) pour garantir leur fiabilite.`
+                :`Ces donnees proviennent de votre export comptable (compte 401 · Fournisseurs). Votre conseiller ${client.advisorLabel||"NVM Finance"} les importe directement depuis votre logiciel de compta (Sage, EBP, Cegid, QuickBooks...) pour garantir leur fiabilite.`
               }
             </div>
           </div>
@@ -3950,11 +4411,11 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
               <KpiCard label="Total HT" value={fmt(totalHT)} color={C.textMid}/>
             </div>
 
-            {/* ANOMALIES — section dédiée */}
+            {/* ANOMALIES · section dédiée */}
             {anomalies.length>0&&(
               <Card>
                 <div style={{padding:"12px 18px",borderBottom:`1px solid ${C.borderLight}`,background:C.redBg}}>
-                  <div style={{fontSize:13,fontWeight:900,color:C.red}}>Analyse d'anomalies — {anomalies.length} point{anomalies.length>1?"s":""} a verifier</div>
+                  <div style={{fontSize:13,fontWeight:900,color:C.red}}>Analyse d'anomalies · {anomalies.length} point{anomalies.length>1?"s":""} a verifier</div>
                   <div style={{fontSize:11,color:C.textMid,marginTop:2}}>Verifiez ces elements avec votre comptable et vos justificatifs</div>
                 </div>
                 <div style={{padding:0}}>
@@ -3986,7 +4447,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
             <Card>
               <SectionHead
                 title={isCreances?"Balance agee clients":"Balance agee fournisseurs"}
-                sub="Trie par retard decroissant — rouge = en retard de paiement"
+                sub="Trie par retard decroissant · rouge = en retard de paiement"
               />
               <div style={{overflowX:"auto"}}>
                 <table style={{width:"100%",borderCollapse:"collapse"}}>
@@ -4083,7 +4544,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
                       <div key={i}>
                         <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}}>
                           <span style={{fontWeight:700,color:C.text}}>{tiers}</span>
-                          <span style={{fontWeight:800,color:couleur}}>{fmt(montant)} · {p}%{p>40?" — concentration elevee":""}</span>
+                          <span style={{fontWeight:800,color:couleur}}>{fmt(montant)} · {p}%{p>40?" · concentration elevee":""}</span>
                         </div>
                         <div style={{height:8,borderRadius:4,background:C.borderLight}}>
                           <div style={{height:"100%",width:`${p}%`,background:couleur,borderRadius:4}}/>
@@ -4153,7 +4614,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
     const availMois = getAvailableMonths(client);
 
     // Périodes sélectionnées
-    // periodeA/B déclarés en haut de ClientSpace — initialisation ici si vide
+    // periodeA/B déclarés en haut de ClientSpace · initialisation ici si vide
     if (!periodeA && availMois.length>0) setPeriodeA(availMois[availMois.length-1]);
     if (!periodeB && availMois.length>1) setPeriodeB(availMois[availMois.length-2]);
 
@@ -4212,7 +4673,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
         {/* Header */}
         <div style={{marginBottom:20}}>
           <div style={{fontSize:18,fontWeight:900,color:C.text,marginBottom:6}}>Comparaison de périodes</div>
-          <div style={{fontSize:13,color:C.textMid}}>Comparez deux mois côte à côte — uniquement les mois avec des données importées sont disponibles.</div>
+          <div style={{fontSize:13,color:C.textMid}}>Comparez deux mois côte à côte · uniquement les mois avec des données importées sont disponibles.</div>
         </div>
 
         {/* Sélecteurs */}
@@ -4250,7 +4711,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
           </div>
           {periodeA===periodeB&&periodeA&&(
             <div style={{padding:"8px 20px",background:"#fffbeb",borderTop:`1px solid ${C.border}`,fontSize:12,color:C.orange,fontWeight:700}}>
-              Les deux périodes sont identiques — sélectionnez deux mois différents pour comparer.
+              Les deux périodes sont identiques · sélectionnez deux mois différents pour comparer.
             </div>
           )}
         </Card>
@@ -4294,7 +4755,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
 
             {/* Tableau comparatif détaillé */}
             <Card style={{marginBottom:16}}>
-              <SectionHead title="Comparaison détaillée — Compte de résultat" sub={`${labelA} vs ${labelB}`}/>
+              <SectionHead title="Comparaison détaillée · Compte de résultat" sub={`${labelA} vs ${labelB}`}/>
               <div style={{overflowX:"auto"}}>
                 <table style={{width:"100%",borderCollapse:"collapse"}}>
                   <thead>
@@ -4341,7 +4802,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
             {/* Ventes côte à côte si dispo */}
             {(ventesA.length>0||ventesB.length>0)&&(
               <Card style={{marginBottom:16}}>
-                <SectionHead title="Ventes produits — comparaison" sub={`${labelA} vs ${labelB} — produit par produit`}/>
+                <SectionHead title="Ventes produits · comparaison" sub={`${labelA} vs ${labelB} · produit par produit`}/>
                 <div style={{overflowX:"auto"}}>
                   <table style={{width:"100%",borderCollapse:"collapse"}}>
                     <thead>
@@ -4388,7 +4849,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
             {/* Salaires côte à côte si dispo */}
             {(salairesA.length>0||salairesB.length>0)&&(
               <Card style={{marginBottom:16}}>
-                <SectionHead title="Masse salariale — comparaison" sub={`${labelA} vs ${labelB}`}/>
+                <SectionHead title="Masse salariale · comparaison" sub={`${labelA} vs ${labelB}`}/>
                 <div style={{overflowX:"auto"}}>
                   <table style={{width:"100%",borderCollapse:"collapse"}}>
                     <thead>
@@ -4433,7 +4894,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
             {/* Charges côte à côte */}
             {(chargesA.length>0||chargesB.length>0)&&(
               <Card>
-                <SectionHead title="Charges — comparaison" sub={`${labelA} vs ${labelB}`}/>
+                <SectionHead title="Charges · comparaison" sub={`${labelA} vs ${labelB}`}/>
                 <div style={{overflowX:"auto"}}>
                   <table style={{width:"100%",borderCollapse:"collapse"}}>
                     <thead>
@@ -4496,15 +4957,11 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
 
   // ── PRÉVISIONNEL HYBRIDE ──────────────────────────────
   if (view === "previsionnel") {
-    const N  = CUR_Y;     // 2026 — année en cours
-    const N1 = N-1;       // 2025 — base historique principale
-    const N2 = N-2;       // 2024
-    const N3 = N-3;       // 2023
-    const NF = N+1;       // 2027 — année future complète à projeter
+    const N  = CUR_Y;     // 2026 · année en cours
+    const N1 = N-1;       // 2025 · base historique principale
+    const NF = N+1;       // 2027 · année future complète à projeter
 
-    // moisPrev peut maintenant couvrir mai 2026 → déc 2027
-    // On encode : 0-11 = mois de N (jan→déc 2026), 12-23 = mois de NF (jan→déc 2027)
-    // moisPrev est un index global 0-23
+    // moisPrev peut couvrir mai 2026 → déc 2027 : 0-11 = mois de N, 12-23 = mois de NF
     const moisGlobal = moisPrev; // 0-23
     const moisAnnee  = moisGlobal < 12 ? N : NF;   // 2026 ou 2027
     const moisLocal  = moisGlobal % 12;             // 0-11
@@ -4523,216 +4980,30 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
     const getAdjM = (id) => adjM[id] !== undefined ? parseFloat(adjM[id]) : 0;
     const hasAdjM = (id) => adjM[id] !== undefined && parseFloat(adjM[id]) !== 0;
 
-    // ── Lecture imports réels uniquement (pas de fallback kpis)
-    // getI(yr, mi, field) : lit les données importées pour l'année yr, mois mi
-    const getI = (yr, mi, field) => {
-      const key=`${yr}-${String(mi+1).padStart(2,"0")}`;
-      const rv=(type)=>(client.imports||[]).filter(i=>i.type===type&&i.mois===key).flatMap(i=>i.rows);
-      const vR=rv("ventes_produits"), cR=rv("charges"), sR=rv("salaires");
-      const getRaw = () => {
-        if(field==="ca")   return vR.reduce((s,r)=>s+parseFloat(r.ca_ht||0),0);
-        if(field==="marge")return vR.reduce((s,r)=>s+parseFloat(r.marge_ht||0),0);
-        if(field==="chF")  return cR.filter(r=>r.type==="fixe").reduce((s,r)=>s+parseFloat(r.montant_ht||0),0);
-        if(field==="chV")  return cR.filter(r=>r.type==="variable").reduce((s,r)=>s+parseFloat(r.montant_ht||0),0);
-        if(field==="chA")  return cR.filter(r=>!r.type||r.type==="autre").reduce((s,r)=>s+parseFloat(r.montant_ht||0),0);
-        if(field==="sal")  return sR.reduce((s,r)=>s+parseFloat(r.salaire_brut||0)+parseFloat(r.cotisations_patronales||0),0);
-        return 0;
-      };
-      const raw = getRaw();
-      // Si pas de données réelles pour l année N demandée → estimer depuis N1 + tendance réelle
-      if(raw===0 && yr===N) {
-        const k_N1 = getI(N1, mi, field);
-        if(k_N1===0) return 0;
-        const moisReels = Array.from({length:CUR_M+1},(_,m2)=>{
-          const r=getI(N,m2,field), p=getI(N1,m2,field);
-          return p>0?r/p:null;
-        }).filter(v=>v!==null&&v>0);
-        const tendance = moisReels.length>0
-          ? moisReels.reduce((s,v)=>s+v,0)/moisReels.length
-          : 1.1;
-        return Math.round(k_N1 * tendance);
-      }
-      return raw;
-    };
+    // ── Calcul (extrait dans src/lib/previsionnel.ts · fonctions nommées, typées, testables,
+    // et non-récursives : c'est ce qui a corrigé le "Maximum call stack size exceeded" précédent)
+    const mf = calcMonthForecast(client, moisGlobal, N, CUR_M, adj);
+    const af = calcAnnualForecast(client, moisGlobal, N, CUR_M, adj);
+    const {
+      v3ca,v2ca,v1ca, v3mg,v2mg,v1mg, v3chF,v2chF,v1chF, v3chV,v2chV,v1chV, v3chA,v2chA,v1chA, v3sal,v2sal,v1sal,
+      v1ch,v2ch,v3ch, v1ebe,v2ebe,v3ebe, v1rbrt,v2rbrt,v3rbrt, v1is,v1res,v2res,v3res,
+      base1,base2,base3, txCA, tauxMgFinal, ratioChVFinal,
+      projCA, projMg, projChF, projChV, projChA, projCh, projSal, projAm, projRemb, projEbe, projRbrt, projIS, projResult,
+      isN1Tot, acompteMens, isTaux, treso, paymentDelays, fluxProj, fluxV1,
+    } = mf;
+    const { annCA_proj, annRes_proj, seuilMois, seuilAnnee, caScenario, resultScenario } = af;
+    const isD = client.is||{taux:isTaux,totalPrecedent:0};
+
     const hasI=(yr,mi)=>(client.imports||[]).some(i=>i.mois===`${yr}-${String(mi+1).padStart(2,"0")}`&&["ventes_produits","charges","salaires"].includes(i.type));
     // Pour 2027 : un mois est dispo seulement si le mois correspondant de 2026 est importé
     const hasI27=(mi)=>hasI(N,mi); // 2027 basé sur réel 2026
 
-    // ── Taux de croissance
-    const tx=(a,b)=>(a>0&&b>0)?Math.round(((b-a)/a*100)*10)/10:null;
-    // Taux de projection : tendance historique + ajustement mensuel
-    const txProj=(v3,v2,v1,id)=>{
-      const t1=tx(v2,v1), t2=tx(v3,v2);
-      const base = t1!==null&&t2!==null ? Math.round((t2/3+t1*2/3)*10)/10 : (t1??t2??0);
-      return hasAdjM(id) ? base+getAdjM(id) : base;
-    };
-
-
-
-    // ── Historique par mois — base selon l'année affichée
-    // 2026 : base N1(2025) / N2(2024) / N3(2023)
-    // 2027 : base N(2026 réel) / N1(2025) / N2(2024)
-    const base1 = moisAnnee===N ? N1 : N;   // année de référence principale
-    const base2 = moisAnnee===N ? N2 : N1;  // année précédente
-    const base3 = moisAnnee===N ? N3 : N2;  // il y a 2 ans
-
-    const v3ca=getI(base3,mi,"ca"),  v2ca=getI(base2,mi,"ca"),  v1ca=getI(base1,mi,"ca");
-    const v3mg=getI(base3,mi,"marge"),v2mg=getI(base2,mi,"marge"),v1mg=getI(base1,mi,"marge");
-    const v3chF=getI(base3,mi,"chF"),v2chF=getI(base2,mi,"chF"),v1chF=getI(base1,mi,"chF");
-    const v3chV=getI(base3,mi,"chV"),v2chV=getI(base2,mi,"chV"),v1chV=getI(base1,mi,"chV");
-    const v3chA=getI(base3,mi,"chA"),v2chA=getI(base2,mi,"chA"),v1chA=getI(base1,mi,"chA");
-    const v3sal=getI(base3,mi,"sal"),v2sal=getI(base2,mi,"sal"),v1sal=getI(base1,mi,"sal");
-    const v1ch=v1chF+v1chV+v1chA, v2ch=v2chF+v2chV+v2chA, v3ch=v3chF+v3chV+v3chA;
-
-    // ── Ratios annuels N1 (plus robuste que mensuel)
-    // Ratios annuels — base selon l'année projetée
-    const rBase1 = moisAnnee===N ? N1 : N;   // base principale pour ratios
-    const rBase2 = moisAnnee===N ? N2 : N1;
-    const annSum=(field)=>Array.from({length:12},(_,m2)=>getI(rBase1,m2,field)).reduce((s,v)=>s+v,0);
-    const ann2Sum=(field)=>Array.from({length:12},(_,m2)=>getI(rBase2,m2,field)).reduce((s,v)=>s+v,0);
-    const annCA1=annSum("ca"), annCA2=ann2Sum("ca");
-    // Taux de marge annuel N1 (base principale)
-    const tauxMargeN1 = annCA1>0 ? Math.round(annSum("marge")/annCA1*1000)/10 : 60;
-    const tauxMargeN2 = annCA2>0 ? Math.round(ann2Sum("marge")/annCA2*1000)/10 : tauxMargeN1;
-    // Ratio chV/CA annuel N1
-    const ratioChVN1 = annCA1>0 ? Math.round(annSum("chV")/annCA1*1000)/10 : 0;
-    const ratioChVN2 = annCA2>0 ? Math.round(ann2Sum("chV")/annCA2*1000)/10 : ratioChVN1;
-
-    // ── Valeurs ajustées (avec éventuel +/- du dirigeant)
-    const txCA   = txProj(v3ca,v2ca,v1ca,"ca");
-    // Taux de marge : moyenne pondérée N1/N2 + ajustement éventuel
-    const tauxMgBase = annCA2>0 ? Math.round((tauxMargeN2/3+tauxMargeN1*2/3)*10)/10 : tauxMargeN1;
-    const tauxMgFinal = getAdjM("taux_marge")!==0 ? tauxMgBase+getAdjM("taux_marge") : tauxMgBase;
-    // Ratio chV : idem
-    const ratioChVBase = annCA2>0 ? Math.round((ratioChVN2/3+ratioChVN1*2/3)*10)/10 : ratioChVN1;
-    const ratioChVFinal = getAdjM("ratio_chv")!==0 ? ratioChVBase+getAdjM("ratio_chv") : ratioChVBase;
-    // Charges fixes : taux croissance + ajustement
-    const txChF = txProj(v3chF,v2chF,v1chF,"chF");
-    // Autres charges : taux croissance + ajustement
-    const txChA = txProj(v3chA,v2chA,v1chA,"chA");
-    // Salaires : taux croissance + ajustement
-    const txSal = txProj(v3sal,v2sal,v1sal,"sal");
-
-    // ── Projections
-    const projCA  = v1ca>0  ? Math.round(v1ca*(1+txCA/100))   : 0;
-    // Marge : taux du mois N1 si dispo, sinon taux annuel
-    const tauxMgMois = v1ca>0 ? v1mg/v1ca*100 : tauxMgFinal;
-    const tauxMgEff  = hasAdjM("taux_marge") ? tauxMgMois+getAdjM("taux_marge") : tauxMgMois;
-    const projMg  = projCA>0? Math.round(projCA*tauxMgEff/100) : 0;  // CA prévu × taux marge mois
-    const projChF = v1chF>0 ? Math.round(v1chF*(1+txChF/100)) : 0;
-    // Charges variables : ratio du mois N1 si dispo (plus précis), sinon ratio annuel
-    // Si projCA augmente → projChV augmente proportionnellement (c'est la dépendance au CA)
-    const ratioChVMois = v1ca>0 ? v1chV/v1ca*100 : ratioChVFinal;
-    const ratioChVEff  = hasAdjM("ratio_chv") ? ratioChVMois+getAdjM("ratio_chv") : ratioChVMois;
-    const projChV = projCA>0? Math.round(projCA*ratioChVEff/100): 0;  // CA prévu × ratio mois
-    const projChA = v1chA>0 ? Math.round(v1chA*(1+txChA/100)) : 0;
-    const projCh  = projChF+projChV+projChA;
-    const projSal = v1sal>0 ? Math.round(v1sal*(1+txSal/100)) : 0;
-
-    // ── Calculés depuis contrats (pas d'ajustement)
-    const projAm = (client.investissements||[]).reduce((s,inv)=>{
-      const debut=inv.dateMEP?new Date(inv.dateMEP):new Date(N1,0,1);
-      const mDebut=debut.getFullYear()*12+debut.getMonth();
-      const mActuel=moisAnnee*12+moisLocal;
-      if(mActuel<mDebut||mActuel>=mDebut+(inv.duree||36)) return s;
-      return s+Math.round(inv.montantHT/(inv.duree||36));
-    },0);
-    const projRemb=(client.emprunts||[]).reduce((s,e)=>{
-      const debut=e.dateDebut?new Date(e.dateDebut):new Date(N1,0,1);
-      const mDebut=debut.getFullYear()*12+debut.getMonth();
-      const mActuel=moisAnnee*12+moisLocal;
-      if(mActuel<mDebut||mActuel>=mDebut+e.duree) return s;
-      return s+Math.round(e.capital*(e.taux/100)/(1-Math.pow(1+e.taux/100,-e.duree))+e.assurance);
-    },0);
-    const isD=client.is||{taux:15,totalPrecedent:0};
-    const projEbe=projMg-projCh-projSal;
-    const projRbrt=projEbe-projAm;
-    const projIS=Math.max(0,Math.round(projRbrt*isD.taux/100));
-    const projResult=projRbrt-projIS;
-    // IS acomptes : base N-1
-    const isN1Tot=isD.totalPrecedent||Array.from({length:12},(_,m2)=>{
-      const mg=getI(N1,m2,"marge"),chF=getI(N1,m2,"chF"),chV=getI(N1,m2,"chV"),chA=getI(N1,m2,"chA"),sal=getI(N1,m2,"sal");
-      const r=mg-chF-chV-chA-sal-projAm; return Math.max(0,Math.round(r*isD.taux/100));
-    }).reduce((s,v)=>s+v,0);
-    const acompteMens=Math.round(isN1Tot/12);
-    const treso=client.tresorerie?.soldeInitial||client.kpis?.tresorerie||0;
-    const fluxProj=Math.round(projCA*0.95-(projCh+projSal)*0.95-projRemb-acompteMens);
-
-    // ── Historiques résultats
-    const v1ebe=v1mg-v1ch-v1sal, v1rbrt=v1ebe-projAm, v1is=Math.max(0,Math.round(v1rbrt*isD.taux/100)), v1res=v1rbrt-v1is;
-    const v2ebe=v2mg-v2ch-v2sal, v2rbrt=v2ebe-projAm;
-    const v3ebe=v3mg-v3ch-v3sal, v3rbrt=v3ebe-projAm;
-    const calcNet=(mg,ch,sal)=>{const r=mg-ch-sal-projAm;return r-Math.max(0,Math.round(r*isD.taux/100));};
-
-    // ── KPIs annuels
-    // ── KPIs annuels — couvre les mois restants de N + toute l'année NF (N+1)
-    // Mois à projeter : de CUR_M (avril=3) à novembre de NF → index 0-23
-    // Taux global annuel N2→N1 (sur tous les mois ayant des données)
-    const txGlobal = (field) => {
-      let tot1=0, tot2=0;
-      for(let m2=0;m2<12;m2++){ tot1+=getI(rBase1,m2,field); tot2+=getI(rBase2,m2,field); }
-      return (tot1>0&&tot2>0) ? Math.round(((tot1-tot2)/tot2*100)*10)/10 : 0;
-    };
-    const txCA_ann  = txGlobal("ca");
-    const txChF_ann = txGlobal("chF");
-    const txChA_ann = txGlobal("chA");
-    const txSal_ann = txGlobal("sal");
-
-    // Mois à projeter : de CUR_M (mois courant) jusqu'à déc NF (index 0-23)
-    const moisDebut = CUR_M; // on part du mois courant
-    const allMoisProj = Array.from({length:24-moisDebut},(_,i)=>moisDebut+i); // ex: [3,4,...,23]
-
-    const annCA_proj = allMoisProj.reduce((s,g)=>{
-      const mL=g%12, mA=g<12?N:NF;
-      const baseAnn=g<12?N1:N;  // 2026 basé N1, 2027 basé N réel
-      const b=getI(baseAnn,mL,"ca");
-      const adjM2=adj[g]||{}, aM2=(id)=>adjM2[id]!==undefined?parseFloat(adjM2[id]):0;
-      const txAdj = aM2("ca")!==0 ? txCA_ann+aM2("ca") : txCA_ann;
-      return s+(b>0?Math.round(b*(1+txAdj/100)):0);
-    },0);
-
-    const annRes_proj = allMoisProj.reduce((s,g)=>{
-      const mL=g%12, baseAnnR=g<12?N1:N;
-      const ca=getI(baseAnnR,mL,"ca"); if(ca===0) return s;
-      const adjM2=adj[g]||{}, aM2=(id)=>adjM2[id]!==undefined?parseFloat(adjM2[id]):0;
-      const txCaAdj = aM2("ca")!==0 ? txCA_ann+aM2("ca") : txCA_ann;
-      const pCa=Math.round(ca*(1+txCaAdj/100));
-      const mg1=getI(baseAnnR,mL,"marge"), ca1=getI(baseAnnR,mL,"ca");
-      const txMgM = ca1>0 ? mg1/ca1*100 : tauxMgBase;
-      const txMgM2 = aM2("taux_marge")!==0 ? txMgM+aM2("taux_marge") : txMgM;
-      const pMg=Math.round(pCa*txMgM2/100);
-      const pChF=Math.round(getI(baseAnnR,mL,"chF")*(1+(aM2("chF")!==0?txChF_ann+aM2("chF"):txChF_ann)/100));
-      const chV1=getI(baseAnnR,mL,"chV");
-      const rChVM = ca1>0 ? chV1/ca1*100 : ratioChVBase;
-      const rChVM2 = aM2("ratio_chv")!==0 ? rChVM+aM2("ratio_chv") : rChVM;
-      const pChV=Math.round(pCa*rChVM2/100);
-      const pChA=Math.round(getI(baseAnnR,mL,"chA")*(1+(aM2("chA")!==0?txChA_ann+aM2("chA"):txChA_ann)/100));
-      const pSal=Math.round(getI(baseAnnR,mL,"sal")*(1+(aM2("sal")!==0?txSal_ann+aM2("sal"):txSal_ann)/100));
-      const r=pMg-pChF-pChV-pChA-pSal-projAm;
-      return s+(r-Math.max(0,Math.round(r*isD.taux/100)));
-    },0);
-
-    let seuilMois=null, seuilAnnee=null, cumR=0;
-    for(const g of allMoisProj){
-      const mL=g%12, mA=g<12?N:NF;
-      const baseS=g<12?N1:N;  // 2026 basé sur N1(2025), 2027 basé sur N(2026 réel)
-      const ca=getI(baseS,mL,"ca"); if(ca===0) continue;
-      const adjM2=adj[g]||{}, aM2=(id)=>adjM2[id]!==undefined?parseFloat(adjM2[id]):0;
-      const pCa=Math.round(ca*(1+(aM2("ca")!==0?txCA_ann+aM2("ca"):txCA_ann)/100));
-      const _ca1=ca,_mg1=getI(baseS,mL,"marge"),_chV1=getI(baseS,mL,"chV");
-      const _txMg=_ca1>0?_mg1/_ca1*100:tauxMgBase, _txMgF=aM2("taux_marge")!==0?_txMg+aM2("taux_marge"):_txMg;
-      const _rChV=_ca1>0?_chV1/_ca1*100:ratioChVBase, _rChVF=aM2("ratio_chv")!==0?_rChV+aM2("ratio_chv"):_rChV;
-      const r=Math.round(pCa*_txMgF/100)-Math.round(getI(baseS,mL,"chF")*(1+(aM2("chF")!==0?txChF_ann+aM2("chF"):txChF_ann)/100))-Math.round(pCa*_rChVF/100)-Math.round(getI(baseS,mL,"chA")*(1+(aM2("chA")!==0?txChA_ann+aM2("chA"):txChA_ann)/100))-Math.round(getI(baseS,mL,"sal")*(1+(aM2("sal")!==0?txSal_ann+aM2("sal"):txSal_ann)/100))-projAm;
-      cumR+=r-Math.max(0,Math.round(r*isD.taux/100));
-      if(cumR>0&&seuilMois===null){seuilMois=mL; seuilAnnee=mA;}
-    }
-
-    // ── Données réelles pour le mois affiché (N ou NF selon moisAnnee)
+    // ── Données réelles pour le mois affiché (N ou NF selon moisAnnee) · pour l'affichage uniquement
     const keyAff=`${moisAnnee}-${String(mi+1).padStart(2,"0")}`;
     const hasRN=(client.imports||[]).some(i=>i.mois===keyAff&&["ventes_produits","charges","salaires"].includes(i.type));
-    const rNca=hasRN?getI(moisAnnee,mi,"ca"):null, rNmg=hasRN?getI(moisAnnee,mi,"marge"):null;
-    const rNchF=hasRN?getI(moisAnnee,mi,"chF"):null, rNchV=hasRN?getI(moisAnnee,mi,"chV"):null;
-    const rNchA=hasRN?getI(moisAnnee,mi,"chA"):null, rNsal=hasRN?getI(moisAnnee,mi,"sal"):null;
+
+    // ── Taux de croissance affiché sur les colonnes historiques (comparaison brute, pas de projection)
+    const tx=(a,b)=>(a>0&&b>0)?Math.round(((b-a)/a*100)*10)/10:null;
 
     // ── Helpers render
     const fTx=tx=>tx===null?<span style={{fontSize:10,color:C.textLight}}>—</span>:<span style={{fontSize:11,fontWeight:700,color:tx>0?C.green:tx<0?C.red:C.textLight}}>{tx>0?"+":""}{tx.toFixed(1)}%</span>;
@@ -4746,8 +5017,8 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
         <div style={{display:"flex",alignItems:"center",gap:3}}>
           <input type="number" step="0.1" value={val===0?"":val}
             onChange={e=>{const p=parseFloat(e.target.value)||0; setAdjM(id,p);}}
-            placeholder="0" title={`${title||"Ajustement"} — spécifique au mois ${MONTHS[mi]}`}
-            style={{width:46,fontSize:11,padding:"2px 4px",textAlign:"right",fontFamily:"'Nunito',sans-serif",fontWeight:isSet?700:400,
+            placeholder="0" title={`${title||"Ajustement"} · spécifique au mois ${MONTHS[mi]}`}
+            style={{width:46,fontSize:11,padding:"2px 4px",textAlign:"right",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif",fontWeight:isSet?700:400,
               border:`1px solid ${isSet?"#1D9E75":C.border}`,borderRadius:4,
               background:isSet?"#E1F5EE":"white",color:isSet?"#085041":C.text}}/>
           <span style={{fontSize:10,color:C.textLight}}>{unit}</span>
@@ -4809,8 +5080,8 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
 
         {/* KPIs */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:16}}>
-          <KpiCard label={`CA prévu ${N} (annuel)`} value={fmt(annCA_proj)} sub={`${txCA>0?"+":""}${txCA.toFixed(1)}% vs ${N1}`} color={C.primary}/>
-          <KpiCard label={`Résultat net prévu ${N}`} value={fmt(annRes_proj)} sub="12 mois cumulés" color={annRes_proj>=0?C.green:C.red}/>
+          <KpiCard label={`CA prévu ${N} (annuel)`} value={fmt(annCA_proj)} sub={<>{txCA>0?"+":""}{txCA.toFixed(1)}% vs {N1}<div style={{marginTop:2,fontWeight:400,fontSize:10,opacity:0.85}}>{fmt(caScenario.low)} – {fmt(caScenario.high)}</div></>} color={C.primary}/>
+          <KpiCard label={`Résultat net prévu ${N}`} value={fmt(annRes_proj)} sub={<>12 mois cumulés<div style={{marginTop:2,fontWeight:400,fontSize:10,opacity:0.85}}>{fmt(resultScenario.low)} – {fmt(resultScenario.high)}</div></>} color={annRes_proj>=0?C.green:C.red}/>
           <KpiCard label="Seuil de rentabilité" value={seuilMois!==null?`Mois ${seuilMois+1}`:"Non atteint"} sub={seuilMois!==null?MONTHS[seuilMois]+" "+seuilAnnee:""} color={seuilMois!==null?C.green:C.red}/>
           <KpiCard label="IS acompte mensuel" value={fmt(acompteMens)} sub={`Base IS ${N1} · taux ${isD.taux}%`} color={C.orange}/>
         </div>
@@ -4821,17 +5092,18 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
             <strong style={{color:C.primary}}>Logique automatique :</strong><br/>
             Marge brute = CA prévu × <strong>{tauxMgFinal.toFixed(1)}%</strong> (taux historique {base1})<br/>
             Charges variables = CA prévu × <strong>{ratioChVFinal.toFixed(1)}%</strong> (ratio historique {base1})<br/>
-            Emprunts, amortissements, IS → calculés depuis les contrats
+            Emprunts, amortissements, IS → calculés depuis les contrats<br/>
+            Trésorerie → délais de paiement réels : <strong>{paymentDelays.clientsDays}j clients / {paymentDelays.fournisseursDays}j fournisseurs</strong>{paymentDelays.isEstimated?" (estimé, aucun import créances/dettes ce mois)":""}
           </div>
           <div style={{padding:"10px 14px",background:"#fffbeb",border:`1px solid ${C.orange}33`,borderRadius:8,fontSize:12,color:C.textMid,lineHeight:1.7}}>
             <strong style={{color:C.orange}}>Colonne Ajust. :</strong> entrez un <strong>+/-</strong> pour les exceptions.<br/>
             Ex : taux marge +2% si négociation fournisseur prévue<br/>
             Ex : salaires +15% si recrutement planifié
-            {hasRN&&<><br/><span style={{color:C.green,fontWeight:700}}>Données réelles {N} détectées — écarts actifs</span></>}
+            {hasRN&&<><br/><span style={{color:C.green,fontWeight:700}}>Données réelles {N} détectées · écarts actifs</span></>}
           </div>
         </div>
 
-        {/* Onglets mois — N puis NF */}
+        {/* Onglets mois · N puis NF */}
         {[{yr:N,label:`${N}`,offset:0},{yr:NF,label:`${NF}`,offset:12}].map(({yr,label,offset})=>(
           <div key={yr}>
             <div style={{fontSize:10,fontWeight:800,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.08em",margin:"10px 0 6px",paddingLeft:2}}>{label}</div>
@@ -4847,10 +5119,10 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
                 return (
                   <button key={g}
                     onClick={()=>{ if(!isDisabled) setMoisPrev(g); }}
-                    title={isLocked?`Données ${N} non importées pour ${m} — importez d'abord le réel ${N}`:""}
+                    title={isLocked?`Données ${N} non importées pour ${m} · importez d'abord le réel ${N}`:""}
                     style={{
                       padding:"4px 10px",fontSize:11,cursor:isDisabled?"not-allowed":"pointer",
-                      fontFamily:"'Nunito',sans-serif",fontWeight:isActive?800:400,borderRadius:20,
+                      fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif",fontWeight:isActive?800:400,borderRadius:20,
                       opacity:isDisabled?0.3:1,
                       border:`1px solid ${isActive?C.primary:isLocked?"#ccc":h?C.green+"55":C.border}`,
                       background:isActive?C.primary:"white",
@@ -4864,7 +5136,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
         ))}
 
         <Card>
-          <SectionHead title={`${MONTHS[moisLocal]} ${moisAnnee} — Prévisionnel détaillé`}
+          <SectionHead title={`${MONTHS[moisLocal]} ${moisAnnee} · Prévisionnel détaillé`}
             sub="Ajust. = correction exceptionnelle en +/- (ex: +2% taux marge, +15% salaires) · Écarts = prévu N vs réel N-1"/>
           <div style={{overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
@@ -4890,7 +5162,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
                   <td style={cM}>{v2ca>0?fmt(v2ca):"—"}</td>
                   <td style={cR}>{v1ca>0?fmt(v1ca):"—"}</td>
                   <td style={cT}>{fTx(tx(v2ca,v1ca))}</td>
-                  <td style={cAdj}><AdjBtn id="ca" title={`Ajustement du taux de croissance CA (défaut: ${txCA>0?"+":""}${txCA.toFixed(1)}%) — entrez l'écart en +/-`}/></td>
+                  <td style={cAdj}><AdjBtn id="ca" title={`Ajustement du taux de croissance CA (défaut: ${txCA>0?"+":""}${txCA.toFixed(1)}%) · entrez l'écart en +/-`}/></td>
                   <td style={cP}>{projCA>0?fmt(projCA):"—"}</td>
                   <Ec v1={v1ca} pN={projCA}/>
                 </tr>
@@ -4910,7 +5182,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
                 <Sep t="Décaissements"/>
                 <tr>
                   <td style={cL}>Charges fixes
-                    <span style={{fontSize:9,display:"block",color:C.textLight,fontWeight:400}}>loyer, assurances, abonnements — tendance historique</span>
+                    <span style={{fontSize:9,display:"block",color:C.textLight,fontWeight:400}}>loyer, assurances, abonnements · tendance historique</span>
                   </td>
                   <td style={cM}>{v3chF>0?fmt(v3chF):"—"}</td>
                   <td style={cM}>{v2chF>0?fmt(v2chF):"—"}</td>
@@ -4934,7 +5206,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
                 </tr>
                 <tr>
                   <td style={cL}>Autres charges
-                    <span style={{fontSize:9,display:"block",color:C.textLight,fontWeight:400}}>honoraires, formations, divers — tendance historique</span>
+                    <span style={{fontSize:9,display:"block",color:C.textLight,fontWeight:400}}>honoraires, formations, divers · tendance historique</span>
                   </td>
                   <td style={cM}>{v3chA>0?fmt(v3chA):"—"}</td>
                   <td style={cM}>{v2chA>0?fmt(v2chA):"—"}</td>
@@ -5011,7 +5283,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
                   <Ec v1={v1rbrt} pN={projRbrt}/>
                 </tr>
 
-                <Sep t="Impôt sur les sociétés — calculé automatiquement"/>
+                <Sep t="Impôt sur les sociétés · calculé automatiquement"/>
                 <tr style={cBlu}>
                   <td style={{...cL,color:"#185FA5"}}>IS acomptes
                     <span style={{fontSize:9,display:"block",color:"#185FA5",fontWeight:400}}>base IS {N1} ({fmt(isN1Tot)}) ÷ 12</span>
@@ -5039,10 +5311,10 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
                 <Sep t="Résultat net"/>
                 <tr style={cTot}>
                   <td style={{...cL,fontWeight:900,fontSize:14}}>Résultat net</td>
-                  <td style={{...cM,fontWeight:800}}>{calcNet(v3mg,v3ch,v3sal)!==0?fmt(calcNet(v3mg,v3ch,v3sal)):"—"}</td>
-                  <td style={{...cM,fontWeight:800}}>{calcNet(v2mg,v2ch,v2sal)!==0?fmt(calcNet(v2mg,v2ch,v2sal)):"—"}</td>
+                  <td style={{...cM,fontWeight:800}}>{v3res!==0?fmt(v3res):"—"}</td>
+                  <td style={{...cM,fontWeight:800}}>{v2res!==0?fmt(v2res):"—"}</td>
                   <td style={{...cR,fontWeight:800}}>{v1res!==0?fmt(v1res):"—"}</td>
-                  <td style={cT}>{fTx(tx(calcNet(v2mg,v2ch,v2sal),v1res))}</td>
+                  <td style={cT}>{fTx(tx(v2res,v1res))}</td>
                   <Calc/>
                   <td style={{...cP,fontSize:15,color:projResult>=0?C.green:C.red}}>{projResult!==0?fmt(projResult):"—"}</td>
                   <Ec v1={v1res} pN={projResult}/>
@@ -5056,18 +5328,18 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
                 </tr>
                 <tr>
                   <td style={cL}>Flux mensuel net estimé
-                    <span style={{fontSize:9,display:"block",color:C.textLight,fontWeight:400}}>CA encaissé (95%) − charges (95%) − emprunts − IS acompte</span>
+                    <span style={{fontSize:9,display:"block",color:C.textLight,fontWeight:400}}>CA encaissé (délai clients {paymentDelays.clientsDays}j) − charges payées (délai fournisseurs {paymentDelays.fournisseursDays}j) − salaires − emprunts − IS acompte</span>
                   </td>
                   <td style={cM}>—</td><td style={cM}>—</td>
-                  <td style={cR}>{fmt(Math.round(v1ca*0.95-(v1ch+v1sal)*0.95-projRemb-acompteMens))}</td>
+                  <td style={cR}>{fmt(fluxV1)}</td>
                   <td style={cT}>—</td><Calc/>
                   <td style={{...cP,color:fluxProj>=0?C.green:C.red}}>{fmt(fluxProj)}</td>
-                  <Ec v1={Math.round(v1ca*0.95-(v1ch+v1sal)*0.95-projRemb-acompteMens)} pN={fluxProj}/>
+                  <Ec v1={fluxV1} pN={fluxProj}/>
                 </tr>
                 <tr style={cTot}>
                   <td style={{...cL,fontWeight:800}}>Trésorerie cumulée fin de mois</td>
                   <td style={cM}>—</td><td style={cM}>—</td>
-                  <td style={{...cR,fontWeight:800}}>{fmt(treso+Math.round(v1ca*0.95-(v1ch+v1sal)*0.95-projRemb-acompteMens))}</td>
+                  <td style={{...cR,fontWeight:800}}>{fmt(treso+fluxV1)}</td>
                   <td style={cT}>—</td><Calc/>
                   <td style={{...cP,fontSize:14,color:(treso+fluxProj)>=0?C.green:C.red}}>{fmt(treso+fluxProj)}</td>
                   <td style={cM}>—</td><td style={cM}>—</td>
@@ -5087,7 +5359,14 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
     );
   }
 
- if (view==="planning" && client.planningEnabled!==false) return <PlanningView client={client} isAdminPreview={isAdminPreview}/>;
+ // Modules MON ÉQUIPE : écriture autorisée même en aperçu admin (isAdminPreview={false} forcé),
+ // pour que l'admin puisse gérer/tester ces données directement sans compte client dédié.
+ if (view==="planning" && client.planningEnabled!==false) return <PlanningView client={client} isAdminPreview={false}/>;
+ if (view==="conges" && client.congesEnabled!==false) return <CongesView client={client} isAdminPreview={false}/>;
+ if (view==="pointage" && client.pointageEnabled!==false) return <PointageView client={client} isAdminPreview={false}/>;
+ if (view==="notesfrais" && client.notesFraisEnabled!==false) return <NotesFraisView client={client} isAdminPreview={false}/>;
+ if (view==="taches" && client.tachesEnabled!==false) return <TachesView client={client} isAdminPreview={false}/>;
+ if (view==="equipetaches" && client.equipeTachesEnabled!==false) return <EquipeTachesView client={client} isAdminPreview={false}/>;
 
  return null;
 }
@@ -5122,7 +5401,7 @@ function PlanningWeekView({ employes, planning, weekStart, TC, empKey, dStr, fmt
      </tr>
     </thead>
     <tbody>
-     {employes.length===0&&<tr><td colSpan={8} style={{padding:"60px 0",textAlign:"center",color:C.textLight,fontSize:13}}>Aucun employé — ajoutez l'équipe via la fiche employé</td></tr>}
+     {employes.length===0&&<tr><td colSpan={8} style={{padding:"60px 0",textAlign:"center",color:C.textLight,fontSize:13}}>Aucun employé · ajoutez l'équipe via la fiche employé</td></tr>}
      {employes.map(emp=>{
       const ek=empKey(emp);
       return (
@@ -5329,7 +5608,7 @@ function PlanningView({ client, isAdminPreview=false }) {
  const avatarColor=i=>AVATAR_COLORS[i%AVATAR_COLORS.length];
  const initiales=e=>((e.prenom||"").charAt(0)+(e.nom||"").charAt(0)).toUpperCase()||"?";
 
- const SI={padding:"8px 12px",borderRadius:8,border:"1.5px solid #d1d5db",fontSize:13,fontFamily:"'Nunito',sans-serif",outline:"none",background:"white",color:C.text,boxSizing:"border-box"};
+ const SI={padding:"8px 12px",borderRadius:8,border:"1.5px solid #d1d5db",fontSize:13,fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif",outline:"none",background:"white",color:C.text,boxSizing:"border-box"};
  const INP={...SI,width:"100%"};
  const LBL={fontSize:11,color:"#6b7280",fontWeight:700,display:"block",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.07em"};
 
@@ -5363,7 +5642,7 @@ function PlanningView({ client, isAdminPreview=false }) {
   })();
  },[client.id,vue,weekStart,moisNav]);
 
- // ── Save — split by month, never overwrite other months ───────
+ // ── Save · split by month, never overwrite other months ───────
  const savePlanningDB=async(newP)=>{
   const prevPlanning=planning;
   setPlanning(newP);
@@ -5446,10 +5725,17 @@ function PlanningView({ client, isAdminPreview=false }) {
   try {
    const row={prenom:ficheForm.prenom,nom:ficheForm.nom,poste:ficheForm.poste,heures_semaine:Number(ficheForm.heures_semaine)||35,dispo:ficheForm.dispo||{},conges:ficheForm.conges||[],notepref:ficheForm.notePref||""};
    const{error:updateErr}=await supabase.from("employes").update(row).eq("id",ficheForm.id);
-   if(updateErr) console.error("saveFicheEmp:",updateErr);
-   setEmployes(prev=>prev.map(e=>e.id===ficheForm.id?{...e,...row}:e));
-   closePanel();
-  } catch(err){console.error("saveFicheEmp:",err);}
+   if(updateErr){
+    console.error("saveFicheEmp:",updateErr);
+    alert("Erreur lors de la sauvegarde : "+updateErr.message);
+   } else {
+    setEmployes(prev=>prev.map(e=>e.id===ficheForm.id?{...e,...row}:e));
+    closePanel();
+   }
+  } catch(err){
+   console.error("saveFicheEmp:",err);
+   alert("Erreur lors de la sauvegarde : "+((err&&err.message)||"inconnue"));
+  }
   setFicheSaving(false);
  };
 
@@ -5537,13 +5823,13 @@ function PlanningView({ client, isAdminPreview=false }) {
  if(loading) return <div style={{display:"flex",justifyContent:"center",padding:"80px 0"}}><div style={{width:32,height:32,border:"3px solid #a7d4d0",borderTop:"3px solid #005653",borderRadius:"50%",animation:"spin 1s linear infinite"}}/></div>;
 
  return (
-  <div style={{display:"flex",flexDirection:"column",height:"100%",background:"#f8fffe",fontFamily:"'Nunito',sans-serif",minHeight:0}} className="fade-up">
+  <div style={{display:"flex",flexDirection:"column",height:"100%",background:"#f8fffe",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif",minHeight:0}} className="fade-up">
 
    {/* ── TOP BAR ── */}
    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 20px",background:"white",borderBottom:"1px solid #c8e8e5",flexShrink:0,gap:12,flexWrap:"wrap"}}>
     <div style={{display:"flex",background:"#f0faf8",borderRadius:8,border:"1px solid #c8e8e5",overflow:"hidden"}}>
      {[["semaine","Semaine"],["mois","Mois"],["liste","Liste"]].map(([id,label])=>(
-      <button key={id} onClick={()=>setVue(id)} style={{padding:"7px 18px",border:"none",cursor:"pointer",background:vue===id?"#005653":"transparent",color:vue===id?"#fff":C.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,transition:"all .15s"}}>{label}</button>
+      <button key={id} onClick={()=>setVue(id)} style={{padding:"7px 18px",border:"none",cursor:"pointer",background:vue===id?"#005653":"transparent",color:vue===id?"#fff":C.textMid,fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif",fontSize:13,fontWeight:700,transition:"all .15s"}}>{label}</button>
      ))}
     </div>
     <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -5554,11 +5840,11 @@ function PlanningView({ client, isAdminPreview=false }) {
      <button onClick={navigateNext} style={{background:"white",border:"1.5px solid #c8e8e5",borderRadius:8,width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.textMid} strokeWidth="2.5"><polyline points="9,18 15,12 9,6"/></svg>
      </button>
-     <button onClick={navigateToday} style={{background:"white",border:"1.5px solid #c8e8e5",borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:700,color:C.textMid,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>Aujourd'hui</button>
+     <button onClick={navigateToday} style={{background:"white",border:"1.5px solid #c8e8e5",borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:700,color:C.textMid,cursor:"pointer",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif"}}>Aujourd'hui</button>
     </div>
     <div style={{display:"flex",gap:8}}>
-     <button onClick={()=>openAddCreneau()} style={{padding:"8px 16px",borderRadius:8,border:"1.5px solid #005653",background:"white",color:"#005653",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>Ajouter un créneau</button>
-     <button onClick={()=>setPanelType("ia")} style={{padding:"8px 16px",borderRadius:8,border:"none",background:"#005653",color:"white",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito',sans-serif",display:"flex",alignItems:"center",gap:6}}>
+     <button onClick={()=>openAddCreneau()} style={{padding:"8px 16px",borderRadius:8,border:"1.5px solid #005653",background:"white",color:"#005653",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif"}}>Ajouter un créneau</button>
+     <button onClick={()=>setPanelType("ia")} style={{padding:"8px 16px",borderRadius:8,border:"none",background:"#005653",color:"white",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif",display:"flex",alignItems:"center",gap:6}}>
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
       Générer avec l'IA
      </button>
@@ -5574,7 +5860,7 @@ function PlanningView({ client, isAdminPreview=false }) {
      {/* Équipe */}
      <div style={{padding:"14px 12px 8px",borderBottom:"1px solid #c8e8e5"}}>
       <div style={{fontSize:10,fontWeight:800,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Équipe</div>
-      <button onClick={()=>{setAddEmpForm({prenom:"",nom:"",poste:"",heures_semaine:35});setPanelType("addEmp");}} style={{width:"100%",padding:"7px 0",borderRadius:7,border:"1.5px solid #005653",background:"transparent",color:"#005653",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito',sans-serif",marginBottom:8}}>+ Ajouter un employe</button>
+      <button onClick={()=>{setAddEmpForm({prenom:"",nom:"",poste:"",heures_semaine:35});setPanelType("addEmp");}} style={{width:"100%",padding:"7px 0",borderRadius:7,border:"1.5px solid #005653",background:"transparent",color:"#005653",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif",marginBottom:8}}>+ Ajouter un employe</button>
       {employes.length===0&&<div style={{fontSize:12,color:C.textLight,padding:"4px 0"}}>Aucun employe</div>}
       {employes.map((emp,i)=>{
        const ek=empKey(emp); const wh=getWeekHours(ek);
@@ -5673,7 +5959,7 @@ function PlanningView({ client, isAdminPreview=false }) {
          <label style={LBL}>Type de créneau</label>
          <div style={{display:"flex",gap:8,marginBottom:18,flexWrap:"wrap"}}>
           {TYPES.map(t=>(
-           <button key={t} onClick={()=>setEditForm(f=>({...f,type:t,debut:DEF_DEBUT[t]||f.debut,fin:DEF_FIN[t]||f.fin}))} style={{padding:"8px 14px",borderRadius:8,border:`2px solid ${editForm.type===t?TC[t].bg:"#e5e7eb"}`,background:editForm.type===t?TC[t].bg:"white",color:editForm.type===t?TC[t].text:C.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+           <button key={t} onClick={()=>setEditForm(f=>({...f,type:t,debut:DEF_DEBUT[t]||f.debut,fin:DEF_FIN[t]||f.fin}))} style={{padding:"8px 14px",borderRadius:8,border:`2px solid ${editForm.type===t?TC[t].bg:"#e5e7eb"}`,background:editForm.type===t?TC[t].bg:"white",color:editForm.type===t?TC[t].text:C.textMid,fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>
             {TC[t].label}
            </button>
           ))}
@@ -5698,8 +5984,8 @@ function PlanningView({ client, isAdminPreview=false }) {
           <div style={{fontSize:12,color:C.textMid,lineHeight:1.5}}>{editForm.iaRaison}</div>
          </div>}
          <div style={{display:"flex",gap:8,marginTop:8}}>
-          <button onClick={()=>saveCreneau(panelData.empKey,panelData.dateStr,editForm.type==="repos"?{type:"repos"}:{type:editForm.type,debut:editForm.debut,fin:editForm.fin,pause_debut:editForm.pause_debut,pause_fin:editForm.pause_fin,note:editForm.note,iaRaison:editForm.iaRaison})} style={{flex:1,padding:"12px 0",borderRadius:8,border:"none",background:"#005653",color:"white",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>Enregistrer</button>
-          <button onClick={()=>deleteCreneau(panelData.empKey,panelData.dateStr)} style={{padding:"12px 16px",borderRadius:8,border:"none",background:"#fee2e2",color:"#dc2626",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>Supprimer</button>
+          <button onClick={()=>saveCreneau(panelData.empKey,panelData.dateStr,editForm.type==="repos"?{type:"repos"}:{type:editForm.type,debut:editForm.debut,fin:editForm.fin,pause_debut:editForm.pause_debut,pause_fin:editForm.pause_fin,note:editForm.note,iaRaison:editForm.iaRaison})} style={{flex:1,padding:"12px 0",borderRadius:8,border:"none",background:"#005653",color:"white",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>Enregistrer</button>
+          <button onClick={()=>deleteCreneau(panelData.empKey,panelData.dateStr)} style={{padding:"12px 16px",borderRadius:8,border:"none",background:"#fee2e2",color:"#dc2626",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>Supprimer</button>
          </div>
         </div>
        );
@@ -5737,7 +6023,7 @@ function PlanningView({ client, isAdminPreview=false }) {
         <label style={LBL}>Type de créneau</label>
         <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
          {TYPES.map(t=>(
-          <button key={t} onClick={()=>setAddForm(f=>({...f,type:t,debut:DEF_DEBUT[t],fin:DEF_FIN[t]}))} style={{padding:"8px 14px",borderRadius:8,border:`2px solid ${addForm.type===t?TC[t].bg:"#e5e7eb"}`,background:addForm.type===t?TC[t].bg:"white",color:addForm.type===t?TC[t].text:C.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+          <button key={t} onClick={()=>setAddForm(f=>({...f,type:t,debut:DEF_DEBUT[t],fin:DEF_FIN[t]}))} style={{padding:"8px 14px",borderRadius:8,border:`2px solid ${addForm.type===t?TC[t].bg:"#e5e7eb"}`,background:addForm.type===t?TC[t].bg:"white",color:addForm.type===t?TC[t].text:C.textMid,fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>
            {TC[t].label}
           </button>
          ))}
@@ -5756,7 +6042,7 @@ function PlanningView({ client, isAdminPreview=false }) {
         <div style={{marginBottom:18}}><label style={LBL}>Note</label>
          <input style={INP} value={addForm.note} onChange={e=>setAddForm(f=>({...f,note:e.target.value}))} placeholder="Note interne..."/>
         </div>
-        <button onClick={()=>saveCreneau(addForm.empKey,addForm.dateStr,addForm.type==="repos"?{type:"repos"}:{type:addForm.type,debut:addForm.debut,fin:addForm.fin,pause_debut:addForm.pause_debut,pause_fin:addForm.pause_fin,note:addForm.note})} style={{width:"100%",padding:"12px 0",borderRadius:8,border:"none",background:"#005653",color:"white",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>Enregistrer</button>
+        <button onClick={()=>saveCreneau(addForm.empKey,addForm.dateStr,addForm.type==="repos"?{type:"repos"}:{type:addForm.type,debut:addForm.debut,fin:addForm.fin,pause_debut:addForm.pause_debut,pause_fin:addForm.pause_fin,note:addForm.note})} style={{width:"100%",padding:"12px 0",borderRadius:8,border:"none",background:"#005653",color:"white",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>Enregistrer</button>
        </div>
       )}
 
@@ -5805,7 +6091,7 @@ function PlanningView({ client, isAdminPreview=false }) {
         <div style={{marginBottom:16}}>
          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
           <label style={{...LBL,marginBottom:0}}>Congés et absences</label>
-          {!isAdminPreview&&<button onClick={()=>setFicheForm(f=>({...f,conges:[...(f.conges||[]),{debut:"",fin:"",type:"CP"}]}))} style={{background:"none",border:"none",cursor:"pointer",color:"#005653",fontSize:12,fontWeight:700,fontFamily:"'Nunito',sans-serif"}}>+ Ajouter</button>}
+          {!isAdminPreview&&<button onClick={()=>setFicheForm(f=>({...f,conges:[...(f.conges||[]),{debut:"",fin:"",type:"CP"}]}))} style={{background:"none",border:"none",cursor:"pointer",color:"#005653",fontSize:12,fontWeight:700,fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif"}}>+ Ajouter</button>}
          </div>
          {(ficheForm.conges||[]).length===0&&<div style={{fontSize:12,color:C.textLight}}>Aucun congé enregistré</div>}
          {(ficheForm.conges||[]).map((c,i)=>(
@@ -5826,7 +6112,7 @@ function PlanningView({ client, isAdminPreview=false }) {
          <label style={LBL}>Préférences et contraintes</label>
          <textarea rows={3} style={{...INP,resize:"vertical",lineHeight:1.5}} value={ficheForm.notePref||""} onChange={e=>setFicheForm(f=>({...f,notePref:e.target.value}))} placeholder="Ex: disponible seulement le matin, préfère ne pas travailler le dimanche..." disabled={isAdminPreview}/>
         </div>
-        {!isAdminPreview&&<button onClick={saveFicheEmp} disabled={ficheSaving} style={{width:"100%",padding:"12px 0",borderRadius:8,border:"none",background:"#005653",color:"white",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:ficheSaving?"not-allowed":"pointer"}}>
+        {!isAdminPreview&&<button onClick={saveFicheEmp} disabled={ficheSaving} style={{width:"100%",padding:"12px 0",borderRadius:8,border:"none",background:"#005653",color:"white",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif",fontSize:13,fontWeight:800,cursor:ficheSaving?"not-allowed":"pointer"}}>
          {ficheSaving?"Enregistrement...":"Enregistrer les modifications"}
         </button>}
        </div>
@@ -5848,7 +6134,7 @@ function PlanningView({ client, isAdminPreview=false }) {
         <div style={{marginBottom:14}}><label style={LBL}>Poste</label><input style={INP} value={addEmpForm.poste} onChange={e=>setAddEmpForm(f=>({...f,poste:e.target.value}))} placeholder="Serveur, Caissier..."/></div>
         <div style={{marginBottom:20}}><label style={LBL}>Heures / semaine</label><input type="number" style={INP} value={addEmpForm.heures_semaine} onChange={e=>setAddEmpForm(f=>({...f,heures_semaine:e.target.value}))} min={1} max={48}/></div>
         {addEmpError&&<div style={{marginBottom:12,padding:"8px 12px",background:"#fef2f2",border:"1px solid #fca5a5",borderRadius:6,fontSize:12,color:"#dc2626",fontWeight:700}}>{addEmpError}</div>}
-        <button onClick={saveNewEmp} disabled={addEmpSaving||!addEmpForm.nom.trim()} style={{width:"100%",padding:"12px 0",borderRadius:8,border:"none",background:addEmpSaving||!addEmpForm.nom.trim()?"#a7d4d0":"#005653",color:"white",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:addEmpSaving||!addEmpForm.nom.trim()?"not-allowed":"pointer"}}>
+        <button onClick={saveNewEmp} disabled={addEmpSaving||!addEmpForm.nom.trim()} style={{width:"100%",padding:"12px 0",borderRadius:8,border:"none",background:addEmpSaving||!addEmpForm.nom.trim()?"#a7d4d0":"#005653",color:"white",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif",fontSize:13,fontWeight:800,cursor:addEmpSaving||!addEmpForm.nom.trim()?"not-allowed":"pointer"}}>
          {addEmpSaving?"Enregistrement...":"Enregistrer"}
         </button>
        </div>
@@ -5894,14 +6180,14 @@ function PlanningView({ client, isAdminPreview=false }) {
           </div>
          );
         })()}
-        <button onClick={generateIA} disabled={iaGenerating||employes.length===0} style={{width:"100%",padding:"12px 0",borderRadius:8,border:"none",background:iaGenerating?"#6aaca8":"#005653",color:"white",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:iaGenerating?"not-allowed":"pointer",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+        <button onClick={generateIA} disabled={iaGenerating||employes.length===0} style={{width:"100%",padding:"12px 0",borderRadius:8,border:"none",background:iaGenerating?"#6aaca8":"#005653",color:"white",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif",fontSize:13,fontWeight:800,cursor:iaGenerating?"not-allowed":"pointer",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
          {iaGenerating&&<div style={{width:16,height:16,border:"2px solid rgba(255,255,255,0.4)",borderTop:"2px solid white",borderRadius:"50%",animation:"spin 1s linear infinite"}}/>}
          {iaGenerating?"Génération en cours...":"Générer 3 propositions"}
         </button>
         {iaError&&(/(rate limit|tokens per day)/i.test(iaError)?(
          <div style={{padding:"12px 14px",background:"#fff7ed",border:"1px solid #fed7aa",borderRadius:8,marginBottom:12}}>
-          <div style={{fontSize:12,color:"#c2410c",fontWeight:700,marginBottom:8}}>Limite journalière IA atteinte. Réessayez demain — les crédits se renouvellent automatiquement chaque jour à minuit.</div>
-          <button onClick={closePanel} style={{width:"100%",padding:"8px 0",borderRadius:7,border:"1.5px solid #c2410c",background:"transparent",color:"#c2410c",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>Modifier manuellement</button>
+          <div style={{fontSize:12,color:"#c2410c",fontWeight:700,marginBottom:8}}>Limite journalière IA atteinte. Réessayez demain · les crédits se renouvellent automatiquement chaque jour à minuit.</div>
+          <button onClick={closePanel} style={{width:"100%",padding:"8px 0",borderRadius:7,border:"1.5px solid #c2410c",background:"transparent",color:"#c2410c",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif"}}>Modifier manuellement</button>
          </div>
         ):(
          <div style={{padding:"10px 14px",background:"#fef2f2",border:"1px solid #fca5a5",borderRadius:8,fontSize:12,color:"#dc2626",marginBottom:12}}>{iaError}</div>
@@ -5914,7 +6200,7 @@ function PlanningView({ client, isAdminPreview=false }) {
             <div key={i} style={{padding:"14px 16px",border:"2px solid #c8e8e5",borderRadius:10,background:"#f8fffe"}}>
              <div style={{fontSize:10,fontWeight:800,color:C.textLight,textTransform:"uppercase",marginBottom:4}}>Option {i+1}</div>
              <div style={{fontSize:13,fontWeight:700,color:C.text,marginBottom:10,lineHeight:1.4}}>{prop.resume}</div>
-             <button onClick={()=>applyProposition(prop)} style={{padding:"8px 16px",borderRadius:8,border:"none",background:"#005653",color:"white",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>Appliquer ce planning</button>
+             <button onClick={()=>applyProposition(prop)} style={{padding:"8px 16px",borderRadius:8,border:"none",background:"#005653",color:"white",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>Appliquer ce planning</button>
             </div>
            ))}
           </div>
@@ -5926,6 +6212,1260 @@ function PlanningView({ client, isAdminPreview=false }) {
      </div>
     </div>
    )}
+  </div>
+ );
+}
+
+// ─── CONGÉS & ABSENCES ──────────────────────────────────────────
+// Réutilise planning_contraintes (type='conge'), déjà en base et RLS-complet,
+// jamais exposé ailleurs dans l'UI. Indépendant du champ employes.conges (jsonb)
+// utilisé par la génération IA du Planning · pas de synchro entre les deux pour l'instant.
+function CongesView({ client, isAdminPreview=false }) {
+ const moisNowStr = () => { const n=new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}`; };
+ const [employes,setEmployes]=useState([]);
+ const [conges,setConges]=useState([]);
+ const [loading,setLoading]=useState(true);
+ const [form,setForm]=useState({employe_id:"",mois:moisNowStr(),debut:1,fin:1});
+ const [saving,setSaving]=useState(false);
+
+ useEffect(()=>{
+  (async()=>{
+   setLoading(true);
+   try {
+    const [eR,cR]=await Promise.all([
+     supabase.from("employes").select("*").eq("client_id",client.id).order("nom"),
+     supabase.from("planning_contraintes").select("*").eq("client_id",client.id).eq("type","conge").order("mois",{ascending:false})
+    ]);
+    setEmployes(eR.data||[]);
+    setConges(cR.data||[]);
+    if(eR.data&&eR.data.length>0) setForm(f=>f.employe_id?f:{...f,employe_id:eR.data[0].id});
+   } catch(e){ console.error("Congés load:",e); }
+   setLoading(false);
+  })();
+ },[client.id]);
+
+ const empNom = id => { const e=employes.find(x=>x.id===id); return e?`${e.prenom||""} ${e.nom}`.trim():"—"; };
+ const parseJours = datesStr => {
+  if(!datesStr) return 0;
+  if(datesStr.includes("-")){ const[a,b]=datesStr.split("-").map(Number); return Math.max(1,(b-a+1)); }
+  return datesStr.split(",").map(s=>s.trim()).filter(Boolean).length;
+ };
+
+ const moisActuel=moisNowStr();
+ const enAttente=conges.filter(c=>c.statut==="en_attente");
+ const valideesMois=conges.filter(c=>c.statut==="validee"&&c.mois===moisActuel);
+ const refusees=conges.filter(c=>c.statut==="refusee");
+ const joursValidesMois=valideesMois.reduce((s,c)=>s+parseJours(c.dates),0);
+
+ const addConge = async () => {
+  if(!form.employe_id||saving) return;
+  setSaving(true);
+  const debut=Math.min(31,Math.max(1,Number(form.debut)||1));
+  const fin=Math.max(debut,Math.min(31,Number(form.fin)||debut));
+  const dates=fin>debut?`${debut}-${fin}`:`${debut}`;
+  try {
+   const{data,error}=await supabase.from("planning_contraintes").insert({
+    client_id:client.id, mois:form.mois, employe_id:Number(form.employe_id), type:"conge", dates, statut:"en_attente"
+   }).select();
+   if(error){ console.error("addConge:",error); alert("Erreur lors de l'ajout du congé : "+error.message); }
+   else if(data&&data.length>0){ setConges(prev=>[data[0],...prev]); }
+  } catch(e){ console.error("addConge:",e); }
+  setSaving(false);
+ };
+
+ const setStatut = async (row,statut) => {
+  const prevConges=conges;
+  setConges(conges.map(c=>c.id===row.id?{...c,statut}:c));
+  const{error}=await supabase.from("planning_contraintes").update({statut}).eq("id",row.id);
+  if(error){ console.error("setStatut:",error); setConges(prevConges); alert("Erreur lors de la mise à jour : "+error.message); }
+ };
+
+ const deleteConge = async row => {
+  const prevConges=conges;
+  setConges(conges.filter(c=>c.id!==row.id));
+  const{error}=await supabase.from("planning_contraintes").delete().eq("id",row.id);
+  if(error){ console.error("deleteConge:",error); setConges(prevConges); alert("Erreur lors de la suppression : "+error.message); }
+ };
+
+ const statutPill = statut => statut==="validee"
+  ? <Pill color={C.green} bg={C.greenBg}>Validé</Pill>
+  : statut==="refusee" ? <Pill color={C.red} bg={C.redBg}>Refusé</Pill>
+  : <Pill color={C.orange} bg={C.orangeBg}>En attente</Pill>;
+
+ return (
+  <div style={{padding:24}} className="fade-up">
+   <div style={{marginBottom:20}}>
+    <div style={{fontSize:18,fontWeight:900,color:C.text}}>Congés & absences</div>
+    <div style={{fontSize:12,color:C.textLight,marginTop:2}}>Demandes de congés de votre équipe, à valider ou refuser</div>
+   </div>
+   <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:20}}>
+    <KpiCard label="Demandes en attente" value={enAttente.length} sub="à traiter" color={C.orange}/>
+    <KpiCard label="Validés ce mois" value={joursValidesMois} sub={`${valideesMois.length} demande(s), jours cumulés`} color={C.green}/>
+    <KpiCard label="Refusés" value={refusees.length} sub="depuis le début" color={C.red}/>
+   </div>
+   {!isAdminPreview&&(
+    <Card style={{padding:18,marginBottom:20}}>
+     <div style={{fontSize:14,fontWeight:800,color:C.text,marginBottom:12}}>Enregistrer une demande de congé</div>
+     {employes.length===0?(
+      <div style={{fontSize:13,color:C.textLight}}>Ajoutez d'abord des employés dans le module Planning.</div>
+     ):(
+      <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
+       <FormRow label="Employé"><select value={form.employe_id} onChange={e=>setForm({...form,employe_id:e.target.value})} className="inp">{employes.map(e=><option key={e.id} value={e.id}>{e.prenom} {e.nom}</option>)}</select></FormRow>
+       <FormRow label="Mois"><input type="month" value={form.mois} onChange={e=>setForm({...form,mois:e.target.value})} className="inp"/></FormRow>
+       <FormRow label="Jour début"><input type="number" min="1" max="31" value={form.debut} onChange={e=>setForm({...form,debut:e.target.value})} className="inp" style={{width:80}}/></FormRow>
+       <FormRow label="Jour fin"><input type="number" min="1" max="31" value={form.fin} onChange={e=>setForm({...form,fin:e.target.value})} className="inp" style={{width:80}}/></FormRow>
+       <Btn onClick={addConge} disabled={saving}>{saving?"Ajout...":"Enregistrer la demande"}</Btn>
+      </div>
+     )}
+    </Card>
+   )}
+   <Card>
+    <SectionHead title="Toutes les demandes"/>
+    {loading?(
+     <div style={{padding:24,textAlign:"center",color:C.textLight,fontSize:13}}>Chargement...</div>
+    ):conges.length===0?(
+     <div style={{padding:24,textAlign:"center",color:C.textLight,fontSize:13}}>Aucune demande de congé pour l'instant.</div>
+    ):(
+     <div style={{overflowX:"auto"}}>
+      <table style={{width:"100%",borderCollapse:"collapse"}}>
+       <thead><tr><Th>Employé</Th><Th>Mois</Th><Th>Jours</Th><Th>Statut</Th><Th></Th></tr></thead>
+       <tbody>
+        {conges.map(c=>(
+         <Tr key={c.id}>
+          <Td bold>{empNom(c.employe_id)}</Td>
+          <Td>{c.mois}</Td>
+          <Td>{c.dates}</Td>
+          <Td>{statutPill(c.statut)}</Td>
+          <Td right>
+           {!isAdminPreview&&(
+            <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
+             {c.statut==="en_attente"&&<>
+              <Btn variant="success" small onClick={()=>setStatut(c,"validee")}>Valider</Btn>
+              <Btn variant="danger" small onClick={()=>setStatut(c,"refusee")}>Refuser</Btn>
+             </>}
+             <Btn variant="ghost" small onClick={()=>deleteConge(c)}>Supprimer</Btn>
+            </div>
+           )}
+          </Td>
+         </Tr>
+        ))}
+       </tbody>
+      </table>
+     </div>
+    )}
+   </Card>
+  </div>
+ );
+}
+
+// ─── NOTES DE FRAIS ─────────────────────────────────────────────
+const NOTES_FRAIS_CATEGORIES = ["Transport","Repas","Hébergement","Fournitures","Autre"];
+function NotesFraisView({ client, isAdminPreview=false }) {
+ const todayStr = () => { const n=new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}-${String(n.getDate()).padStart(2,"0")}`; };
+ const [employes,setEmployes]=useState([]);
+ const [notes,setNotes]=useState([]);
+ const [loading,setLoading]=useState(true);
+ const [form,setForm]=useState({employe_id:"",date:todayStr(),montant:"",categorie:"Transport",description:""});
+ const [saving,setSaving]=useState(false);
+
+ useEffect(()=>{
+  (async()=>{
+   setLoading(true);
+   try {
+    const [eR,nR]=await Promise.all([
+     supabase.from("employes").select("*").eq("client_id",client.id).order("nom"),
+     supabase.from("notes_frais").select("*").eq("client_id",client.id).order("date",{ascending:false})
+    ]);
+    setEmployes(eR.data||[]);
+    setNotes(nR.data||[]);
+    if(eR.data&&eR.data.length>0) setForm(f=>f.employe_id?f:{...f,employe_id:eR.data[0].id});
+   } catch(e){ console.error("Notes de frais load:",e); }
+   setLoading(false);
+  })();
+ },[client.id]);
+
+ const moisActuel=(()=>{ const n=new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}`; })();
+ const enAttente=notes.filter(n=>n.statut==="en_attente");
+ const valideesMois=notes.filter(n=>n.statut==="validee"&&n.date?.slice(0,7)===moisActuel);
+ const refusees=notes.filter(n=>n.statut==="refusee");
+ const montantValideesMois=valideesMois.reduce((s,n)=>s+parseFloat(n.montant||0),0);
+
+ const addNote = async () => {
+  if(!form.employe_id||!form.montant||saving) return;
+  setSaving(true);
+  const emp=employes.find(e=>e.id===Number(form.employe_id));
+  try {
+   const{data,error}=await supabase.from("notes_frais").insert({
+    client_id:client.id, employe_id:Number(form.employe_id),
+    employe_nom:emp?`${emp.prenom||""} ${emp.nom}`.trim():"",
+    date:form.date, montant:Number(form.montant), categorie:form.categorie,
+    description:form.description, statut:"en_attente"
+   }).select();
+   if(error){ console.error("addNote:",error); alert("Erreur lors de l'ajout de la note de frais : "+error.message); }
+   else if(data&&data.length>0){ setNotes(prev=>[data[0],...prev]); setForm({...form,montant:"",description:""}); }
+  } catch(e){ console.error("addNote:",e); }
+  setSaving(false);
+ };
+
+ const setStatut = async (row,statut) => {
+  const prevNotes=notes;
+  setNotes(notes.map(n=>n.id===row.id?{...n,statut}:n));
+  const{error}=await supabase.from("notes_frais").update({statut}).eq("id",row.id);
+  if(error){ console.error("setStatut:",error); setNotes(prevNotes); alert("Erreur lors de la mise à jour : "+error.message); }
+ };
+
+ const deleteNote = async row => {
+  const prevNotes=notes;
+  setNotes(notes.filter(n=>n.id!==row.id));
+  const{error}=await supabase.from("notes_frais").delete().eq("id",row.id);
+  if(error){ console.error("deleteNote:",error); setNotes(prevNotes); alert("Erreur lors de la suppression : "+error.message); }
+ };
+
+ const statutPill = statut => statut==="validee"
+  ? <Pill color={C.green} bg={C.greenBg}>Validée</Pill>
+  : statut==="refusee" ? <Pill color={C.red} bg={C.redBg}>Refusée</Pill>
+  : <Pill color={C.orange} bg={C.orangeBg}>En attente</Pill>;
+
+ return (
+  <div style={{padding:24}} className="fade-up">
+   <div style={{marginBottom:20}}>
+    <div style={{fontSize:18,fontWeight:900,color:C.text}}>Notes de frais</div>
+    <div style={{fontSize:12,color:C.textLight,marginTop:2}}>Soumission et validation des dépenses de votre équipe</div>
+   </div>
+   <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:20}}>
+    <KpiCard label="En attente" value={enAttente.length} sub="à valider" color={C.orange}/>
+    <KpiCard label="Validées ce mois" value={fmt(montantValideesMois)} sub={`${valideesMois.length} note(s)`} color={C.green}/>
+    <KpiCard label="Refusées" value={refusees.length} sub="depuis le début" color={C.red}/>
+   </div>
+   {!isAdminPreview&&(
+    <Card style={{padding:18,marginBottom:20}}>
+     <div style={{fontSize:14,fontWeight:800,color:C.text,marginBottom:12}}>Déclarer une dépense</div>
+     {employes.length===0?(
+      <div style={{fontSize:13,color:C.textLight}}>Ajoutez d'abord des employés dans le module Planning.</div>
+     ):(
+      <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
+       <FormRow label="Employé"><select value={form.employe_id} onChange={e=>setForm({...form,employe_id:e.target.value})} className="inp">{employes.map(e=><option key={e.id} value={e.id}>{e.prenom} {e.nom}</option>)}</select></FormRow>
+       <FormRow label="Date"><input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} className="inp"/></FormRow>
+       <FormRow label="Montant (€)"><input type="number" min="0" step="0.01" value={form.montant} onChange={e=>setForm({...form,montant:e.target.value})} className="inp" style={{width:110}}/></FormRow>
+       <FormRow label="Catégorie"><select value={form.categorie} onChange={e=>setForm({...form,categorie:e.target.value})} className="inp">{NOTES_FRAIS_CATEGORIES.map(c=><option key={c}>{c}</option>)}</select></FormRow>
+       <FormRow label="Description"><input value={form.description} onChange={e=>setForm({...form,description:e.target.value})} className="inp" placeholder="Ex: taxi client, restaurant..." style={{width:200}}/></FormRow>
+       <Btn onClick={addNote} disabled={saving}>{saving?"Ajout...":"Ajouter"}</Btn>
+      </div>
+     )}
+    </Card>
+   )}
+   <Card>
+    <SectionHead title="Historique des notes de frais"/>
+    {loading?(
+     <div style={{padding:24,textAlign:"center",color:C.textLight,fontSize:13}}>Chargement...</div>
+    ):notes.length===0?(
+     <div style={{padding:24,textAlign:"center",color:C.textLight,fontSize:13}}>Aucune note de frais enregistrée pour l'instant.</div>
+    ):(
+     <div style={{overflowX:"auto"}}>
+      <table style={{width:"100%",borderCollapse:"collapse"}}>
+       <thead><tr><Th>Employé</Th><Th>Date</Th><Th>Catégorie</Th><Th>Description</Th><Th right>Montant</Th><Th>Statut</Th><Th></Th></tr></thead>
+       <tbody>
+        {notes.map(n=>(
+         <Tr key={n.id}>
+          <Td bold>{n.employe_nom||"—"}</Td>
+          <Td>{n.date}</Td>
+          <Td>{n.categorie}</Td>
+          <Td>{n.description||"—"}</Td>
+          <Td right bold>{fmt(n.montant)}</Td>
+          <Td>{statutPill(n.statut)}</Td>
+          <Td right>
+           {!isAdminPreview&&(
+            <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
+             {n.statut==="en_attente"&&<>
+              <Btn variant="success" small onClick={()=>setStatut(n,"validee")}>Valider</Btn>
+              <Btn variant="danger" small onClick={()=>setStatut(n,"refusee")}>Refuser</Btn>
+             </>}
+             <Btn variant="ghost" small onClick={()=>deleteNote(n)}>Supprimer</Btn>
+            </div>
+           )}
+          </Td>
+         </Tr>
+        ))}
+       </tbody>
+      </table>
+     </div>
+    )}
+   </Card>
+  </div>
+ );
+}
+
+// ─── TÂCHES ─────────────────────────────────────────────────────
+const TACHES_COLONNES = [
+ {id:"a_faire", label:"À faire", color:C.orange},
+ {id:"en_cours", label:"En cours", color:C.primary},
+ {id:"termine", label:"Terminé", color:C.green},
+];
+
+function TacheCard({ tache, isAdminPreview }) {
+ const {attributes,listeners,setNodeRef,transform,isDragging}=useDraggable({id:String(tache.id),disabled:isAdminPreview});
+ const style={
+  transform:transform?`translate3d(${transform.x}px, ${transform.y}px, 0)`:undefined,
+  opacity:isDragging?0.4:1,
+  zIndex:isDragging?10:"auto",
+ };
+ return (
+  <div ref={setNodeRef} {...listeners} {...attributes} style={{...style,background:C.white,border:`1px solid ${C.border}`,borderRadius:8,padding:"10px 12px",marginBottom:8,cursor:isAdminPreview?"default":"grab",boxShadow:"0 1px 2px rgba(0,0,0,0.04)",touchAction:"none"}}>
+   <div style={{fontSize:13,fontWeight:800,color:C.text,marginBottom:4}}>{tache.titre}</div>
+   {tache.description&&<div style={{fontSize:12,color:C.textMid,marginBottom:6,lineHeight:1.5}}>{tache.description}</div>}
+   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:11,color:C.textLight}}>
+    <span>{tache.employe_nom||"Non assigné"}</span>
+    {tache.echeance&&<span>{tache.echeance}</span>}
+   </div>
+  </div>
+ );
+}
+
+function TacheColonne({ colonne, taches, isAdminPreview }) {
+ const {setNodeRef,isOver}=useDroppable({id:colonne.id});
+ return (
+  <div ref={setNodeRef} style={{flex:1,minWidth:240,background:isOver?C.bg:"transparent",borderRadius:10,padding:8,transition:"background .15s"}}>
+   <div style={{display:"flex",alignItems:"center",gap:8,padding:"4px 6px 10px"}}>
+    <span style={{width:8,height:8,borderRadius:"50%",background:colonne.color}}/>
+    <span style={{fontSize:12,fontWeight:800,color:C.text}}>{colonne.label}</span>
+    <span style={{fontSize:11,color:C.textLight}}>{taches.length}</span>
+   </div>
+   {taches.map(t=><TacheCard key={t.id} tache={t} isAdminPreview={isAdminPreview}/>)}
+   {taches.length===0&&<div style={{fontSize:12,color:C.textLight,padding:"8px 6px"}}>Aucune tâche</div>}
+  </div>
+ );
+}
+
+function TachesView({ client, isAdminPreview=false }) {
+ const [employes,setEmployes]=useState([]);
+ const [taches,setTaches]=useState([]);
+ const [loading,setLoading]=useState(true);
+ const [form,setForm]=useState({titre:"",description:"",employe_id:"",echeance:""});
+ const [saving,setSaving]=useState(false);
+ const [showForm,setShowForm]=useState(false);
+ const [aiDesc,setAiDesc]=useState("");
+ const [aiLoading,setAiLoading]=useState(false);
+ const [aiError,setAiError]=useState("");
+ const sensors=useSensors(useSensor(PointerSensor,{activationConstraint:{distance:5}}));
+
+ useEffect(()=>{
+  (async()=>{
+   setLoading(true);
+   try {
+    const [eR,tR]=await Promise.all([
+     supabase.from("employes").select("*").eq("client_id",client.id).order("nom"),
+     supabase.from("taches").select("*").eq("client_id",client.id).order("created_at",{ascending:false})
+    ]);
+    setEmployes(eR.data||[]);
+    setTaches(tR.data||[]);
+   } catch(e){ console.error("Tâches load:",e); }
+   setLoading(false);
+  })();
+ },[client.id]);
+
+ const addTache = async () => {
+  if(!form.titre||saving) return;
+  setSaving(true);
+  const emp=form.employe_id?employes.find(e=>e.id===Number(form.employe_id)):null;
+  try {
+   const{data,error}=await supabase.from("taches").insert({
+    client_id:client.id, employe_id:emp?emp.id:null,
+    employe_nom:emp?`${emp.prenom||""} ${emp.nom}`.trim():"",
+    titre:form.titre, description:form.description, echeance:form.echeance||null, statut:"a_faire"
+   }).select();
+   if(error){ console.error("addTache:",error); alert("Erreur lors de l'ajout de la tâche : "+error.message); }
+   else if(data&&data.length>0){ setTaches(prev=>[data[0],...prev]); setForm({titre:"",description:"",employe_id:"",echeance:""}); setShowForm(false); }
+  } catch(e){ console.error("addTache:",e); }
+  setSaving(false);
+ };
+
+ const updateStatut = async (id,statut) => {
+  const prevTaches=taches;
+  setTaches(taches.map(t=>t.id===id?{...t,statut}:t));
+  const{error}=await supabase.from("taches").update({statut}).eq("id",id);
+  if(error){ console.error("updateStatut:",error); setTaches(prevTaches); alert("Erreur lors de la mise à jour : "+error.message); }
+ };
+
+ const generateWithAI = async () => {
+  if(!aiDesc.trim()||aiLoading) return;
+  setAiLoading(true); setAiError("");
+  try {
+   const {data:{session}} = await supabase.auth.getSession();
+   const res = await fetch("/api/ai/taches", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json", "Authorization":`Bearer ${session?.access_token}` },
+    body: JSON.stringify({ description: aiDesc })
+   });
+   const data = await res.json();
+   if(data.error){ setAiError(data.error); }
+   else {
+    setForm(f=>({...f, titre:data.titre||"", description:data.description||"", echeance:data.echeance||""}));
+    setShowForm(true); setAiDesc("");
+   }
+  } catch(e){ console.error("generateWithAI:",e); setAiError("Erreur réseau."); }
+  setAiLoading(false);
+ };
+
+ const onDragEnd = ({active,over}) => {
+  if(!over||isAdminPreview) return;
+  const id=Number(active.id);
+  const newStatut=String(over.id);
+  const tache=taches.find(t=>t.id===id);
+  if(!tache||tache.statut===newStatut) return;
+  if(!TACHES_COLONNES.some(c=>c.id===newStatut)) return;
+  updateStatut(id,newStatut);
+ };
+
+ return (
+  <div style={{padding:24}} className="fade-up">
+   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12,marginBottom:20}}>
+    <div>
+     <div style={{fontSize:18,fontWeight:900,color:C.text}}>Tâches</div>
+     <div style={{fontSize:12,color:C.textLight,marginTop:2}}>Suivi des tâches de votre équipe</div>
+    </div>
+    {!isAdminPreview&&<Btn variant="ghost" onClick={()=>setShowForm(s=>!s)}>{showForm?"Fermer":"+ Nouvelle tâche"}</Btn>}
+   </div>
+
+   {!isAdminPreview&&(
+    <Card style={{padding:18,marginBottom:20}}>
+     <div style={{fontSize:14,fontWeight:800,color:C.text,marginBottom:12}}>Créer avec l'IA</div>
+     <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
+      <FormRow label="Décrivez la tâche en une phrase"><input value={aiDesc} onChange={e=>setAiDesc(e.target.value)} className="inp" style={{width:340}} placeholder="Ex: réunion équipe vendredi pour préparer l'inventaire de rentrée"/></FormRow>
+      <Btn variant="success" onClick={generateWithAI} disabled={aiLoading||!aiDesc.trim()}>{aiLoading?"Génération...":"Générer"}</Btn>
+     </div>
+     {aiError&&<div style={{marginTop:10,fontSize:12,color:C.red}}>{aiError}</div>}
+    </Card>
+   )}
+
+   {!isAdminPreview&&showForm&&(
+    <Card style={{padding:18,marginBottom:20,border:`2px solid ${C.primary}`}}>
+     <div style={{fontSize:14,fontWeight:800,color:C.text,marginBottom:12}}>Nouvelle tâche</div>
+     <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
+      <FormRow label="Titre"><input value={form.titre} onChange={e=>setForm({...form,titre:e.target.value})} className="inp" style={{width:220}}/></FormRow>
+      <FormRow label="Description"><input value={form.description} onChange={e=>setForm({...form,description:e.target.value})} className="inp" style={{width:260}}/></FormRow>
+      <FormRow label="Assigné à"><select value={form.employe_id} onChange={e=>setForm({...form,employe_id:e.target.value})} className="inp"><option value="">Non assigné</option>{employes.map(e=><option key={e.id} value={e.id}>{e.prenom} {e.nom}</option>)}</select></FormRow>
+      <FormRow label="Échéance"><input type="date" value={form.echeance} onChange={e=>setForm({...form,echeance:e.target.value})} className="inp"/></FormRow>
+      <Btn onClick={addTache} disabled={saving||!form.titre}>{saving?"Ajout...":"Ajouter"}</Btn>
+     </div>
+    </Card>
+   )}
+
+   <Card style={{padding:16}}>
+    {loading?(
+     <div style={{padding:24,textAlign:"center",color:C.textLight,fontSize:13}}>Chargement...</div>
+    ):(
+     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+      <div style={{display:"flex",gap:16,overflowX:"auto"}}>
+       {TACHES_COLONNES.map(col=><TacheColonne key={col.id} colonne={col} taches={taches.filter(t=>t.statut===col.id)} isAdminPreview={isAdminPreview}/>)}
+      </div>
+     </DndContext>
+    )}
+   </Card>
+  </div>
+ );
+}
+
+// ─── GESTION D'ÉQUIPE & TÂCHES (multi-sites, tâches récurrentes) ─
+// Sites/employés/tâches récurrentes sont stockés en base ; le statut de
+// chaque occurrence (faite/en retard/à venir) est calculé à la volée à
+// partir de la règle de récurrence + du journal executions_taches · pas de
+// cron, pas de pré-génération de lignes futures (même principe que calcAlertes).
+const ET_TYPE_LABELS={bureau:"Bureau",site_industriel:"Site industriel",autre:"Autre"};
+const ET_FREQ_LABELS={quotidienne:"Quotidienne",hebdomadaire:"Hebdomadaire",mensuelle:"Mensuelle"};
+const ET_JOURS_SEMAINE=["Dimanche","Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi"];
+const ET_JOURS_COURT=["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"];
+const ET_STATUT_META={
+ faite:{label:"Faite",color:C.green,bg:C.greenBg},
+ en_retard:{label:"En retard",color:C.red,bg:C.redBg},
+ aujourdhui:{label:"Aujourd'hui",color:C.orange,bg:C.orangeBg},
+ a_venir:{label:"À venir",color:C.textLight,bg:C.bg},
+};
+function etDStr(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+function etTacheDueOn(tache, dateStr) {
+ if(!tache.actif) return false;
+ const d=new Date(dateStr+"T00:00:00");
+ if(tache.frequence==="quotidienne") return true;
+ if(tache.frequence==="hebdomadaire") return tache.jour_semaine===d.getDay();
+ if(tache.frequence==="mensuelle") return tache.jour_mois===d.getDate();
+ return false;
+}
+function etStatutOccurrence(tacheId, dateStr, executions, todayStr) {
+ const exec=executions.find(e=>e.tache_recurrente_id===tacheId&&e.date_prevue===dateStr);
+ if(exec) return {statut:"faite", exec};
+ if(dateStr<todayStr) return {statut:"en_retard"};
+ if(dateStr===todayStr) return {statut:"aujourdhui"};
+ return {statut:"a_venir"};
+}
+function etFrequenceLabel(t){
+ if(t.frequence==="hebdomadaire") return `Hebdomadaire (${ET_JOURS_SEMAINE[t.jour_semaine]||"?"})`;
+ if(t.frequence==="mensuelle") return `Mensuelle (le ${t.jour_mois})`;
+ return "Quotidienne";
+}
+
+function EquipeTachesDashboard({ sites, taches, employes, executions }) {
+ const today=new Date(), todayStr=etDStr(today);
+ const weekStart=plGetMonday(today);
+ const weekDays=Array.from({length:7},(_,i)=>{const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);return d;});
+ const sitesActifs=sites.filter(s=>s.actif);
+ const tachesActives=taches.filter(t=>t.actif);
+
+ let totalOccurrencesSemaine=0, faitesSemaine=0;
+ weekDays.forEach(d=>{
+  const ds=etDStr(d);
+  if(ds>todayStr) return;
+  tachesActives.forEach(t=>{
+   const site=sites.find(s=>s.id===t.site_id);
+   if(!site||!site.actif||!etTacheDueOn(t,ds)) return;
+   totalOccurrencesSemaine++;
+   if(etStatutOccurrence(t.id,ds,executions,todayStr).statut==="faite") faitesSemaine++;
+  });
+ });
+ const tauxCompletion = totalOccurrencesSemaine>0 ? Math.round(faitesSemaine/totalOccurrencesSemaine*100) : 100;
+
+ const alertes=[];
+ for(let i=0;i<14;i++){
+  const d=new Date(today); d.setDate(d.getDate()-i);
+  const ds=etDStr(d);
+  tachesActives.forEach(t=>{
+   const site=sites.find(s=>s.id===t.site_id);
+   if(!site||!site.actif||!etTacheDueOn(t,ds)) return;
+   if(etStatutOccurrence(t.id,ds,executions,todayStr).statut==="en_retard") alertes.push({tache:t,site,date:ds});
+  });
+ }
+ alertes.sort((a,b)=>a.date<b.date?1:-1);
+
+ return (
+  <div className="fade-up">
+   <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:20}}>
+    <KpiCard label="Sites actifs" value={sitesActifs.length} sub={`sur ${sites.length} au total`} color={C.primary}/>
+    <KpiCard label="Taux de complétion" value={`${tauxCompletion}%`} sub="cette semaine" color={tauxCompletion>=80?C.green:tauxCompletion>=50?C.orange:C.red}/>
+    <KpiCard label="Alertes actives" value={alertes.length} sub={alertes.length>0?"tâches en retard":"tout est à jour"} color={alertes.length>0?C.red:C.green}/>
+   </div>
+   <Card>
+    <SectionHead title="Tâches en retard" sub="Fenêtre des 14 derniers jours"/>
+    {alertes.length===0?(
+     <div style={{padding:24,textAlign:"center",color:C.textLight,fontSize:13}}>Aucune tâche en retard.</div>
+    ):(
+     <div style={{padding:"8px 20px 20px",display:"flex",flexDirection:"column",gap:10}}>
+      {alertes.map((a,i)=>(
+       <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,padding:"12px 16px",background:C.redBg,border:`1.5px solid ${C.red}44`,borderLeft:`5px solid ${C.red}`,borderRadius:10}}>
+        <div>
+         <Pill color={C.red} bg={C.white}>EN RETARD</Pill>
+         <span style={{marginLeft:10,fontSize:13,fontWeight:800,color:C.text}}>{a.tache.titre}</span>
+         <span style={{marginLeft:8,fontSize:12,color:C.textMid}}>· {a.site.nom}</span>
+        </div>
+        <span style={{fontSize:12,color:C.red,fontWeight:700}}>{a.date}</span>
+       </div>
+      ))}
+     </div>
+    )}
+   </Card>
+  </div>
+ );
+}
+
+function EquipeTachesPlanning({ sites, taches, employes, tacheEmployes, executions, isAdminPreview, onMarquerFaite, onAnnulerFaite }) {
+ const [sousVue,setSousVue]=useState("semaine");
+ const [weekStart,setWeekStart]=useState(()=>plGetMonday(new Date()));
+ const [jourSel,setJourSel]=useState(()=>etDStr(new Date()));
+ const [filtreEmploye,setFiltreEmploye]=useState("");
+ const todayStr=etDStr(new Date());
+ const weekDays=Array.from({length:7},(_,i)=>{const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);return d;});
+
+ const employesOf = tid => tacheEmployes.filter(te=>te.tache_recurrente_id===tid).map(te=>te.employe_id);
+ const empNames = tid => employesOf(tid).map(eid=>{const e=employes.find(x=>x.id===eid);return e?`${e.prenom} ${e.nom}`:null;}).filter(Boolean);
+
+ const tachesActives = (filtreEmploye
+  ? taches.filter(t=>t.actif&&employesOf(t.id).includes(Number(filtreEmploye)))
+  : taches.filter(t=>t.actif));
+ const sitesActifs = sites.filter(s=>s.actif);
+
+ const navPrev=()=>{ if(sousVue==="semaine"){const d=new Date(weekStart);d.setDate(d.getDate()-7);setWeekStart(d);} else {const d=new Date(jourSel);d.setDate(d.getDate()-1);setJourSel(etDStr(d));} };
+ const navNext=()=>{ if(sousVue==="semaine"){const d=new Date(weekStart);d.setDate(d.getDate()+7);setWeekStart(d);} else {const d=new Date(jourSel);d.setDate(d.getDate()+1);setJourSel(etDStr(d));} };
+ const navToday=()=>{ setWeekStart(plGetMonday(new Date())); setJourSel(todayStr); };
+
+ return (
+  <div className="fade-up">
+   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12,marginBottom:16}}>
+    <div style={{display:"flex",gap:8}}>
+     <Btn variant={sousVue==="semaine"?"primary":"ghost"} small onClick={()=>setSousVue("semaine")}>Semaine</Btn>
+     <Btn variant={sousVue==="jour"?"primary":"ghost"} small onClick={()=>setSousVue("jour")}>Jour</Btn>
+    </div>
+    <div style={{display:"flex",alignItems:"center",gap:8}}>
+     <Btn variant="ghost" small onClick={navPrev}>‹</Btn>
+     <Btn variant="ghost" small onClick={navToday}>Aujourd'hui</Btn>
+     <span style={{fontSize:12,fontWeight:700,color:C.textMid,minWidth:120,textAlign:"center"}}>{sousVue==="semaine"?`${weekDays[0].getDate()}/${weekDays[0].getMonth()+1} – ${weekDays[6].getDate()}/${weekDays[6].getMonth()+1}`:jourSel}</span>
+     <Btn variant="ghost" small onClick={navNext}>›</Btn>
+    </div>
+    <select value={filtreEmploye} onChange={e=>setFiltreEmploye(e.target.value)} className="inp" style={{width:"auto"}}>
+     <option value="">Tous les employés</option>
+     {employes.map(e=><option key={e.id} value={e.id}>{e.prenom} {e.nom}</option>)}
+    </select>
+   </div>
+
+   {sousVue==="semaine"?(
+    <Card style={{padding:16,overflowX:"auto"}}>
+     {sitesActifs.length===0?(
+      <div style={{padding:24,textAlign:"center",color:C.textLight,fontSize:13}}>Ajoutez d'abord un site actif.</div>
+     ):(
+      <table style={{width:"100%",borderCollapse:"collapse",minWidth:800}}>
+       <thead><tr><Th>Site</Th>{weekDays.map((d,i)=><Th key={i}>{ET_JOURS_COURT[d.getDay()]} {d.getDate()}</Th>)}</tr></thead>
+       <tbody>
+        {sitesActifs.map(site=>(
+         <Tr key={site.id}>
+          <Td bold>{site.nom}</Td>
+          {weekDays.map((d,i)=>{
+           const ds=etDStr(d);
+           const dueTaches=tachesActives.filter(t=>t.site_id===site.id&&etTacheDueOn(t,ds));
+           return (
+            <Td key={i}>
+             <div style={{display:"flex",flexDirection:"column",gap:4}}>
+              {dueTaches.map(t=>{
+               const {statut}=etStatutOccurrence(t.id,ds,executions,todayStr);
+               const meta=ET_STATUT_META[statut];
+               return (
+                <div key={t.id} title={empNames(t.id).join(", ")||"Non assigné"} style={{fontSize:10,fontWeight:700,color:meta.color,background:meta.bg,border:`1px solid ${meta.color}33`,borderRadius:6,padding:"3px 6px",lineHeight:1.3}}>
+                 {t.titre}
+                </div>
+               );
+              })}
+              {dueTaches.length===0&&<span style={{fontSize:11,color:C.textLight}}>—</span>}
+             </div>
+            </Td>
+           );
+          })}
+         </Tr>
+        ))}
+       </tbody>
+      </table>
+     )}
+    </Card>
+   ):(
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+     {sitesActifs.length===0?(
+      <Card><div style={{padding:24,textAlign:"center",color:C.textLight,fontSize:13}}>Ajoutez d'abord un site actif.</div></Card>
+     ):sitesActifs.map(site=>{
+      const dueTaches=tachesActives.filter(t=>t.site_id===site.id&&etTacheDueOn(t,jourSel));
+      return (
+       <Card key={site.id}>
+        <SectionHead title={site.nom} sub={site.adresse}/>
+        {dueTaches.length===0?(
+         <div style={{padding:"16px 20px",color:C.textLight,fontSize:13}}>Aucune tâche prévue ce jour.</div>
+        ):(
+         <div style={{padding:"8px 20px 16px",display:"flex",flexDirection:"column",gap:8}}>
+          {dueTaches.map(t=>{
+           const {statut,exec}=etStatutOccurrence(t.id,jourSel,executions,todayStr);
+           const meta=ET_STATUT_META[statut];
+           return (
+            <div key={t.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,padding:"10px 14px",background:meta.bg,border:`1px solid ${meta.color}33`,borderLeft:`4px solid ${meta.color}`,borderRadius:8,flexWrap:"wrap"}}>
+             <div>
+              <div style={{fontSize:13,fontWeight:800,color:C.text}}>{t.titre}{t.heure_prevue?` · ${String(t.heure_prevue).slice(0,5)}`:""}</div>
+              <div style={{fontSize:11,color:C.textMid,marginTop:2}}>{empNames(t.id).join(", ")||"Non assigné"}</div>
+             </div>
+             <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <Pill color={meta.color} bg="transparent">{meta.label}</Pill>
+              {!isAdminPreview&&(statut==="faite"
+               ? <Btn variant="ghost" small onClick={()=>onAnnulerFaite(exec)}>Annuler</Btn>
+               : <Btn variant="success" small onClick={()=>onMarquerFaite(t,jourSel,site.id)}>Marquer faite</Btn>
+              )}
+             </div>
+            </div>
+           );
+          })}
+         </div>
+        )}
+       </Card>
+      );
+     })}
+    </div>
+   )}
+  </div>
+ );
+}
+
+function EquipeTachesSites({ sites, isAdminPreview, onAdd, onUpdate, onDelete }) {
+ const blank={nom:"",adresse:"",type:"bureau",frequence:"hebdomadaire",actif:true};
+ const [form,setForm]=useState(blank);
+ const [editingId,setEditingId]=useState(null);
+ const [showForm,setShowForm]=useState(false);
+ const [saving,setSaving]=useState(false);
+
+ const startAdd=()=>{setForm(blank);setEditingId(null);setShowForm(true);};
+ const startEdit=(s)=>{setForm({nom:s.nom,adresse:s.adresse,type:s.type,frequence:s.frequence,actif:s.actif!==false});setEditingId(s.id);setShowForm(true);};
+ const cancel=()=>{setShowForm(false);setForm(blank);setEditingId(null);};
+ const save=async()=>{
+  if(!form.nom||saving) return;
+  setSaving(true);
+  if(editingId) await onUpdate(editingId,form); else await onAdd(form);
+  setSaving(false); cancel();
+ };
+
+ return (
+  <div className="fade-up">
+   {!isAdminPreview&&<div style={{display:"flex",justifyContent:"flex-end",marginBottom:16}}><Btn variant="success" onClick={startAdd}>+ Nouveau site</Btn></div>}
+   {!isAdminPreview&&showForm&&(
+    <Card style={{padding:18,marginBottom:20,border:`2px solid ${C.primary}`}}>
+     <div style={{fontSize:14,fontWeight:800,color:C.text,marginBottom:12}}>{editingId?"Modifier le site":"Nouveau site"}</div>
+     <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
+      <FormRow label="Nom du site"><input value={form.nom} onChange={e=>setForm({...form,nom:e.target.value})} className="inp" style={{width:200}}/></FormRow>
+      <FormRow label="Adresse"><input value={form.adresse} onChange={e=>setForm({...form,adresse:e.target.value})} className="inp" style={{width:260}}/></FormRow>
+      <FormRow label="Type"><select value={form.type} onChange={e=>setForm({...form,type:e.target.value})} className="inp">{Object.entries(ET_TYPE_LABELS).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></FormRow>
+      <FormRow label="Fréquence de nettoyage"><select value={form.frequence} onChange={e=>setForm({...form,frequence:e.target.value})} className="inp">{Object.entries(ET_FREQ_LABELS).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></FormRow>
+      <FormRow label="Statut"><label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,fontWeight:700,color:C.text,height:38}}><input type="checkbox" checked={form.actif} onChange={e=>setForm({...form,actif:e.target.checked})}/>Actif</label></FormRow>
+      <Btn onClick={save} disabled={saving||!form.nom}>{saving?"Enregistrement...":editingId?"Enregistrer":"Ajouter"}</Btn>
+      <Btn variant="ghost" onClick={cancel}>Annuler</Btn>
+     </div>
+    </Card>
+   )}
+   <Card>
+    <SectionHead title={`Sites (${sites.length})`}/>
+    {sites.length===0?(
+     <div style={{padding:24,textAlign:"center",color:C.textLight,fontSize:13}}>Aucun site enregistré pour l'instant.</div>
+    ):(
+     <div style={{overflowX:"auto"}}>
+      <table style={{width:"100%",borderCollapse:"collapse"}}>
+       <thead><tr><Th>Nom</Th><Th>Adresse</Th><Th>Type</Th><Th>Fréquence</Th><Th>Statut</Th><Th></Th></tr></thead>
+       <tbody>
+        {sites.map(s=>(
+         <Tr key={s.id}>
+          <Td bold>{s.nom}</Td>
+          <Td>{s.adresse||"—"}</Td>
+          <Td>{ET_TYPE_LABELS[s.type]||s.type}</Td>
+          <Td>{ET_FREQ_LABELS[s.frequence]||s.frequence}</Td>
+          <Td>{s.actif!==false?<Pill color={C.green} bg={C.greenBg}>Actif</Pill>:<Pill color={C.textLight}>Inactif</Pill>}</Td>
+          <Td right>
+           {!isAdminPreview&&(
+            <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
+             <Btn variant="ghost" small onClick={()=>startEdit(s)}>Modifier</Btn>
+             <Btn variant="ghost" small onClick={()=>onDelete(s)}>Supprimer</Btn>
+            </div>
+           )}
+          </Td>
+         </Tr>
+        ))}
+       </tbody>
+      </table>
+     </div>
+    )}
+   </Card>
+  </div>
+ );
+}
+
+function EquipeTachesEquipe({ employes, sites, employeSites, isAdminPreview, onAdd, onUpdate, onDelete, onToggleSite }) {
+ const blank={prenom:"",nom:"",poste:""};
+ const [form,setForm]=useState(blank);
+ const [editingId,setEditingId]=useState(null);
+ const [showForm,setShowForm]=useState(false);
+ const [saving,setSaving]=useState(false);
+ const [expandedId,setExpandedId]=useState(null);
+
+ const startAdd=()=>{setForm(blank);setEditingId(null);setShowForm(true);};
+ const startEdit=(e)=>{setForm({prenom:e.prenom||"",nom:e.nom,poste:e.poste||""});setEditingId(e.id);setShowForm(true);};
+ const cancel=()=>{setShowForm(false);setForm(blank);setEditingId(null);};
+ const save=async()=>{
+  if(!form.nom||saving) return;
+  setSaving(true);
+  if(editingId) await onUpdate(editingId,form); else await onAdd(form);
+  setSaving(false); cancel();
+ };
+
+ const sitesOf = empId => employeSites.filter(es=>es.employe_id===empId).map(es=>es.site_id);
+ const expanded = employes.find(e=>e.id===expandedId);
+
+ return (
+  <div className="fade-up">
+   {!isAdminPreview&&<div style={{display:"flex",justifyContent:"flex-end",marginBottom:16}}><Btn variant="success" onClick={startAdd}>+ Nouvel employé</Btn></div>}
+   {!isAdminPreview&&showForm&&(
+    <Card style={{padding:18,marginBottom:20,border:`2px solid ${C.primary}`}}>
+     <div style={{fontSize:14,fontWeight:800,color:C.text,marginBottom:12}}>{editingId?"Modifier l'employé":"Nouvel employé"}</div>
+     <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
+      <FormRow label="Prénom"><input value={form.prenom} onChange={e=>setForm({...form,prenom:e.target.value})} className="inp" style={{width:140}}/></FormRow>
+      <FormRow label="Nom"><input value={form.nom} onChange={e=>setForm({...form,nom:e.target.value})} className="inp" style={{width:140}}/></FormRow>
+      <FormRow label="Poste"><input value={form.poste} onChange={e=>setForm({...form,poste:e.target.value})} className="inp" style={{width:160}}/></FormRow>
+      <Btn onClick={save} disabled={saving||!form.nom}>{saving?"Enregistrement...":editingId?"Enregistrer":"Ajouter"}</Btn>
+      <Btn variant="ghost" onClick={cancel}>Annuler</Btn>
+     </div>
+    </Card>
+   )}
+   <Card>
+    <SectionHead title={`Équipe (${employes.length})`} sub="Cliquez sur « Sites » pour gérer les affectations"/>
+    {employes.length===0?(
+     <div style={{padding:24,textAlign:"center",color:C.textLight,fontSize:13}}>Aucun employé pour l'instant.</div>
+    ):(
+     <div style={{overflowX:"auto"}}>
+      <table style={{width:"100%",borderCollapse:"collapse"}}>
+       <thead><tr><Th>Employé</Th><Th>Poste</Th><Th>Sites affectés</Th><Th></Th></tr></thead>
+       <tbody>
+        {employes.map(e=>(
+         <Tr key={e.id}>
+          <Td bold>{e.prenom} {e.nom}</Td>
+          <Td>{e.poste||"—"}</Td>
+          <Td>{sitesOf(e.id).length>0?sitesOf(e.id).map(sid=>sites.find(s=>s.id===sid)?.nom).filter(Boolean).join(", "):"Aucun"}</Td>
+          <Td right>
+           {!isAdminPreview&&(
+            <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
+             <Btn variant="ghost" small onClick={()=>setExpandedId(expandedId===e.id?null:e.id)}>{expandedId===e.id?"Fermer":"Sites"}</Btn>
+             <Btn variant="ghost" small onClick={()=>startEdit(e)}>Modifier</Btn>
+             <Btn variant="ghost" small onClick={()=>onDelete(e)}>Supprimer</Btn>
+            </div>
+           )}
+          </Td>
+         </Tr>
+        ))}
+       </tbody>
+      </table>
+     </div>
+    )}
+   </Card>
+   {expanded&&(
+    <Card style={{padding:18,marginTop:16}}>
+     <div style={{fontSize:14,fontWeight:800,color:C.text,marginBottom:10}}>Sites affectés · {expanded.prenom} {expanded.nom}</div>
+     <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+      {sites.map(s=>{
+       const checked=sitesOf(expanded.id).includes(s.id);
+       return <label key={s.id} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,fontWeight:700,color:C.text,cursor:isAdminPreview?"default":"pointer"}}><input type="checkbox" checked={checked} disabled={isAdminPreview} onChange={()=>onToggleSite(expanded.id,s.id,checked)}/>{s.nom}</label>;
+      })}
+      {sites.length===0&&<span style={{fontSize:12,color:C.textLight}}>Ajoutez d'abord des sites.</span>}
+     </div>
+    </Card>
+   )}
+  </div>
+ );
+}
+
+function EquipeTachesTaches({ taches, sites, employes, tacheEmployes, isAdminPreview, onAdd, onUpdate, onDelete, onToggleEmploye }) {
+ const blank={titre:"",site_id:"",frequence:"quotidienne",jour_semaine:1,jour_mois:1,heure_prevue:""};
+ const [form,setForm]=useState(blank);
+ const [editingId,setEditingId]=useState(null);
+ const [showForm,setShowForm]=useState(false);
+ const [saving,setSaving]=useState(false);
+ const [expandedId,setExpandedId]=useState(null);
+
+ const startAdd=()=>{setForm({...blank,site_id:sites[0]?.id||""});setEditingId(null);setShowForm(true);};
+ const startEdit=(t)=>{setForm({titre:t.titre,site_id:t.site_id,frequence:t.frequence,jour_semaine:t.jour_semaine??1,jour_mois:t.jour_mois??1,heure_prevue:t.heure_prevue||""});setEditingId(t.id);setShowForm(true);};
+ const cancel=()=>{setShowForm(false);setForm(blank);setEditingId(null);};
+ const save=async()=>{
+  if(!form.titre||!form.site_id||saving) return;
+  setSaving(true);
+  const payload={
+   titre:form.titre, site_id:Number(form.site_id), frequence:form.frequence,
+   jour_semaine:form.frequence==="hebdomadaire"?Number(form.jour_semaine):null,
+   jour_mois:form.frequence==="mensuelle"?Number(form.jour_mois):null,
+   heure_prevue:form.heure_prevue||null,
+  };
+  if(editingId) await onUpdate(editingId,payload); else await onAdd(payload);
+  setSaving(false); cancel();
+ };
+
+ const employesOf = tid => tacheEmployes.filter(te=>te.tache_recurrente_id===tid).map(te=>te.employe_id);
+ const expanded = taches.find(t=>t.id===expandedId);
+
+ return (
+  <div className="fade-up">
+   {!isAdminPreview&&<div style={{display:"flex",justifyContent:"flex-end",marginBottom:16}}><Btn variant="success" onClick={startAdd} disabled={sites.length===0}>+ Nouvelle tâche récurrente</Btn></div>}
+   {!isAdminPreview&&sites.length===0&&<div style={{fontSize:12,color:C.textLight,marginBottom:12}}>Ajoutez d'abord un site.</div>}
+   {!isAdminPreview&&showForm&&(
+    <Card style={{padding:18,marginBottom:20,border:`2px solid ${C.primary}`}}>
+     <div style={{fontSize:14,fontWeight:800,color:C.text,marginBottom:12}}>{editingId?"Modifier la tâche":"Nouvelle tâche récurrente"}</div>
+     <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
+      <FormRow label="Titre"><input value={form.titre} onChange={e=>setForm({...form,titre:e.target.value})} className="inp" style={{width:200}} placeholder="Ex: Nettoyage sols"/></FormRow>
+      <FormRow label="Site"><select value={form.site_id} onChange={e=>setForm({...form,site_id:e.target.value})} className="inp">{sites.map(s=><option key={s.id} value={s.id}>{s.nom}</option>)}</select></FormRow>
+      <FormRow label="Fréquence"><select value={form.frequence} onChange={e=>setForm({...form,frequence:e.target.value})} className="inp">{Object.entries(ET_FREQ_LABELS).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></FormRow>
+      {form.frequence==="hebdomadaire"&&<FormRow label="Jour"><select value={form.jour_semaine} onChange={e=>setForm({...form,jour_semaine:e.target.value})} className="inp">{ET_JOURS_SEMAINE.map((j,i)=><option key={i} value={i}>{j}</option>)}</select></FormRow>}
+      {form.frequence==="mensuelle"&&<FormRow label="Jour du mois"><input type="number" min="1" max="31" value={form.jour_mois} onChange={e=>setForm({...form,jour_mois:e.target.value})} className="inp" style={{width:80}}/></FormRow>}
+      <FormRow label="Heure prévue"><input type="time" value={form.heure_prevue} onChange={e=>setForm({...form,heure_prevue:e.target.value})} className="inp"/></FormRow>
+      <Btn onClick={save} disabled={saving||!form.titre||!form.site_id}>{saving?"Enregistrement...":editingId?"Enregistrer":"Ajouter"}</Btn>
+      <Btn variant="ghost" onClick={cancel}>Annuler</Btn>
+     </div>
+    </Card>
+   )}
+   <Card>
+    <SectionHead title={`Tâches récurrentes (${taches.length})`} sub="Cliquez sur « Employés » pour gérer les affectations"/>
+    {taches.length===0?(
+     <div style={{padding:24,textAlign:"center",color:C.textLight,fontSize:13}}>Aucune tâche récurrente pour l'instant.</div>
+    ):(
+     <div style={{overflowX:"auto"}}>
+      <table style={{width:"100%",borderCollapse:"collapse"}}>
+       <thead><tr><Th>Tâche</Th><Th>Site</Th><Th>Fréquence</Th><Th>Employés</Th><Th></Th></tr></thead>
+       <tbody>
+        {taches.map(t=>(
+         <Tr key={t.id}>
+          <Td bold>{t.titre}</Td>
+          <Td>{sites.find(s=>s.id===t.site_id)?.nom||"—"}</Td>
+          <Td>{etFrequenceLabel(t)}</Td>
+          <Td>{employesOf(t.id).length>0?employesOf(t.id).map(eid=>{const e=employes.find(x=>x.id===eid);return e?`${e.prenom} ${e.nom}`:null;}).filter(Boolean).join(", "):"Non assigné"}</Td>
+          <Td right>
+           {!isAdminPreview&&(
+            <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
+             <Btn variant="ghost" small onClick={()=>setExpandedId(expandedId===t.id?null:t.id)}>{expandedId===t.id?"Fermer":"Employés"}</Btn>
+             <Btn variant="ghost" small onClick={()=>startEdit(t)}>Modifier</Btn>
+             <Btn variant="ghost" small onClick={()=>onDelete(t)}>Supprimer</Btn>
+            </div>
+           )}
+          </Td>
+         </Tr>
+        ))}
+       </tbody>
+      </table>
+     </div>
+    )}
+   </Card>
+   {expanded&&(
+    <Card style={{padding:18,marginTop:16}}>
+     <div style={{fontSize:14,fontWeight:800,color:C.text,marginBottom:10}}>Employés assignés · {expanded.titre}</div>
+     <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+      {employes.map(e=>{
+       const checked=employesOf(expanded.id).includes(e.id);
+       return <label key={e.id} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,fontWeight:700,color:C.text,cursor:isAdminPreview?"default":"pointer"}}><input type="checkbox" checked={checked} disabled={isAdminPreview} onChange={()=>onToggleEmploye(expanded.id,e.id,checked)}/>{e.prenom} {e.nom}</label>;
+      })}
+      {employes.length===0&&<span style={{fontSize:12,color:C.textLight}}>Ajoutez d'abord des employés.</span>}
+     </div>
+    </Card>
+   )}
+  </div>
+ );
+}
+
+function EquipeTachesHistorique({ executions, taches, sites, employes }) {
+ const [filtreSite,setFiltreSite]=useState("");
+ const [filtreEmploye,setFiltreEmploye]=useState("");
+ const rows=executions
+  .filter(e=>!filtreSite||e.site_id===Number(filtreSite))
+  .filter(e=>!filtreEmploye||e.employe_id===Number(filtreEmploye))
+  .slice()
+  .sort((a,b)=>new Date(b.date_validation)-new Date(a.date_validation));
+
+ return (
+  <div className="fade-up">
+   <div style={{display:"flex",gap:12,marginBottom:16,flexWrap:"wrap"}}>
+    <select value={filtreSite} onChange={e=>setFiltreSite(e.target.value)} className="inp" style={{width:"auto"}}>
+     <option value="">Tous les sites</option>
+     {sites.map(s=><option key={s.id} value={s.id}>{s.nom}</option>)}
+    </select>
+    <select value={filtreEmploye} onChange={e=>setFiltreEmploye(e.target.value)} className="inp" style={{width:"auto"}}>
+     <option value="">Tous les employés</option>
+     {employes.map(e=><option key={e.id} value={e.id}>{e.prenom} {e.nom}</option>)}
+    </select>
+   </div>
+   <Card>
+    <SectionHead title={`Historique (${rows.length})`}/>
+    {rows.length===0?(
+     <div style={{padding:24,textAlign:"center",color:C.textLight,fontSize:13}}>Aucune tâche validée pour l'instant.</div>
+    ):(
+     <div style={{overflowX:"auto"}}>
+      <table style={{width:"100%",borderCollapse:"collapse"}}>
+       <thead><tr><Th>Date prévue</Th><Th>Tâche</Th><Th>Site</Th><Th>Employé</Th><Th>Validée le</Th></tr></thead>
+       <tbody>
+        {rows.map(ex=>{
+         const t=taches.find(x=>x.id===ex.tache_recurrente_id);
+         const s=sites.find(x=>x.id===ex.site_id);
+         const e=employes.find(x=>x.id===ex.employe_id);
+         return (
+          <Tr key={ex.id}>
+           <Td>{ex.date_prevue}</Td>
+           <Td bold>{t?.titre||"—"}</Td>
+           <Td>{s?.nom||"—"}</Td>
+           <Td>{e?`${e.prenom} ${e.nom}`:"—"}</Td>
+           <Td>{new Date(ex.date_validation).toLocaleString("fr-FR")}</Td>
+          </Tr>
+         );
+        })}
+       </tbody>
+      </table>
+     </div>
+    )}
+   </Card>
+  </div>
+ );
+}
+
+function EquipeTachesView({ client, isAdminPreview=false }) {
+ const [vue,setVue]=useState("dashboard");
+ const [loading,setLoading]=useState(true);
+ const [sites,setSites]=useState([]);
+ const [employes,setEmployes]=useState([]);
+ const [employeSites,setEmployeSites]=useState([]);
+ const [tachesRecurrentes,setTachesRecurrentes]=useState([]);
+ const [tacheEmployes,setTacheEmployes]=useState([]);
+ const [executions,setExecutions]=useState([]);
+
+ useEffect(()=>{
+  (async()=>{
+   setLoading(true);
+   try {
+    const [sR,eR,esR,trR,teR,exR]=await Promise.all([
+     supabase.from("sites").select("*").eq("client_id",client.id).order("nom"),
+     supabase.from("employes").select("*").eq("client_id",client.id).order("nom"),
+     supabase.from("employe_sites").select("*").eq("client_id",client.id),
+     supabase.from("taches_recurrentes").select("*").eq("client_id",client.id).order("titre"),
+     supabase.from("taches_recurrentes_employes").select("*").eq("client_id",client.id),
+     supabase.from("executions_taches").select("*").eq("client_id",client.id)
+    ]);
+    setSites(sR.data||[]); setEmployes(eR.data||[]); setEmployeSites(esR.data||[]);
+    setTachesRecurrentes(trR.data||[]); setTacheEmployes(teR.data||[]); setExecutions(exR.data||[]);
+   } catch(e){ console.error("EquipeTaches load:",e); }
+   setLoading(false);
+  })();
+ },[client.id]);
+
+ const addSite = async(form) => {
+  const {data,error}=await supabase.from("sites").insert({client_id:client.id,...form}).select();
+  if(error){ console.error("addSite:",error); alert("Erreur lors de l'ajout du site : "+error.message); }
+  else if(data&&data.length>0) setSites(prev=>[...prev,data[0]].sort((a,b)=>a.nom.localeCompare(b.nom)));
+ };
+ const updateSite = async(id,form) => {
+  const prev=sites;
+  setSites(sites.map(s=>s.id===id?{...s,...form}:s));
+  const {error}=await supabase.from("sites").update(form).eq("id",id);
+  if(error){ console.error("updateSite:",error); setSites(prev); alert("Erreur lors de la mise à jour : "+error.message); }
+ };
+ const deleteSite = async(site) => {
+  const prev=sites;
+  setSites(sites.filter(s=>s.id!==site.id));
+  const {error}=await supabase.from("sites").delete().eq("id",site.id);
+  if(error){ console.error("deleteSite:",error); setSites(prev); alert("Erreur lors de la suppression : "+error.message); }
+ };
+
+ const addEmploye = async(form) => {
+  const {data,error}=await supabase.from("employes").insert({client_id:client.id,...form}).select();
+  if(error){ console.error("addEmploye:",error); alert("Erreur lors de l'ajout de l'employé : "+error.message); }
+  else if(data&&data.length>0) setEmployes(prev=>[...prev,data[0]].sort((a,b)=>a.nom.localeCompare(b.nom)));
+ };
+ const updateEmploye = async(id,form) => {
+  const prev=employes;
+  setEmployes(employes.map(e=>e.id===id?{...e,...form}:e));
+  const {error}=await supabase.from("employes").update(form).eq("id",id);
+  if(error){ console.error("updateEmploye:",error); setEmployes(prev); alert("Erreur lors de la mise à jour : "+error.message); }
+ };
+ const deleteEmploye = async(emp) => {
+  const prev=employes;
+  setEmployes(employes.filter(e=>e.id!==emp.id));
+  const {error}=await supabase.from("employes").delete().eq("id",emp.id);
+  if(error){ console.error("deleteEmploye:",error); setEmployes(prev); alert("Erreur lors de la suppression : "+error.message); }
+ };
+
+ const toggleEmployeSite = async(employeId,siteId,currentlyChecked) => {
+  const prev=employeSites;
+  if(currentlyChecked){
+   setEmployeSites(employeSites.filter(es=>!(es.employe_id===employeId&&es.site_id===siteId)));
+   const {error}=await supabase.from("employe_sites").delete().eq("employe_id",employeId).eq("site_id",siteId);
+   if(error){ console.error("toggleEmployeSite del:",error); setEmployeSites(prev); alert("Erreur : "+error.message); }
+  } else {
+   const {data,error}=await supabase.from("employe_sites").insert({client_id:client.id,employe_id:employeId,site_id:siteId}).select();
+   if(error){ console.error("toggleEmployeSite add:",error); alert("Erreur : "+error.message); }
+   else if(data&&data.length>0) setEmployeSites(p=>[...p,data[0]]);
+  }
+ };
+
+ const addTache = async(form) => {
+  const {data,error}=await supabase.from("taches_recurrentes").insert({client_id:client.id,...form}).select();
+  if(error){ console.error("addTache:",error); alert("Erreur lors de l'ajout de la tâche : "+error.message); }
+  else if(data&&data.length>0) setTachesRecurrentes(prev=>[...prev,data[0]].sort((a,b)=>a.titre.localeCompare(b.titre)));
+ };
+ const updateTache = async(id,form) => {
+  const prev=tachesRecurrentes;
+  setTachesRecurrentes(tachesRecurrentes.map(t=>t.id===id?{...t,...form}:t));
+  const {error}=await supabase.from("taches_recurrentes").update(form).eq("id",id);
+  if(error){ console.error("updateTache:",error); setTachesRecurrentes(prev); alert("Erreur lors de la mise à jour : "+error.message); }
+ };
+ const deleteTache = async(tache) => {
+  const prev=tachesRecurrentes;
+  setTachesRecurrentes(tachesRecurrentes.filter(t=>t.id!==tache.id));
+  const {error}=await supabase.from("taches_recurrentes").delete().eq("id",tache.id);
+  if(error){ console.error("deleteTache:",error); setTachesRecurrentes(prev); alert("Erreur lors de la suppression : "+error.message); }
+ };
+
+ const toggleTacheEmploye = async(tacheId,employeId,currentlyChecked) => {
+  const prev=tacheEmployes;
+  if(currentlyChecked){
+   setTacheEmployes(tacheEmployes.filter(te=>!(te.tache_recurrente_id===tacheId&&te.employe_id===employeId)));
+   const {error}=await supabase.from("taches_recurrentes_employes").delete().eq("tache_recurrente_id",tacheId).eq("employe_id",employeId);
+   if(error){ console.error("toggleTacheEmploye del:",error); setTacheEmployes(prev); alert("Erreur : "+error.message); }
+  } else {
+   const {data,error}=await supabase.from("taches_recurrentes_employes").insert({client_id:client.id,tache_recurrente_id:tacheId,employe_id:employeId}).select();
+   if(error){ console.error("toggleTacheEmploye add:",error); alert("Erreur : "+error.message); }
+   else if(data&&data.length>0) setTacheEmployes(p=>[...p,data[0]]);
+  }
+ };
+
+ const marquerFaite = async(tache,dateStr,siteId) => {
+  const empIds=tacheEmployes.filter(te=>te.tache_recurrente_id===tache.id).map(te=>te.employe_id);
+  const {data,error}=await supabase.from("executions_taches").insert({
+   client_id:client.id, tache_recurrente_id:tache.id, site_id:siteId,
+   employe_id:empIds[0]||null, date_prevue:dateStr
+  }).select();
+  if(error){ console.error("marquerFaite:",error); alert("Erreur : "+error.message); }
+  else if(data&&data.length>0) setExecutions(prev=>[...prev,data[0]]);
+ };
+ const annulerFaite = async(exec) => {
+  const prev=executions;
+  setExecutions(executions.filter(e=>e.id!==exec.id));
+  const {error}=await supabase.from("executions_taches").delete().eq("id",exec.id);
+  if(error){ console.error("annulerFaite:",error); setExecutions(prev); alert("Erreur : "+error.message); }
+ };
+
+ const ET_VUES=[
+  {id:"dashboard",label:"Tableau de bord"},
+  {id:"planning",label:"Planning"},
+  {id:"sites",label:"Sites"},
+  {id:"equipe",label:"Équipe"},
+  {id:"taches",label:"Tâches récurrentes"},
+  {id:"historique",label:"Historique"},
+ ];
+
+ return (
+  <div style={{padding:24}} className="fade-up">
+   <div style={{marginBottom:20}}>
+    <div style={{fontSize:18,fontWeight:900,color:C.text}}>Gestion d'équipe & Tâches</div>
+    <div style={{fontSize:12,color:C.textLight,marginTop:2}}>Sites, équipe et tâches récurrentes multi-sites</div>
+   </div>
+   <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
+    {ET_VUES.map(v=><Btn key={v.id} variant={vue===v.id?"primary":"ghost"} small onClick={()=>setVue(v.id)}>{v.label}</Btn>)}
+   </div>
+   {loading?(
+    <div style={{padding:40,textAlign:"center",color:C.textLight,fontSize:13}}>Chargement...</div>
+   ):(
+    <>
+     {vue==="dashboard"&&<EquipeTachesDashboard sites={sites} taches={tachesRecurrentes} employes={employes} executions={executions}/>}
+     {vue==="planning"&&<EquipeTachesPlanning sites={sites} taches={tachesRecurrentes} employes={employes} tacheEmployes={tacheEmployes} executions={executions} isAdminPreview={isAdminPreview} onMarquerFaite={marquerFaite} onAnnulerFaite={annulerFaite}/>}
+     {vue==="sites"&&<EquipeTachesSites sites={sites} isAdminPreview={isAdminPreview} onAdd={addSite} onUpdate={updateSite} onDelete={deleteSite}/>}
+     {vue==="equipe"&&<EquipeTachesEquipe employes={employes} sites={sites} employeSites={employeSites} isAdminPreview={isAdminPreview} onAdd={addEmploye} onUpdate={updateEmploye} onDelete={deleteEmploye} onToggleSite={toggleEmployeSite}/>}
+     {vue==="taches"&&<EquipeTachesTaches taches={tachesRecurrentes} sites={sites} employes={employes} tacheEmployes={tacheEmployes} isAdminPreview={isAdminPreview} onAdd={addTache} onUpdate={updateTache} onDelete={deleteTache} onToggleEmploye={toggleTacheEmploye}/>}
+     {vue==="historique"&&<EquipeTachesHistorique executions={executions} taches={tachesRecurrentes} sites={sites} employes={employes}/>}
+    </>
+   )}
+  </div>
+ );
+}
+
+// ─── POINTAGE ───────────────────────────────────────────────────
+// Version simple : arrivée/départ du jour même, pas de géolocalisation ni de
+// validation manager · le compte CLIENT gère toute son équipe, comme pour Planning.
+function PointageView({ client, isAdminPreview=false }) {
+ const dStr = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+ const timeNow = () => { const n=new Date(); return `${String(n.getHours()).padStart(2,"0")}:${String(n.getMinutes()).padStart(2,"0")}`; };
+ const DAY_LABELS=["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
+ const todayStr = dStr(new Date());
+
+ const [weekStart,setWeekStart]=useState(()=>plGetMonday(new Date()));
+ const [employes,setEmployes]=useState([]);
+ const [pointages,setPointages]=useState([]);
+ const [loading,setLoading]=useState(true);
+
+ const weekDays = Array.from({length:7},(_,i)=>{const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);return d;});
+ const weekEnd = weekDays[6];
+
+ useEffect(()=>{
+  (async()=>{
+   setLoading(true);
+   try {
+    const [eR,pR]=await Promise.all([
+     supabase.from("employes").select("*").eq("client_id",client.id).order("nom"),
+     supabase.from("pointages").select("*").eq("client_id",client.id).gte("date",dStr(weekStart)).lte("date",dStr(weekEnd))
+    ]);
+    setEmployes(eR.data||[]);
+    setPointages(pR.data||[]);
+   } catch(e){ console.error("Pointage load:",e); }
+   setLoading(false);
+  })();
+ },[client.id,weekStart]);
+
+ const rowFor = (empId,dateStr) => pointages.find(p=>p.employe_id===empId&&p.date===dateStr);
+
+ const clockIn = async emp => {
+  if(rowFor(emp.id,todayStr)) return;
+  try {
+   const{data,error}=await supabase.from("pointages").insert({client_id:client.id,employe_id:emp.id,date:todayStr,heure_arrivee:timeNow()}).select();
+   if(error){ console.error("clockIn:",error); alert("Erreur au pointage : "+error.message); }
+   else if(data&&data.length>0) setPointages(prev=>[...prev,data[0]]);
+  } catch(e){ console.error("clockIn:",e); }
+ };
+
+ const clockOut = async emp => {
+  const existing=rowFor(emp.id,todayStr);
+  if(!existing||existing.heure_depart) return;
+  const heure_depart=timeNow();
+  const prevPointages=pointages;
+  setPointages(pointages.map(p=>p.id===existing.id?{...p,heure_depart}:p));
+  const{error}=await supabase.from("pointages").update({heure_depart}).eq("id",existing.id);
+  if(error){ console.error("clockOut:",error); setPointages(prevPointages); alert("Erreur au pointage : "+error.message); }
+ };
+
+ const heuresEntre = (a,b) => { if(!a||!b) return 0; const[ah,am]=a.split(":").map(Number); const[bh,bm]=b.split(":").map(Number); return Math.max(0,(bh*60+bm-ah*60-am)/60); };
+ const heuresEmp = emp => weekDays.reduce((s,d)=>s+heuresEntre(rowFor(emp.id,dStr(d))?.heure_arrivee,rowFor(emp.id,dStr(d))?.heure_depart),0);
+
+ const navigatePrev=()=>{const d=new Date(weekStart);d.setDate(d.getDate()-7);setWeekStart(d);};
+ const navigateNext=()=>{const d=new Date(weekStart);d.setDate(d.getDate()+7);setWeekStart(d);};
+ const navigateToday=()=>setWeekStart(plGetMonday(new Date()));
+
+ const totalHeuresSemaine = employes.reduce((s,e)=>s+heuresEmp(e),0);
+ const pointesAujourdhui = employes.filter(e=>rowFor(e.id,todayStr)).length;
+ const heuresAttendues = employes.reduce((s,e)=>s+(Number(e.heures_semaine)||35),0);
+
+ const renderCell = (emp,d) => {
+  const ds=dStr(d), r=rowFor(emp.id,ds), isToday=ds===todayStr;
+  if(!r) return isToday&&!isAdminPreview
+   ? <Btn variant="primary" small onClick={()=>clockIn(emp)}>Arrivée</Btn>
+   : <span style={{fontSize:12,color:C.textLight}}>—</span>;
+  if(!r.heure_depart) return isToday&&!isAdminPreview
+   ? <span style={{fontSize:12,color:C.textMid,display:"flex",alignItems:"center",gap:6}}>{r.heure_arrivee}<Btn variant="ghost" small onClick={()=>clockOut(emp)}>Départ</Btn></span>
+   : <span style={{fontSize:12,color:C.textMid}}>{r.heure_arrivee} → —</span>;
+  return <span style={{fontSize:12,color:C.textMid}}>{r.heure_arrivee} → {r.heure_depart}</span>;
+ };
+
+ return (
+  <div style={{padding:24}} className="fade-up">
+   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12,marginBottom:20}}>
+    <div>
+     <div style={{fontSize:18,fontWeight:900,color:C.text}}>Pointage</div>
+     <div style={{fontSize:12,color:C.textLight,marginTop:2}}>Heures d'arrivée et de départ de votre équipe</div>
+    </div>
+    <div style={{display:"flex",alignItems:"center",gap:8}}>
+     <Btn variant="ghost" small onClick={navigatePrev}>‹</Btn>
+     <Btn variant="ghost" small onClick={navigateToday}>Aujourd'hui</Btn>
+     <span style={{fontSize:12,fontWeight:700,color:C.textMid}}>{weekDays[0].getDate()}/{weekDays[0].getMonth()+1} – {weekEnd.getDate()}/{weekEnd.getMonth()+1}</span>
+     <Btn variant="ghost" small onClick={navigateNext}>›</Btn>
+    </div>
+   </div>
+   <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:20}}>
+    <KpiCard label="Heures cette semaine" value={`${Math.round(totalHeuresSemaine)}h`} sub={`sur ${heuresAttendues}h prévues`} color={C.primary}/>
+    <KpiCard label="Pointés aujourd'hui" value={pointesAujourdhui} sub={`sur ${employes.length}`} color={C.green}/>
+    <KpiCard label="Écart vs prévu" value={`${totalHeuresSemaine>=heuresAttendues?"+":""}${Math.round(totalHeuresSemaine-heuresAttendues)}h`} sub="cette semaine" color={totalHeuresSemaine>=heuresAttendues?C.green:C.orange}/>
+   </div>
+   <Card>
+    <SectionHead title="Semaine en cours" sub="Le pointage se fait le jour même · les autres jours affichent l'historique"/>
+    {loading?(
+     <div style={{padding:24,textAlign:"center",color:C.textLight,fontSize:13}}>Chargement...</div>
+    ):employes.length===0?(
+     <div style={{padding:24,textAlign:"center",color:C.textLight,fontSize:13}}>Ajoutez d'abord des employés dans le module Planning.</div>
+    ):(
+     <div style={{overflowX:"auto"}}>
+      <table style={{width:"100%",borderCollapse:"collapse"}}>
+       <thead>
+        <tr>
+         <Th>Employé</Th>
+         {weekDays.map((d,i)=><Th key={i}>{DAY_LABELS[i]} {d.getDate()}</Th>)}
+         <Th right>Total semaine</Th>
+        </tr>
+       </thead>
+       <tbody>
+        {employes.map(emp=>{
+         const h=heuresEmp(emp), prevu=Number(emp.heures_semaine)||35;
+         const color=h>=prevu?C.green:h>=prevu*0.8?C.orange:C.red;
+         return (
+          <Tr key={emp.id}>
+           <Td bold>{emp.prenom} {emp.nom}</Td>
+           {weekDays.map((d,i)=><Td key={i}>{renderCell(emp,d)}</Td>)}
+           <Td right bold color={color}>{Math.round(h)}h / {prevu}h</Td>
+          </Tr>
+         );
+        })}
+       </tbody>
+      </table>
+     </div>
+    )}
+   </Card>
   </div>
  );
 }
@@ -6009,7 +7549,7 @@ function calcAlertes(client, moisIdx, moisYear) {
     level:"orange", kpi:"Taux de marge faible",
     current: `${Math.round(tauxMarge)}%`, threshold:`> ${seuilMargeOrange}%`,
     msg:isBarTabacPresse
-      ? `Votre marge brute est de ${Math.round(tauxMarge)}% du CA. Le tabac (6%) et la presse (20%) tirent la marge vers le bas — le mix de ventes est déterminant.`
+      ? `Votre marge brute est de ${Math.round(tauxMarge)}% du CA. Le tabac (6%) et la presse (20%) tirent la marge vers le bas · le mix de ventes est déterminant.`
       : `Votre marge brute est de ${Math.round(tauxMarge)}% du CA. Le seuil de vigilance est à 30%.`,
     action:isBarTabacPresse
       ? "Analysez la répartition bar/tabac/presse dans vos ventes et cherchez à valoriser les produits bar (cocktails, planches)."
@@ -6034,7 +7574,7 @@ function calcAlertes(client, moisIdx, moisYear) {
     level:"orange", kpi:"Charges externes à surveiller",
     current: `${Math.round(tauxChargesExt)}% du CA`, threshold:`< ${seuilChargesOrange}% du CA`,
     msg:isBarTabacPresse
-      ? `Vos charges externes représentent ${Math.round(tauxChargesExt)}% du CA. Tabac et licences sont incompressibles — surveillez loyer et approvisionnements.`
+      ? `Vos charges externes représentent ${Math.round(tauxChargesExt)}% du CA. Tabac et licences sont incompressibles · surveillez loyer et approvisionnements.`
       : `Vos charges externes représentent ${Math.round(tauxChargesExt)}% de votre CA.`,
     action:isBarTabacPresse
       ? "Comparez vos tarifs d'approvisionnement boissons et identifiez les charges compressibles hors tabac/presse."
@@ -6093,6 +7633,9 @@ function calcAlertes(client, moisIdx, moisYear) {
     action:"Revoyez votre structure de charges et cherchez à augmenter votre résultat."
   });
 
+  // ── Échéances fiscales & sociales (génériques, indépendantes du mois consulté)
+  alerts.push(...calcAlertesFiscales(client));
+
   // Aucune alerte
   if (alerts.length === 0) alerts.push({
     level:"green", kpi:"Situation financière saine",
@@ -6104,7 +7647,62 @@ function calcAlertes(client, moisIdx, moisYear) {
   return alerts;
 }
 
+// ── Échéancier fiscal & social : rappels calendaires génériques, identiques pour
+// tous les clients (TVA, DSN, acomptes IS, CFE) · basés sur la date réelle du jour,
+// pas sur le mois consulté dans le sélecteur KPI.
+function calcAlertesFiscales(client, today = new Date()) {
+  const alerts = [];
+  const year = today.getFullYear();
+  const MS_DAY = 24*60*60*1000;
+  const advisor = client?.advisorLabel || "NVM Finance";
+  const fmtDate = (d) => d.toLocaleDateString("fr-FR", { day:"2-digit", month:"long" });
 
+  const pushEcheance = (kpi, dueDate, msg, action) => {
+    const diffDays = Math.ceil((dueDate - today) / MS_DAY);
+    if (diffDays < 0 || diffDays > 15) return;
+    alerts.push({
+      level: diffDays <= 5 ? "red" : "orange",
+      kpi,
+      current: diffDays === 0 ? "Aujourd'hui" : `J-${diffDays}`,
+      threshold: fmtDate(dueDate),
+      msg,
+      action,
+      isFiscal: true,
+    });
+  };
+
+  pushEcheance(
+    "Déclaration de TVA",
+    new Date(year, today.getMonth(), 19),
+    "Votre déclaration de TVA mensuelle approche.",
+    `Préparez votre CA3 et vérifiez vos justificatifs de TVA déductible avec ${advisor}.`
+  );
+
+  pushEcheance(
+    "DSN mensuelle",
+    new Date(year, today.getMonth(), 15),
+    "Votre Déclaration Sociale Nominative mensuelle approche.",
+    "Vérifiez les données de paie transmises à l'URSSAF avant la date limite."
+  );
+
+  [[2,"1er acompte IS"],[5,"2e acompte IS"],[8,"3e acompte IS"],[11,"4e acompte IS"]].forEach(([month, label]) => {
+    pushEcheance(
+      label,
+      new Date(year, month, 15),
+      `Votre ${label.toLowerCase()} arrive à échéance.`,
+      `Vérifiez le montant à verser avec ${advisor}.`
+    );
+  });
+
+  pushEcheance(
+    "Cotisation Foncière des Entreprises (CFE)",
+    new Date(year, 11, 15),
+    "Le solde de la CFE arrive à échéance.",
+    "Vérifiez le montant dû sur votre espace impots.gouv.fr."
+  );
+
+  return alerts;
+}
 
 // ════════════════════════════════════════════════════════
 // ALERTES VIEW
@@ -6135,8 +7733,8 @@ function AlertesView({ clients, singleClient, moisIdx, moisYear }) {
             </div>
             <div style={{fontSize:13,color:C.textMid,marginBottom:8,lineHeight:1.6}}>{a.msg}</div>
             {a.threshold&&<div style={{display:"flex",gap:16,fontSize:12,marginBottom:8}}>
-              <span style={{color:C.textLight}}>Valeur : <strong style={{color:C.red}}>{a.current}</strong></span>
-              <span style={{color:C.textLight}}>Objectif : <strong>{a.threshold}</strong></span>
+              <span style={{color:C.textLight}}>{a.isFiscal?"Délai":"Valeur"} : <strong style={{color:C.red}}>{a.current}</strong></span>
+              <span style={{color:C.textLight}}>{a.isFiscal?"Échéance":"Objectif"} : <strong>{a.threshold}</strong></span>
             </div>}
             {a.action&&<div style={{padding:"8px 14px",background:C.redBg,borderRadius:8,fontSize:12,color:C.red,fontWeight:700}}>{a.action}</div>}
           </div>
@@ -6152,8 +7750,8 @@ function AlertesView({ clients, singleClient, moisIdx, moisYear }) {
             </div>
             <div style={{fontSize:13,color:C.textMid,marginBottom:8,lineHeight:1.6}}>{a.msg}</div>
             {a.threshold&&<div style={{display:"flex",gap:16,fontSize:12,marginBottom:8}}>
-              <span style={{color:C.textLight}}>Valeur : <strong style={{color:C.orange}}>{a.current}</strong></span>
-              <span style={{color:C.textLight}}>Objectif : <strong>{a.threshold}</strong></span>
+              <span style={{color:C.textLight}}>{a.isFiscal?"Délai":"Valeur"} : <strong style={{color:C.orange}}>{a.current}</strong></span>
+              <span style={{color:C.textLight}}>{a.isFiscal?"Échéance":"Objectif"} : <strong>{a.threshold}</strong></span>
             </div>}
             {a.action&&<div style={{padding:"8px 14px",background:C.orangeBg,borderRadius:8,fontSize:12,color:C.orange,fontWeight:700}}>{a.action}</div>}
           </div>
@@ -6175,7 +7773,7 @@ function AlertesView({ clients, singleClient, moisIdx, moisYear }) {
 // RAPPORT IA
 // ════════════════════════════════════════════════════════
 // ════════════════════════════════════════════════════════
-// ADMIN — GESTION ACCÈS & MOTS DE PASSE
+// ADMIN · GESTION ACCÈS & MOTS DE PASSE
 // ════════════════════════════════════════════════════════
 function AdminAcces({ clients }) {
   const [sent, setSent] = useState({});
@@ -6190,7 +7788,7 @@ function AdminAcces({ clients }) {
     setSent(prev=>({...prev,[email]:true}));
   };
 
-  // USERS_AUTH est un tableau global (tous les clients de la plateforme) — on le
+  // USERS_AUTH est un tableau global (tous les clients de la plateforme) · on le
   // filtre ici sur les clients réellement passés en props, sinon un cabinet (ou un
   // aperçu admin) verrait les accès de clients qui ne sont pas les siens.
   const clientUsers = USERS_AUTH.filter(u=>u.role==="CLIENT" && clients.some(c=>c.id===u.clientId));
@@ -6258,7 +7856,7 @@ function RapportIA({ clients, moisIdx, moisYear }) {
     const sectorContext = client.sector === "Bar / Tabac / Presse"
       ? "\nContexte sectoriel : activite mixte bar + tabac reglemente + presse. Marge structurellement faible : tabac 6-8%, presse 15-20%, bar 60-70%. Treso en cash importante (recettes journalieres). Charges fixes elevees : licence IV, approvisionnement tabac obligatoire, loyer. KPIs secteur : marge brute cible 20-30%, EBE cible 8-12%, charges ext max 38%."
       : "";
-    const prompt=`Tu es analyste financier senior. Rapport mensuel pour :\nClient : ${client.name} | Secteur : ${client.sector} | Periode : ${MONTHS[moisIdx]} ${moisYear}${sectorContext}\nCA HT : ${fmt(kpis.ca)} | Marge brute : ${fmt(kpis.marge)} (${pct(kpis.ca>0?kpis.marge/kpis.ca*100:0)}) | EBE : ${fmt(kpis.ebe)} | Resultat : ${fmt(kpis.result)}\nEmprunts : ${(client.emprunts||[]).length} en cours | Investissements : ${(client.investissements||[]).length}\nAlertes : ${calcAlertes(client,moisIdx,moisYear).filter(a=>a.level!=="green").map(a=>`[${a.level.toUpperCase()}] ${a.kpi}`).join(", ")||"Aucune"}\nRedige : 1. SYNTHESE 2. PERFORMANCES 3. TRESORERIE 4. POINTS D'ATTENTION 5. 3 RECOMMANDATIONS — Professionnel, concis, oriente decision.`;
+    const prompt=`Tu es analyste financier senior. Rapport mensuel pour :\nClient : ${client.name} | Secteur : ${client.sector} | Periode : ${MONTHS[moisIdx]} ${moisYear}${sectorContext}\nCA HT : ${fmt(kpis.ca)} | Marge brute : ${fmt(kpis.marge)} (${pct(kpis.ca>0?kpis.marge/kpis.ca*100:0)}) | EBE : ${fmt(kpis.ebe)} | Resultat : ${fmt(kpis.result)}\nEmprunts : ${(client.emprunts||[]).length} en cours | Investissements : ${(client.investissements||[]).length}\nAlertes : ${calcAlertes(client,moisIdx,moisYear).filter(a=>a.level!=="green").map(a=>`[${a.level.toUpperCase()}] ${a.kpi}`).join(", ")||"Aucune"}\nRedige : 1. SYNTHESE 2. PERFORMANCES 3. TRESORERIE 4. POINTS D'ATTENTION 5. 3 RECOMMANDATIONS · Professionnel, concis, oriente decision.`;
     if(!prompt?.trim()){setText("Erreur : prompt vide.");setLoading(false);return;}
     try {
       const {data:{session}} = await supabase.auth.getSession();
@@ -6290,7 +7888,7 @@ function RapportIA({ clients, moisIdx, moisYear }) {
           <Btn onClick={generate} disabled={loading} variant="success">{loading?"Generation...":"Generer rapport IA"}</Btn>
         </div>
         {loading&&<div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,padding:"40px 0"}}><div style={{width:32,height:32,border:`3px solid ${C.border}`,borderTop:`3px solid ${C.primary}`,borderRadius:"50%",animation:"spin 1s linear infinite"}}/><span style={{color:C.textLight}}>Analyse en cours...</span></div>}
-        {text&&!loading&&<div style={{margin:"0 16px 16px",padding:"24px 28px",background:C.bg,borderRadius:10,border:`1px solid ${C.border}`}}><div style={{fontSize:14,fontWeight:800,color:C.text,marginBottom:18,paddingBottom:14,borderBottom:`2px solid ${C.borderLight}`}}>Rapport de gestion — {MONTHS[moisIdx]} {moisYear} — {client?.name}</div>{renderMD(text)}</div>}
+        {text&&!loading&&<div style={{margin:"0 16px 16px",padding:"24px 28px",background:C.bg,borderRadius:10,border:`1px solid ${C.border}`}}><div style={{fontSize:14,fontWeight:800,color:C.text,marginBottom:18,paddingBottom:14,borderBottom:`2px solid ${C.borderLight}`}}>Rapport de gestion · {MONTHS[moisIdx]} {moisYear} · {client?.name}</div>{renderMD(text)}</div>}
         {!text&&!loading&&<div style={{textAlign:"center",padding:"60px 0",color:C.textLight}}><div style={{fontSize:15,fontWeight:700,marginBottom:8}}>Selectionnez un client et generez le rapport</div></div>}
       </Card>
     </div>
@@ -6366,6 +7964,7 @@ export default function App() {
         if(!cd||cd.length===0) return;
         const extras=cd.map(c=>({
           id:c.id,name:c.name,sector:c.sector,color:c.color,manager:c.manager,cabinet_id:c.cabinet_id,planningEnabled:c.planning_enabled!==false,
+          congesEnabled:c.conges_enabled!==false,pointageEnabled:c.pointage_enabled!==false,notesFraisEnabled:c.notes_frais_enabled!==false,tachesEnabled:c.taches_enabled!==false,equipeTachesEnabled:c.equipe_taches_enabled!==false,
           since:c.since,status:c.status,email:c.email||(ud||[]).find(u=>u.client_id===c.id)?.email||"",
           kpis:c.kpis||{ca:0,marge:0,charges:0,salaires:0,ebe:0,result:0,tresorerie:0},
           emprunts:c.emprunts||[],investissements:c.investissements||[],
@@ -6389,7 +7988,7 @@ export default function App() {
     })();
   },[]);
 
-  // Cabinets partenaires (visible admin uniquement — la RLS renvoie [] pour les autres rôles)
+  // Cabinets partenaires (visible admin uniquement · la RLS renvoie [] pour les autres rôles)
   const [cabinets,setCabinets]=useState([]);
   useEffect(()=>{
     (async()=>{
@@ -6480,7 +8079,7 @@ export default function App() {
     const prevClient = clients.find(c=>c.id===id);
     setClients(prev=>prev.map(c=>c.id===id?{...c,...patch}:c));
     setPreviewClient(prev=>prev?.id===id?{...prev,...patch}:prev);
-    // Sauvegarder dans Supabase — en cas d'échec, on annule la mise à jour locale
+    // Sauvegarder dans Supabase · en cas d'échec, on annule la mise à jour locale
     // optimiste et on prévient l'utilisateur au lieu de laisser croire que c'est enregistré.
     try {
       const {data:client, error:selectError} = await supabase.from("clients").select("*").eq("id",id).single();
@@ -6489,7 +8088,7 @@ export default function App() {
       const updated = {...client,...patch};
       // Verrou optimiste sur updated_at : si quelqu'un d'autre a modifié ce client
       // entre notre lecture et notre écriture, la clause .eq("updated_at",...) ne
-      // matche plus aucune ligne — on détecte le conflit au lieu d'écraser silencieusement.
+      // matche plus aucune ligne · on détecte le conflit au lieu d'écraser silencieusement.
       const {data:updateResult, error:upsertError} = await supabase.from("clients").update({
         name:updated.name,sector:updated.sector||"",color:updated.color,
         manager:updated.manager,since:updated.since,status:updated.status,email:updated.email||"",
@@ -6498,10 +8097,16 @@ export default function App() {
         tresorerie:updated.tresorerie||{soldeInitial:0,ajustements:[]},
         is_data:updated.is||{totalPrecedent:0,taux:15},
         previsionnel:updated.previsionnel||{adjustments:{}},
+        planning_enabled:updated.planningEnabled!==false,
+        conges_enabled:updated.congesEnabled!==false,
+        pointage_enabled:updated.pointageEnabled!==false,
+        notes_frais_enabled:updated.notesFraisEnabled!==false,
+        taches_enabled:updated.tachesEnabled!==false,
+        equipe_taches_enabled:updated.equipeTachesEnabled!==false,
       }).eq("id",id).eq("updated_at",client.updated_at).select();
       if(upsertError) throw upsertError;
       if(!updateResult||updateResult.length===0){
-        throw new Error("Ce dossier a été modifié entre-temps par quelqu'un d'autre (autre onglet, autre utilisateur) — vos changements n'ont pas été enregistrés pour éviter d'écraser les siens. Rechargez la page et réessayez.");
+        throw new Error("Ce dossier a été modifié entre-temps par quelqu'un d'autre (autre onglet, autre utilisateur) · vos changements n'ont pas été enregistrés pour éviter d'écraser les siens. Rechargez la page et réessayez.");
       }
       // Si patch contient des imports, les sauvegarder séparément
       if(patch.imports) {
@@ -6580,7 +8185,7 @@ export default function App() {
 
   const visibleClients = previewCabinet ? clients.filter(c=>c.cabinet_id===previewCabinet.id) : clients;
   const ADMIN_TITLES={clients:`Portefeuille clients (${visibleClients.length})`,acces:"Accès & mots de passe clients",saisie:"Saisie & Import CSV",financier:"Donnees financieres",alertes:"Centre d'alertes",rapports:"Rapports IA",cabinets:"Cabinets partenaires"};
-  const CLIENT_TITLES={dashboard:"Tableau de bord",alertes:"Mes alertes",ventes:"Mes ventes",achats:"Mes coûts d'achat",charges:"Mes charges",salaires:"Ma masse salariale",creances:"Mes créances clients",dettes:"Mes dettes fournisseurs",resultat:"Mon resultat financier",tva:"Ma TVA",tresorerie:"Ma tresorerie",emprunts:"Mes emprunts",investissements:"Mes investissements",is:"Mon impot (IS)",catalogue:"Mon catalogue produits", comparaison:"Comparaison de périodes", previsionnel:"Prévisionnel", planning:"Planning & équipe"};
+  const CLIENT_TITLES={dashboard:"Tableau de bord",alertes:"Mes alertes",ventes:"Mes ventes",achats:"Mes coûts d'achat",charges:"Mes charges",salaires:"Ma masse salariale",creances:"Mes créances clients",dettes:"Mes dettes fournisseurs",resultat:"Mon resultat financier",tva:"Ma TVA",tresorerie:"Ma tresorerie",emprunts:"Mes emprunts",investissements:"Mes investissements",roi:"Calculateur ROI",embauche:"Simulateur d'embauche",is:"Mon impot (IS)",catalogue:"Mon catalogue produits", comparaison:"Comparaison de périodes", previsionnel:"Prévisionnel", planning:"Planning & équipe", conges:"Congés & absences", notesfrais:"Notes de frais", taches:"Tâches", equipetaches:"Gestion d'équipe & Tâches", pointage:"Pointage"};
 
   // Modal credentials nouveau client (admin)
   const CredentialsModal = newClientCredentials ? (
@@ -6590,7 +8195,7 @@ export default function App() {
         <div style={{fontSize:13,color:C.textMid,marginBottom:20,lineHeight:1.6}}>
           {newClientCredentials.email!=="(email non renseigné)"
             ?"Le compte a été créé. Un e-mail d'invitation a été envoyé automatiquement à votre client."
-            :"Le compte a été créé, mais aucun e-mail n'a été renseigné — ajoutez-en un depuis l'onglet Accès clients pour inviter ce client."}
+            :"Le compte a été créé, mais aucun e-mail n'a été renseigné · ajoutez-en un depuis l'onglet Accès clients pour inviter ce client."}
         </div>
         <div style={{background:C.bg,borderRadius:10,padding:16,marginBottom:20,display:"flex",flexDirection:"column",gap:10}}>
           <div style={{fontSize:12,color:C.textMid}}>Client : <strong style={{color:C.text}}>{newClientCredentials.name}</strong></div>
@@ -6610,12 +8215,12 @@ export default function App() {
   if (previewClient) {
     const live=clients.find(c=>c.id===previewClient.id)||previewClient;
     return (
-      <div style={{display:"flex",height:"100vh",fontFamily:"'Nunito',sans-serif"}}>
+      <div style={{display:"flex",height:"100vh",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif"}}>
         <GlobalCSS/>
-        <ClientSidebar view={view} setView={setView} onLogout={()=>setPreviewClient(null)} clientName={live.name} alertCount={calcAlertes(live,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length} planningEnabled={live.planningEnabled} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
+        <ClientSidebar view={view} setView={setView} onLogout={()=>setPreviewClient(null)} clientName={live.name} alertCount={calcAlertes(live,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length} planningEnabled={live.planningEnabled} congesEnabled={live.congesEnabled} pointageEnabled={live.pointageEnabled} notesFraisEnabled={live.notesFraisEnabled} tachesEnabled={live.tachesEnabled} equipeTachesEnabled={live.equipeTachesEnabled} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <TopBar
-            title={`Apercu client — ${live.name}`}
+            title={`Aperçu client · ${live.name}`}
             user={{name:"Admin",role:"ADMIN"}}
             onMenuToggle={()=>setMenuOpen(o=>!o)}
             extra={
@@ -6625,8 +8230,8 @@ export default function App() {
               </div>
             }
           />
-          <div style={{flex:1,overflowY:"auto"}}>
-            <ClientSpace client={{...live,advisorLabel:live.cabinet_id?(cabinets.find(cab=>cab.id===live.cabinet_id)?.name||"votre cabinet comptable"):"NVM Finance"}} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear} isAdminPreview={true}/>
+          <div style={{flex:1,overflowY:"auto",background:"linear-gradient(155deg,#f0faf8 0%,#ffffff 45%,#ecfdf5 100%)"}}>
+            <ClientSpace client={{...live,advisorLabel:live.cabinet_id?(cabinets.find(cab=>cab.id===live.cabinet_id)?.name||"votre cabinet comptable"):"NVM Finance"}} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear} isAdminPreview={true} setView={setView}/>
           </div>
         </div>
       </div>
@@ -6634,7 +8239,7 @@ export default function App() {
   }
 
   if(resetMode) return (
-    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg, #005653 0%, #003d3a 100%)",fontFamily:"'Nunito',sans-serif"}}>
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg, #005653 0%, #003d3a 100%)",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif"}}>
       <div style={{background:"white",borderRadius:20,padding:"48px 40px",width:"100%",maxWidth:420,boxShadow:"0 24px 60px rgba(0,0,0,0.3)"}}>
         <div style={{textAlign:"center",marginBottom:32}}>
           <div style={{fontSize:28,fontWeight:900,color:"#005653"}}>NVM FINANCE</div>
@@ -6643,12 +8248,12 @@ export default function App() {
         <div style={{marginBottom:16}}>
           <label style={{fontSize:11,fontWeight:800,color:"#6aaca8",display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.08em"}}>Nouveau mot de passe</label>
           <input type="password" value={resetPassword} onChange={e=>setResetPassword(e.target.value)} placeholder="Minimum 8 caractères"
-            style={{width:"100%",padding:"12px 16px",borderRadius:10,border:"1.5px solid #a7d4d0",fontSize:14,fontFamily:"'Nunito',sans-serif",outline:"none",boxSizing:"border-box"}}/>
+            style={{width:"100%",padding:"12px 16px",borderRadius:10,border:"1.5px solid #a7d4d0",fontSize:14,fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif",outline:"none",boxSizing:"border-box"}}/>
         </div>
         <div style={{marginBottom:24}}>
           <label style={{fontSize:11,fontWeight:800,color:"#6aaca8",display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.08em"}}>Confirmer le mot de passe</label>
           <input type="password" value={resetConfirm} onChange={e=>setResetConfirm(e.target.value)} placeholder="Répétez votre mot de passe"
-            style={{width:"100%",padding:"12px 16px",borderRadius:10,border:"1.5px solid #a7d4d0",fontSize:14,fontFamily:"'Nunito',sans-serif",outline:"none",boxSizing:"border-box"}}/>
+            style={{width:"100%",padding:"12px 16px",borderRadius:10,border:"1.5px solid #a7d4d0",fontSize:14,fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif",outline:"none",boxSizing:"border-box"}}/>
         </div>
         {resetMsg&&<div style={{color:resetMsg.includes("✅")?"#059669":"#dc2626",fontSize:13,marginBottom:16,textAlign:"center"}}>{resetMsg}</div>}
         <button onClick={async()=>{
@@ -6682,7 +8287,7 @@ export default function App() {
           } else {
             setTimeout(()=>setResetMode(false),2000);
           }
-        }} style={{width:"100%",padding:"14px",background:"#005653",color:"white",border:"none",borderRadius:12,fontSize:15,fontWeight:800,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>
+        }} style={{width:"100%",padding:"14px",background:"#005653",color:"white",border:"none",borderRadius:12,fontSize:15,fontWeight:800,cursor:"pointer",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif"}}>
           Définir mon mot de passe →
         </button>
       </div>
@@ -6693,15 +8298,15 @@ export default function App() {
   if (user.role==="CLIENT") {
     const client=clients.find(c=>c.id===user.clientId);
     return (
-      <div style={{display:"flex",height:"100vh",fontFamily:"'Nunito',sans-serif"}}>
+      <div style={{display:"flex",height:"100vh",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif"}}>
         <GlobalCSS/>
-        {/* Popup première connexion — priorité absolue */}
+        {/* Popup première connexion · priorité absolue */}
         {user.firstLogin&&<FirstLoginModal user={user} onComplete={(u)=>setUser(u)}/>}
-        <ClientSidebar view={view} setView={setView} onLogout={handleLogout} clientName={client?.name||user.name} alertCount={client?calcAlertes(client,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length:0} planningEnabled={client?.planningEnabled} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
+        <ClientSidebar view={view} setView={setView} onLogout={handleLogout} clientName={client?.name||user.name} alertCount={client?calcAlertes(client,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length:0} planningEnabled={client?.planningEnabled} congesEnabled={client?.congesEnabled} pointageEnabled={client?.pointageEnabled} notesFraisEnabled={client?.notesFraisEnabled} tachesEnabled={client?.tachesEnabled} equipeTachesEnabled={client?.equipeTachesEnabled} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <TopBar title={CLIENT_TITLES[view]||"Dashboard"} user={user} onMenuToggle={()=>setMenuOpen(o=>!o)}/>
-          <div style={{flex:1,overflowY:"auto"}}>
-            {client&&<ClientSpace client={{...client,advisorLabel:client.cabinet_id?(cabinets.find(cab=>cab.id===client.cabinet_id)?.name||"votre cabinet comptable"):"NVM Finance"}} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear}/>}
+          <div style={{flex:1,overflowY:"auto",background:"linear-gradient(155deg,#f0faf8 0%,#ffffff 45%,#ecfdf5 100%)"}}>
+            {client&&<ClientSpace client={{...client,advisorLabel:client.cabinet_id?(cabinets.find(cab=>cab.id===client.cabinet_id)?.name||"votre cabinet comptable"):"NVM Finance"}} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear} setView={setView}/>}
           </div>
         </div>
       </div>
@@ -6709,7 +8314,7 @@ export default function App() {
   }
 
   return (
-    <div style={{display:"flex",height:"100vh",fontFamily:"'Nunito',sans-serif"}}>
+    <div style={{display:"flex",height:"100vh",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif"}}>
       <GlobalCSS/>
       {CredentialsModal}
       {FirstLoginPopup}
@@ -6718,17 +8323,17 @@ export default function App() {
         <TopBar title={ADMIN_TITLES[view]||"Admin"} user={user} onMenuToggle={()=>setMenuOpen(o=>!o)}
           extra={previewCabinet?(
             <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <span style={{fontSize:12,color:C.textMid,fontWeight:700}}>Aperçu — {previewCabinet.name}</span>
+              <span style={{fontSize:12,color:C.textMid,fontWeight:700}}>Aperçu · {previewCabinet.name}</span>
               <Btn small variant="primary" onClick={()=>{setPreviewCabinet(null);setView("cabinets");}}>← Retour admin</Btn>
             </div>
           ):undefined}
         />
-        <div style={{flex:1,overflowY:"auto"}}>
+        <div style={{flex:1,overflowY:"auto",background:"linear-gradient(155deg,#f0faf8 0%,#ffffff 45%,#ecfdf5 100%)"}}>
           {view==="clients"&&<AdminClients clients={visibleClients} cabinets={previewCabinet?[]:cabinets} onViewAsClient={setPreviewClient} onAddClient={handleAddClient} onUpdateClient={updateClient} onDeleteClient={(id)=>{(async()=>{
           // Récupérer l'email du client avant suppression
           const clientToDelete = clients.find(c=>c.id===id);
           const emailToDelete = clientToDelete?.email || USERS_AUTH.find(u=>u.clientId===id)?.email;
-          // Supprimer d'abord en base — si ça échoue, on ne touche pas à l'état local
+          // Supprimer d'abord en base · si ça échoue, on ne touche pas à l'état local
           const {error:deleteError} = await supabase.from("clients").delete().eq("id",id);
           if(deleteError){
             console.error("Erreur suppression client:",deleteError);
