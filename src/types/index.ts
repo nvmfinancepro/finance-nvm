@@ -93,6 +93,7 @@ export interface Client {
   tresorerie: Tresorerie;
   is: ISData;
   imports: ImportCSV[];
+  previsionnel?: { adjustments?: Record<number, Record<string, number | string>> };
 }
 
 // ─── Alertes ─────────────────────────────────────────────────────────────────
