@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { LogoSVG } from "@/components/ui/Logo";
 import { getPublishedPosts } from "@/lib/blog";
 
+export const revalidate = 60;
+
 const C = { primary: "#005653", green: "#21C45D", bg: "#ecfdf5", text: "#002e2c", mid: "#2d6b68", light: "#a7d4d0", border: "#c8e8e5" };
 
 const title = "Blog | Gestion et pilotage financier PME — NVM Finance";

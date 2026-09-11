@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 import { getPublishedPosts } from "@/lib/blog";
 
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = "https://www.nvm-finance.fr";
   const posts = await getPublishedPosts();

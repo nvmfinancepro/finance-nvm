@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { LogoSVG } from "@/components/ui/Logo";
 import { getPostBySlug } from "@/lib/blog";
 
+export const revalidate = 60;
+
 const C = { primary: "#005653", green: "#21C45D", bg: "#ecfdf5", text: "#002e2c", mid: "#2d6b68", light: "#a7d4d0", border: "#c8e8e5" };
 
 const sectionStyle: CSSProperties = { maxWidth: 760, margin: "0 auto", padding: "0 24px" };
