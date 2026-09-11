@@ -68,7 +68,7 @@ export default function Page() {
             <a href="/services" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Nos offres</a>
           </div>
           <div style={{display:"flex",gap:10,alignItems:"center"}}>
-            <a href="https://nvm-finance.vercel.app" target="_blank" rel="noopener noreferrer" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Espace client</a>
+            <a href="/auth/login" target="_blank" rel="noopener noreferrer" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Espace client</a>
             <a href="https://calendly.com/nvmfinance-pro/30min" target="_blank" rel="noopener noreferrer" style={{background:C.primary,color:"#fff",padding:"9px 22px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none"}}>Prendre RDV</a>
           </div>
         </div>
@@ -87,7 +87,7 @@ export default function Page() {
             <Logo width={70}/>
             <button onClick={()=>setMenuOpen(false)} style={{fontSize:20,cursor:"pointer",color:"#6aaca8",background:"none",border:"none",padding:4}}>✕</button>
           </div>
-          {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"},{h:"/on-vous-montre",l:"On vous montre"},{h:"https://nvm-finance.vercel.app",l:"Espace client",ext:true}].map((lk,i)=>(
+          {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"},{h:"/on-vous-montre",l:"On vous montre"},{h:"/auth/login",l:"Espace client",ext:true}].map((lk,i)=>(
             <a key={i} href={lk.h} target={lk.ext?"_blank":undefined} rel={lk.ext?"noopener noreferrer":undefined} onClick={()=>setMenuOpen(false)}
               style={{display:"block",padding:"16px 24px",fontSize:15,fontWeight:700,color:"#002e2c",textDecoration:"none",borderBottom:"1px solid #c8e8e5"}}>
               {lk.l}
@@ -147,7 +147,7 @@ export default function Page() {
               <div style={{fontSize:11,fontWeight:800,color:"rgba(255,255,255,.3)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Contact</div>
               <a href="https://calendly.com/nvmfinance-pro/30min" target="_blank" rel="noopener noreferrer" style={{display:"block",fontSize:13,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Prendre RDV</a>
               <a href="mailto:nathan@nvm-finance.fr" style={{display:"block",fontSize:13,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Nous écrire</a>
-              <a href="https://nvm-finance.vercel.app" target="_blank" rel="noopener noreferrer" style={{display:"block",fontSize:13,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Espace client</a>
+              <a href="/auth/login" target="_blank" rel="noopener noreferrer" style={{display:"block",fontSize:13,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>Espace client</a>
             </div>
             <div>
               <div style={{fontSize:11,fontWeight:800,color:"rgba(255,255,255,.3)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Légal</div>

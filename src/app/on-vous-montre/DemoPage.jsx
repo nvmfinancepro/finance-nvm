@@ -491,14 +491,14 @@ export default function DemoPage() {
         </div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 48px 14px",borderTop:`1px solid ${C.border}`}}>
           <div style={{display:"flex",gap:4,alignItems:"center"}}>
-            {[{h:"/site",l:"Accueil"},{h:"/site/services",l:"Nos offres"},{h:"https://nvmfinance.wordpress.com",l:"À propos"}].map((lk,i)=>(
+            {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"},{h:"/blog",l:"Blog"},{h:"https://nvmfinance.wordpress.com",l:"À propos"}].map((lk,i)=>(
               <a key={i} href={lk.h} style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>
                 {lk.l}
               </a>
             ))}
           </div>
           <div style={{display:"flex",gap:10,alignItems:"center"}}>
-                        <a href="https://nvm-finance.vercel.app" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Espace client</a>
+                        <a href="/auth/login" target="_blank" rel="noopener noreferrer" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Espace client</a>
             <a href="https://calendly.com/nvmfinance-pro/30min" target="_blank" rel="noopener noreferrer" style={{background:C.primary,color:"#fff",padding:"9px 22px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 16px rgba(0,86,83,.2)"}}>Prendre RDV</a>
           </div>
         </div>
