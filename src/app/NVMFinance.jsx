@@ -613,8 +613,8 @@ function NavItem({ icon, label, badge, badgeColor, active, onClick }) {
 }
 function AdminSidebar({ view, setView, onLogout, clientCount, alertCount, open, onClose, role }) {
  const nav=[{id:"clients",icon:"",label:"Gestion clients",badge:clientCount},{id:"acces",icon:"",label:"Accès clients"},{id:"saisie",icon:"",label:"Saisie & Import CSV"},{id:"financier",icon:"",label:"Données financières"},{id:"alertes",icon:"",label:"Alertes",badge:alertCount,badgeColor:C.red},{id:"rapports",icon:"",label:"Rapports IA"}];
- // La création de cabinets partenaires reste strictement réservée à l'admin de la plateforme
- if(role!=="CABINET") nav.push({id:"cabinets",icon:"",label:"Cabinets partenaires"});
+ // Le blog du site public et la création de cabinets partenaires restent strictement réservés à l'admin de la plateforme
+ if(role!=="CABINET") nav.push({id:"blog",icon:"",label:"Blog"},{id:"cabinets",icon:"",label:"Cabinets partenaires"});
  return <SidebarBase role={role==="CABINET"?"Espace Cabinet":"Espace Administrateur"} onLogout={onLogout} open={open} onClose={onClose}><nav style={{flex:1,padding:"10px 8px",overflowY:"auto"}}>{nav.map(item=><NavItem key={item.id} {...item} active={view===item.id} onClick={()=>{setView(item.id);onClose&&onClose();}}/>)}</nav></SidebarBase>;
 }
 function ClientSidebar({ view, setView, onLogout, clientName, alertCount, planningEnabled, congesEnabled, pointageEnabled, notesFraisEnabled, tachesEnabled, equipeTachesEnabled, stockEnabled, open, onClose }) {
@@ -8148,6 +8148,173 @@ function RapportIA({ clients, moisIdx, moisYear }) {
   );
 }
 
+// ─── BLOG ───────────────────────────────────────────────────────
+const BLOG_THEMES = ["Gestion de trésorerie PME","Comptabilité & facturation","Pilotage financier PME","Automatisation & outils de gestion"];
+function slugify(str) {
+ return (str||"").toString().normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,80)||"article";
+}
+
+function AdminBlog() {
+ const [posts,setPosts]=useState([]);
+ const [loading,setLoading]=useState(true);
+ const [theme,setTheme]=useState(BLOG_THEMES[0]);
+ const [angle,setAngle]=useState("");
+ const [generating,setGenerating]=useState(false);
+ const [genError,setGenError]=useState("");
+ const [editId,setEditId]=useState(null);
+ const [editForm,setEditForm]=useState(null);
+ const [saving,setSaving]=useState(false);
+ const [confirmDeleteId,setConfirmDeleteId]=useState(null);
+
+ useEffect(()=>{
+  (async()=>{
+   setLoading(true);
+   try {
+    const{data}=await supabase.from("blog_posts").select("*").order("created_at",{ascending:false});
+    setPosts(data||[]);
+   } catch(e){ console.error("Blog load:",e); }
+   setLoading(false);
+  })();
+ },[]);
+
+ const publies=posts.filter(p=>p.status==="published").length;
+ const brouillons=posts.filter(p=>p.status==="draft").length;
+
+ const uniqueSlug=async(base)=>{
+  let slug=base,n=2;
+  while(posts.some(p=>p.slug===slug)){ slug=`${base}-${n}`; n++; }
+  return slug;
+ };
+
+ const generate=async()=>{
+  if(generating) return;
+  setGenerating(true); setGenError("");
+  try {
+   const{data:{session}}=await supabase.auth.getSession();
+   const res=await fetch("/api/blog/generate",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},
+    body:JSON.stringify({theme,angle})
+   });
+   const data=await res.json();
+   if(!res.ok||data.error){ setGenError(data.error||"Erreur de génération."); setGenerating(false); return; }
+   const slug=await uniqueSlug(slugify(data.title));
+   const{data:inserted,error}=await supabase.from("blog_posts").insert({
+    title:data.title, slug, excerpt:data.excerpt||"", body:data.body||"", theme, status:"draft"
+   }).select();
+   if(error){ setGenError(error.message); }
+   else if(inserted&&inserted.length>0){ setPosts(prev=>[inserted[0],...prev]); setAngle(""); }
+  } catch(e){ setGenError("Erreur réseau."); }
+  setGenerating(false);
+ };
+
+ const startEdit=(p)=>{ setEditId(p.id); setEditForm({title:p.title,slug:p.slug,excerpt:p.excerpt,body:p.body}); setConfirmDeleteId(null); };
+ const cancelEdit=()=>{ setEditId(null); setEditForm(null); };
+
+ const saveEdit=async()=>{
+  if(!editForm||saving) return;
+  setSaving(true);
+  const{error}=await supabase.from("blog_posts").update({
+   title:editForm.title, slug:editForm.slug, excerpt:editForm.excerpt, body:editForm.body
+  }).eq("id",editId);
+  if(error){ alert("Erreur lors de l'enregistrement : "+error.message); }
+  else { setPosts(prev=>prev.map(p=>p.id===editId?{...p,...editForm}:p)); cancelEdit(); }
+  setSaving(false);
+ };
+
+ const togglePublish=async(p)=>{
+  const next=p.status==="published"?"draft":"published";
+  const patch=next==="published"?{status:next,published_at:new Date().toISOString()}:{status:next};
+  const prevPosts=posts;
+  setPosts(posts.map(x=>x.id===p.id?{...x,...patch}:x));
+  const{error}=await supabase.from("blog_posts").update(patch).eq("id",p.id);
+  if(error){ setPosts(prevPosts); alert("Erreur : "+error.message); }
+ };
+
+ const deletePost=async(p)=>{
+  const prevPosts=posts;
+  setPosts(posts.filter(x=>x.id!==p.id));
+  setConfirmDeleteId(null);
+  const{error}=await supabase.from("blog_posts").delete().eq("id",p.id);
+  if(error){ setPosts(prevPosts); alert("Erreur lors de la suppression : "+error.message); }
+ };
+
+ return (
+  <div style={{padding:24}} className="fade-up">
+   <div style={{marginBottom:20}}>
+    <div style={{fontSize:18,fontWeight:900,color:C.text}}>Blog</div>
+    <div style={{fontSize:12,color:C.textLight,marginTop:2}}>Articles SEO du site public — génération IA, relecture, publication</div>
+   </div>
+   <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:20}}>
+    <KpiCard label="Articles" value={posts.length} color={C.primary}/>
+    <KpiCard label="Publiés" value={publies} color={C.green}/>
+    <KpiCard label="Brouillons" value={brouillons} color={C.textMid}/>
+   </div>
+
+   <Card style={{padding:18,marginBottom:20}}>
+    <div style={{fontSize:14,fontWeight:800,color:C.text,marginBottom:12}}>Générer un brouillon avec l'IA</div>
+    <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
+     <FormRow label="Thème"><select value={theme} onChange={e=>setTheme(e.target.value)} className="inp">{BLOG_THEMES.map(t=><option key={t}>{t}</option>)}</select></FormRow>
+     <FormRow label="Angle (optionnel)"><input value={angle} onChange={e=>setAngle(e.target.value)} className="inp" placeholder="Ex: spécial restauration" style={{width:220}}/></FormRow>
+     <Btn onClick={generate} disabled={generating} variant="success">{generating?"Génération...":"Générer avec l'IA"}</Btn>
+    </div>
+    {genError&&<div style={{marginTop:10,color:C.red,fontSize:12,fontWeight:700}}>{genError}</div>}
+   </Card>
+
+   <Card>
+    <SectionHead title="Articles"/>
+    {loading?(
+     <div style={{padding:24,textAlign:"center",color:C.textLight,fontSize:13}}>Chargement...</div>
+    ):posts.length===0?(
+     <div style={{padding:24,textAlign:"center",color:C.textLight,fontSize:13}}>Aucun article pour l'instant. Génère un premier brouillon ci-dessus.</div>
+    ):(
+     <div>
+      {posts.map(p=>(
+       <div key={p.id} style={{padding:16,borderBottom:`1px solid ${C.borderLight}`}}>
+        {editId===p.id ? (
+         <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          <FormRow label="Titre"><input value={editForm.title} onChange={e=>setEditForm({...editForm,title:e.target.value})} className="inp" style={{width:"100%"}}/></FormRow>
+          <FormRow label="Slug (URL /blog/...)"><input value={editForm.slug} onChange={e=>setEditForm({...editForm,slug:slugify(e.target.value)})} className="inp" style={{width:"100%"}}/></FormRow>
+          <FormRow label="Résumé (meta description)"><textarea value={editForm.excerpt} onChange={e=>setEditForm({...editForm,excerpt:e.target.value})} className="inp" rows={2} style={{width:"100%",resize:"vertical",fontFamily:"inherit"}}/></FormRow>
+          <FormRow label="Contenu"><textarea value={editForm.body} onChange={e=>setEditForm({...editForm,body:e.target.value})} className="inp" rows={16} style={{width:"100%",resize:"vertical",fontFamily:"inherit"}}/></FormRow>
+          <div style={{display:"flex",gap:8}}>
+           <Btn onClick={saveEdit} disabled={saving} variant="success">{saving?"Enregistrement...":"Enregistrer"}</Btn>
+           <Btn variant="ghost" onClick={cancelEdit}>Annuler</Btn>
+          </div>
+         </div>
+        ):(
+         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
+          <div style={{flex:1,minWidth:220}}>
+           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,flexWrap:"wrap"}}>
+            <span style={{fontSize:14,fontWeight:800,color:C.text}}>{p.title}</span>
+            <Pill color={p.status==="published"?C.green:C.textMid}>{p.status==="published"?"Publié":"Brouillon"}</Pill>
+           </div>
+           <div style={{fontSize:12,color:C.textLight}}>/blog/{p.slug}</div>
+           <div style={{fontSize:12,color:C.textMid,marginTop:6}}>{p.excerpt}</div>
+          </div>
+          <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
+           <Btn variant="ghost" small onClick={()=>startEdit(p)}>Modifier</Btn>
+           <Btn variant={p.status==="published"?"ghost":"success"} small onClick={()=>togglePublish(p)}>{p.status==="published"?"Dépublier":"Publier"}</Btn>
+           {confirmDeleteId===p.id ? (
+            <>
+             <Btn variant="danger" small onClick={()=>deletePost(p)}>Confirmer</Btn>
+             <Btn variant="ghost" small onClick={()=>setConfirmDeleteId(null)}>Annuler</Btn>
+            </>
+           ) : (
+            <Btn variant="ghost" small onClick={()=>setConfirmDeleteId(p.id)}>Supprimer</Btn>
+           )}
+          </div>
+         </div>
+        )}
+       </div>
+      ))}
+     </div>
+    )}
+   </Card>
+  </div>
+ );
+}
+
 export default function App() {
   const [user,setUser]=useState(null);
   const [view,setView]=useState("clients");
@@ -8444,7 +8611,7 @@ export default function App() {
   };
 
   const visibleClients = previewCabinet ? clients.filter(c=>c.cabinet_id===previewCabinet.id) : clients;
-  const ADMIN_TITLES={clients:`Portefeuille clients (${visibleClients.length})`,acces:"Accès & mots de passe clients",saisie:"Saisie & Import CSV",financier:"Donnees financieres",alertes:"Centre d'alertes",rapports:"Rapports IA",cabinets:"Cabinets partenaires"};
+  const ADMIN_TITLES={clients:`Portefeuille clients (${visibleClients.length})`,acces:"Accès & mots de passe clients",saisie:"Saisie & Import CSV",financier:"Donnees financieres",alertes:"Centre d'alertes",rapports:"Rapports IA",blog:"Blog",cabinets:"Cabinets partenaires"};
   const CLIENT_TITLES={dashboard:"Tableau de bord",alertes:"Mes alertes",ventes:"Mes ventes",achats:"Mes coûts d'achat",charges:"Mes charges",salaires:"Ma masse salariale",creances:"Mes créances clients",dettes:"Mes dettes fournisseurs",resultat:"Mon resultat financier",tva:"Ma TVA",tresorerie:"Ma tresorerie",emprunts:"Mes emprunts",investissements:"Mes investissements",roi:"Calculateur ROI",embauche:"Simulateur d'embauche",is:"Mon impot (IS)",catalogue:"Mon catalogue produits", comparaison:"Comparaison de périodes", previsionnel:"Prévisionnel", planning:"Planning & équipe", conges:"Congés & absences", notesfrais:"Notes de frais", taches:"Tâches", equipetaches:"Gestion d'équipe & Tâches", pointage:"Pointage", stock:"Mon stock"};
 
   // Modal credentials nouveau client (admin)
@@ -8623,6 +8790,7 @@ export default function App() {
           {view==="financier"&&<AdminFinancier clients={visibleClients} onUpdateClient={updateClient}/>}
           {view==="alertes"&&<AlertesView clients={visibleClients} moisIdx={moisIdx} moisYear={moisYear}/>}
           {view==="rapports"&&<RapportIA clients={visibleClients} moisIdx={moisIdx} moisYear={moisYear}/>}
+          {view==="blog"&&user.role==="ADMIN"&&!previewCabinet&&<AdminBlog/>}
           {view==="cabinets"&&user.role==="ADMIN"&&!previewCabinet&&<AdminCabinets cabinets={cabinets} clients={clients} onAddCabinet={handleAddCabinet} onDeleteCabinet={handleDeleteCabinet} onViewAsCabinet={(cab)=>{setPreviewCabinet(cab);setView("clients");}}/>}
         </div>
       </div>

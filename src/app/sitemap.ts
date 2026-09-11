@@ -1,7 +1,9 @@
 import type { MetadataRoute } from "next";
+import { getPublishedPosts } from "@/lib/blog";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = "https://www.nvm-finance.fr";
+  const posts = await getPublishedPosts();
 
   return [
     {
@@ -29,5 +31,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.8,
     },
+    {
+      url: `${base}/blog`,
+      changeFrequency: "weekly",
+      priority: 0.7,
+    },
+    ...posts.map((p) => ({
+      url: `${base}/blog/${p.slug}`,
+      lastModified: p.published_at ? new Date(p.published_at) : undefined,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    })),
   ];
 }
