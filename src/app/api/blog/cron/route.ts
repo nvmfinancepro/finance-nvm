@@ -68,9 +68,10 @@ Retourne UNIQUEMENT ce JSON, sans texte autour ni backticks : {"title":"titre ac
         "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         max_tokens: 2000,
         temperature: 0.5,
+        reasoning_effort: "low",
         messages: [
           { role: "system", content: "Tu es rédacteur SEO spécialisé en gestion financière et opérationnelle pour PME françaises. Réponds UNIQUEMENT avec du JSON valide, sans texte avant ni après, sans backticks." },
           { role: "user", content: prompt },

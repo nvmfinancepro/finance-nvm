@@ -30,9 +30,10 @@ export async function POST(req: NextRequest) {
         "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         max_tokens: 500,
         temperature: 0.2,
+        reasoning_effort: "low",
         messages: [
           { role: "system", content: "Tu es un assistant qui structure des tâches à partir d'une description libre. Reponds UNIQUEMENT avec du JSON valide, sans texte avant ni après, sans backticks." },
           { role: "user", content: prompt },

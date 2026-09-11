@@ -36,9 +36,10 @@ export async function POST(req: NextRequest) {
         "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         max_tokens: 8192,
         temperature: 0.1,
+        reasoning_effort: "low",
         messages: [
           { role: "system", content: "RÈGLE ABSOLUE : il doit toujours y avoir au minimum le nombre de personnes requis simultanément. Ne jamais mettre tous les employés en repos le même jour. Vérifier chaque jour que la couverture minimum est respectée avant de valider le planning. Tu es un assistant RH. Reponds UNIQUEMENT avec du JSON valide, sans texte avant ni apres, sans backticks. Types autorisés UNIQUEMENT : travail, repos, conge. Pour les congés payés utilise TOUJOURS conge. Ne jamais utiliser cp, conge_paye, congé ou tout autre variante." },
           { role: "user", content: prompt }
