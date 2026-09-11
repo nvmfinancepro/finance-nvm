@@ -222,7 +222,7 @@ const Btn = ({ children, onClick, variant="primary", small, style={}, disabled }
 };
 const Pill = ({ children, color=C.primary, bg }) => <span style={{background:bg||color+"18",color,border:`1px solid ${color}33`,borderRadius:100,padding:"3px 11px",fontSize:11,fontWeight:800,whiteSpace:"nowrap",display:"inline-block"}}>{children}</span>;
 const KpiCard = ({ label, value, sub, color=C.primary }) => (
- <div style={{background:C.white,borderRadius:20,padding:"20px 22px",position:"relative",boxShadow:"0 16px 36px rgba(0,86,83,.06)"}}>
+ <div style={{background:C.white,border:`1.5px solid ${C.text}`,borderRadius:20,padding:"22px 24px",position:"relative",boxShadow:"0 16px 36px rgba(0,86,83,.06)"}}>
  <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:9}}>
  <div style={{width:7,height:7,borderRadius:"50%",background:color,flexShrink:0}}/>
  <div style={{fontSize:11,color:C.textLight,fontWeight:800,textTransform:"uppercase",letterSpacing:"0.08em"}}>{label}</div>
@@ -231,9 +231,9 @@ const KpiCard = ({ label, value, sub, color=C.primary }) => (
  {sub&&<div style={{fontSize:12,color,fontWeight:700,marginTop:6}}>{sub}</div>}
  </div>
 );
-const Card = ({ children, style={} }) => <div style={{background:C.white,borderRadius:22,boxShadow:"0 16px 36px rgba(0,86,83,.06)",...style}}>{children}</div>;
+const Card = ({ children, style={} }) => <div style={{background:C.white,border:`1.5px solid ${C.text}`,borderRadius:22,boxShadow:"0 16px 36px rgba(0,86,83,.06)",overflow:"hidden",...style}}>{children}</div>;
 const SectionHead = ({ title, sub, action }) => (
- <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 18px",borderBottom:`1px solid ${C.borderLight}`}}>
+ <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",borderBottom:`1px solid ${C.borderLight}`}}>
  <div><div style={{fontSize:14,fontWeight:800,color:C.text}}>{title}</div>{sub&&<div style={{fontSize:11,color:C.textLight,marginTop:2}}>{sub}</div>}</div>
  {action&&<div style={{display:"flex",gap:8,alignItems:"center"}}>{action}</div>}
  </div>
@@ -617,7 +617,7 @@ function AdminSidebar({ view, setView, onLogout, clientCount, alertCount, open, 
  if(role!=="CABINET") nav.push({id:"cabinets",icon:"",label:"Cabinets partenaires"});
  return <SidebarBase role={role==="CABINET"?"Espace Cabinet":"Espace Administrateur"} onLogout={onLogout} open={open} onClose={onClose}><nav style={{flex:1,padding:"10px 8px",overflowY:"auto"}}>{nav.map(item=><NavItem key={item.id} {...item} active={view===item.id} onClick={()=>{setView(item.id);onClose&&onClose();}}/>)}</nav></SidebarBase>;
 }
-function ClientSidebar({ view, setView, onLogout, clientName, alertCount, planningEnabled, congesEnabled, pointageEnabled, notesFraisEnabled, tachesEnabled, equipeTachesEnabled, open, onClose }) {
+function ClientSidebar({ view, setView, onLogout, clientName, alertCount, planningEnabled, congesEnabled, pointageEnabled, notesFraisEnabled, tachesEnabled, equipeTachesEnabled, stockEnabled, open, onClose }) {
  const sections = [
  { label:"VUE D'ENSEMBLE", items:[
  {id:"dashboard", icon:"", label:"Tableau de bord"},
@@ -651,6 +651,7 @@ function ClientSidebar({ view, setView, onLogout, clientName, alertCount, planni
  ...(notesFraisEnabled!==false ? [{id:"notesfrais", icon:"", label:"Notes de frais"}] : []),
  ...(tachesEnabled!==false ? [{id:"taches", icon:"", label:"Tâches"}] : []),
  ...(equipeTachesEnabled!==false ? [{id:"equipetaches", icon:"", label:"Gestion d'équipe & Tâches"}] : []),
+ ...(stockEnabled!==false ? [{id:"stock", icon:"", label:"Mon stock"}] : []),
  ]},
  { label:"ANALYSE", items:[
  {id:"comparaison",   icon:"↔", label:"Comparaison périodes"},
@@ -784,13 +785,29 @@ function AdminClients({ clients, cabinets, onViewAsClient, onAddClient, onUpdate
  const [editSaving,setEditSaving]=useState(false);
  const [confirmDelete,setConfirmDelete]=useState(null);
 
- const startEdit=(c)=>{ setEditId(c.id); setEditC({name:c.name,sector:c.sector,manager:c.manager,status:c.status,email:c.email||"",planningEnabled:c.planningEnabled!==false,congesEnabled:c.congesEnabled!==false,pointageEnabled:c.pointageEnabled!==false,notesFraisEnabled:c.notesFraisEnabled!==false,tachesEnabled:c.tachesEnabled!==false,equipeTachesEnabled:c.equipeTachesEnabled!==false}); };
+ const startEdit=(c)=>{ setEditId(c.id); setEditC({name:c.name,sector:c.sector,manager:c.manager,status:c.status,email:c.email||"",planningEnabled:c.planningEnabled!==false,congesEnabled:c.congesEnabled!==false,pointageEnabled:c.pointageEnabled!==false,notesFraisEnabled:c.notesFraisEnabled!==false,tachesEnabled:c.tachesEnabled!==false,equipeTachesEnabled:c.equipeTachesEnabled!==false,stockEnabled:c.stockEnabled!==false,impactJournalEnabled:c.impactJournalEnabled===true,impactJournalTotal:c.impactJournal?.total||0,impactJournalItems:c.impactJournal?.items||[]}); };
+ const addImpactItem=(kind)=>{
+   const blank = kind==="temps"
+     ? {id:Date.now(),date:"",label:"",kind:"temps",avant:"",apres:"",frequence:""}
+     : {id:Date.now(),date:"",label:"",kind:"argent",type:"economie",montant:0,recurrent:false};
+   setEditC(prev=>({...prev,impactJournalItems:[...(prev.impactJournalItems||[]),blank]}));
+ };
+ const updateImpactItem=(id,patch)=>{
+   setEditC(prev=>({...prev,impactJournalItems:(prev.impactJournalItems||[]).map(it=>it.id===id?{...it,...patch}:it)}));
+ };
+ const removeImpactItem=(id)=>{
+   setEditC(prev=>({...prev,impactJournalItems:(prev.impactJournalItems||[]).filter(it=>it.id!==id)}));
+ };
+ const sumImpactItems=()=>{
+   const total=(editC.impactJournalItems||[]).filter(it=>it.kind!=="temps").reduce((s,it)=>s+(it.type==="economie"?-1:1)*(Number(it.montant)||0),0);
+   setEditC(prev=>({...prev,impactJournalTotal:Math.abs(total)}));
+ };
  const saveEdit=async()=>{
     if(editSaving) return;
     setEditSaving(true);
     // Écriture unique via onUpdateClient (verrou optimiste + rollback + alerte déjà gérés là-bas) —
     // ne pas dupliquer avec un second appel Supabase direct en parallèle.
-    await onUpdateClient(editId,{name:editC.name,sector:editC.sector,manager:editC.manager,email:editC.email,planningEnabled:editC.planningEnabled,congesEnabled:editC.congesEnabled,pointageEnabled:editC.pointageEnabled,notesFraisEnabled:editC.notesFraisEnabled,tachesEnabled:editC.tachesEnabled,equipeTachesEnabled:editC.equipeTachesEnabled});
+    await onUpdateClient(editId,{name:editC.name,sector:editC.sector,manager:editC.manager,email:editC.email,planningEnabled:editC.planningEnabled,congesEnabled:editC.congesEnabled,pointageEnabled:editC.pointageEnabled,notesFraisEnabled:editC.notesFraisEnabled,tachesEnabled:editC.tachesEnabled,equipeTachesEnabled:editC.equipeTachesEnabled,stockEnabled:editC.stockEnabled,impactJournalEnabled:editC.impactJournalEnabled,impactJournal:{total:Number(editC.impactJournalTotal)||0,totalLabel:"Valeur créée",items:(editC.impactJournalItems||[]).filter(it=>it.label)}});
     setEditId(null);
     setEditSaving(false);
   };
@@ -871,7 +888,78 @@ function AdminClients({ clients, cabinets, onViewAsClient, onAddClient, onUpdate
      <input type="checkbox" checked={editC.equipeTachesEnabled!==false} onChange={e=>setEditC({...editC,equipeTachesEnabled:e.target.checked})}/>
      Accès au module Gestion d'équipe & Tâches
    </label>
+   <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,fontWeight:700,color:C.text,marginTop:8}}>
+     <input type="checkbox" checked={editC.stockEnabled!==false} onChange={e=>setEditC({...editC,stockEnabled:e.target.checked})}/>
+     Accès au module Stock
+   </label>
  </div>
+ <div style={{padding:"0 20px 12px"}}>
+   <div style={{fontSize:11,fontWeight:800,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>Affichage du tableau de bord</div>
+   <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,fontWeight:700,color:C.text}}>
+     <input type="checkbox" checked={editC.impactJournalEnabled===true} onChange={e=>setEditC({...editC,impactJournalEnabled:e.target.checked})}/>
+     Afficher le widget "Valeur créée" (journal des actions du conseiller)
+   </label>
+ </div>
+ {editC.impactJournalEnabled&&(
+ <div style={{padding:"0 20px 12px"}}>
+   <div style={{fontSize:11,fontWeight:800,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>Valeur créée · journal des actions</div>
+
+   <FormRow label="Montant total affiché (le gros chiffre en haut du widget)">
+     <div style={{display:"flex",gap:8,alignItems:"center"}}>
+       <input type="number" value={editC.impactJournalTotal||0} onChange={e=>setEditC({...editC,impactJournalTotal:e.target.value})} className="inp" style={{maxWidth:180}}/>
+       <Btn small variant="ghost" onClick={sumImpactItems}>Somme des actions €</Btn>
+     </div>
+   </FormRow>
+
+   <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:10}}>
+     {(editC.impactJournalItems||[]).map(it=>(
+       <div key={it.id} style={{background:C.bg,border:`1px solid ${C.borderLight}`,borderRadius:12,padding:12,display:"flex",flexDirection:"column",gap:8}}>
+         <div style={{display:"flex",gap:8}}>
+           <select value={it.kind||"argent"} onChange={e=>updateImpactItem(it.id,{kind:e.target.value})} className="inp" style={{maxWidth:150}}>
+             <option value="argent">💶 Argent</option>
+             <option value="temps">⏱ Temps gagné</option>
+           </select>
+           <input value={it.date||""} onChange={e=>updateImpactItem(it.id,{date:e.target.value})} placeholder="Juin 2026" className="inp" style={{maxWidth:130}}/>
+           <input value={it.label||""} onChange={e=>updateImpactItem(it.id,{label:e.target.value})} placeholder="Ex : Renégociation fournisseur farine" className="inp" style={{flex:1}}/>
+           <Btn small variant="ghost" onClick={()=>removeImpactItem(it.id)} style={{color:C.red}}>Supprimer</Btn>
+         </div>
+         {it.kind==="temps"?(
+           <>
+           <div style={{display:"flex",gap:8,alignItems:"center"}}>
+             <input value={it.avant||""} onChange={e=>updateImpactItem(it.id,{avant:e.target.value})} placeholder="Avant : 3h" className="inp" style={{maxWidth:130}}/>
+             <span style={{color:C.textLight,fontWeight:800}}>→</span>
+             <input value={it.apres||""} onChange={e=>updateImpactItem(it.id,{apres:e.target.value})} placeholder="Après : 30 min" className="inp" style={{maxWidth:130}}/>
+             <input value={it.frequence||""} onChange={e=>updateImpactItem(it.id,{frequence:e.target.value})} placeholder="par semaine (optionnel)" className="inp" style={{maxWidth:180}}/>
+           </div>
+           <div style={{display:"flex",gap:8,alignItems:"center"}}>
+             <input type="number" value={it.tauxHoraire||""} onChange={e=>updateImpactItem(it.id,{tauxHoraire:e.target.value})} placeholder="Taux horaire € (ex : 13)" className="inp" style={{maxWidth:180}}/>
+             <input type="number" value={it.valeurEstimee||""} onChange={e=>updateImpactItem(it.id,{valeurEstimee:e.target.value})} placeholder="Valeur estimée €/mois" className="inp" style={{maxWidth:180}}/>
+             <span style={{fontSize:11,color:C.textLight}}>optionnel · valorisation du temps gagné</span>
+           </div>
+           </>
+         ):(
+           <div style={{display:"flex",gap:8,alignItems:"center"}}>
+             <select value={it.type||"economie"} onChange={e=>updateImpactItem(it.id,{type:e.target.value})} className="inp" style={{maxWidth:150}}>
+               <option value="economie">Économie (–)</option>
+               <option value="gain">Gain (+)</option>
+             </select>
+             <input type="number" value={it.montant||0} onChange={e=>updateImpactItem(it.id,{montant:e.target.value})} placeholder="Montant €" className="inp" style={{maxWidth:140}}/>
+             <label style={{display:"flex",alignItems:"center",gap:6,fontSize:12,fontWeight:700,color:C.text,whiteSpace:"nowrap"}}>
+               <input type="checkbox" checked={it.recurrent===true} onChange={e=>updateImpactItem(it.id,{recurrent:e.target.checked})}/>
+               Récurrent (/mois)
+             </label>
+           </div>
+         )}
+       </div>
+     ))}
+   </div>
+
+   <div style={{display:"flex",gap:8,marginTop:10}}>
+     <Btn small variant="ghost" onClick={()=>addImpactItem("argent")}>+ Action argent</Btn>
+     <Btn small variant="ghost" onClick={()=>addImpactItem("temps")}>+ Action temps gagné</Btn>
+   </div>
+ </div>
+ )}
  <div style={{padding:"0 20px 20px",display:"flex",gap:10}}>
  <Btn variant="ghost" onClick={()=>setEditId(null)}>Annuler</Btn>
  <Btn variant="orange" onClick={saveEdit} disabled={editSaving}>{editSaving?"Enregistrement...":"Enregistrer les modifications"}</Btn>
@@ -2214,7 +2302,7 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
 
       {/* Alertes */}
       {alertes.length>0&&alertes.slice(0,2).map((a,i)=>(
-        <div key={i} style={{padding:"14px 20px",background:a.level==="red"?C.redBg:C.orangeBg,borderLeft:`4px solid ${a.level==="red"?C.red:C.orange}`,borderRadius:16,boxShadow:"0 16px 36px rgba(0,86,83,.06)",display:"flex",gap:12,alignItems:"center"}}>
+        <div key={i} style={{padding:"16px 22px",background:a.level==="red"?C.redBg:C.orangeBg,border:`2px solid ${a.level==="red"?C.red:C.orange}`,borderRadius:16,boxShadow:"0 16px 36px rgba(0,86,83,.06)",display:"flex",gap:12,alignItems:"center"}}>
           <Pill color={a.level==="red"?C.red:C.orange}>{a.level==="red"?"CRITIQUE":"VIGILANCE"}</Pill>
           <span style={{fontSize:13,fontWeight:700,color:C.text}}>{a.kpi}</span>
           <span style={{fontSize:12,color:C.textMid,flex:1}}>{a.msg}</span>
@@ -2224,6 +2312,49 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
       {alertes.length>2&&<div style={{fontSize:12,color:C.textMid,textAlign:"center"}}>+{alertes.length-2} autre{alertes.length-3>0?"s":""} alerte{alertes.length-3>0?"s":""} · voir l'onglet <strong>Mes alertes</strong></div>}
 
       <EquipeSnapshot client={client} setView={setView} isAdminPreview={isAdminPreview}/>
+
+      {/* ── Valeur créée (visible uniquement si activé par l'admin ET que le client a un journal d'actions) ── */}
+      {client.impactJournalEnabled&&client.impactJournal?.items?.length>0&&(
+        <div>
+          <div style={{fontSize:11,fontWeight:800,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10}}>Valeur créée</div>
+          <div style={{display:"grid",gridTemplateColumns:"300px 1fr",gap:16}}>
+            <div style={{background:C.primary,borderRadius:20,padding:"24px 26px",color:"white",boxShadow:"0 20px 44px rgba(0,86,83,.25)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center"}}>
+              <div style={{fontSize:11,color:"rgba(255,255,255,0.75)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>{client.impactJournal.totalLabel||"Valeur créée"}</div>
+              <div style={{fontSize:36,fontWeight:900,letterSpacing:"-0.01em"}}>{fmt(client.impactJournal.total||0)}</div>
+            </div>
+            <Card>
+              <SectionHead title="Journal des actions" sub="Ce que votre conseiller a mis en place"/>
+              <div style={{padding:"4px 20px 14px"}}>
+                {client.impactJournal.items.map((it,i)=>(
+                  <div key={it.id||i} style={{display:"flex",alignItems:"center",gap:14,padding:"12px 0",borderBottom:i<client.impactJournal.items.length-1?`1px solid ${C.borderLight}`:"none"}}>
+                    <div style={{width:8,height:8,borderRadius:"50%",background:it.kind==="temps"?C.primary:C.green,flexShrink:0}}/>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:13,fontWeight:700,color:C.text}}>{it.label}</div>
+                      {it.date&&<div style={{fontSize:11,color:C.textLight,marginTop:2}}>{it.date}</div>}
+                    </div>
+                    {it.kind==="temps"?(
+                      <div style={{textAlign:"right"}}>
+                        <div style={{fontSize:14,fontWeight:900,color:C.primary,whiteSpace:"nowrap"}}>
+                          {it.avant} <span style={{color:C.textLight,fontWeight:700}}>→</span> {it.apres}{it.frequence?<span style={{fontSize:11,fontWeight:700,color:C.textLight}}> {it.frequence}</span>:""}
+                        </div>
+                        {it.valeurEstimee>0&&(
+                          <div style={{fontSize:11,fontWeight:700,color:C.textLight,marginTop:2}}>
+                            ≈ {fmt(it.valeurEstimee)}/mois{it.tauxHoraire?` (${it.tauxHoraire} €/h)`:""}
+                          </div>
+                        )}
+                      </div>
+                    ):(
+                      <div style={{fontSize:14,fontWeight:900,color:C.green,whiteSpace:"nowrap"}}>
+                        {it.type==="economie"?"–":"+"}{fmt(it.montant)}{it.recurrent?"/mois":""}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
 
       {/* ── KPIs PERFORMANCE ── */}
       <div>
@@ -5367,6 +5498,7 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
  if (view==="notesfrais" && client.notesFraisEnabled!==false) return <NotesFraisView client={client} isAdminPreview={false}/>;
  if (view==="taches" && client.tachesEnabled!==false) return <TachesView client={client} isAdminPreview={false}/>;
  if (view==="equipetaches" && client.equipeTachesEnabled!==false) return <EquipeTachesView client={client} isAdminPreview={false}/>;
+ if (view==="stock" && client.stockEnabled!==false) return <StockView client={client} isAdminPreview={false}/>;
 
  return null;
 }
@@ -5545,7 +5677,7 @@ function PlanningListView({ employes, planning, moisNav, TC, empKey, fmtH, C }) 
         <td style={{padding:"10px 14px",color:C.text,fontSize:12}}>{dateLabel}</td>
         <td style={{padding:"10px 14px",fontWeight:700,color:C.text,fontSize:12}}>{row.emp.prenom} {row.emp.nom}</td>
         <td style={{padding:"10px 14px"}}><span style={{padding:"3px 10px",borderRadius:20,background:tc.bg,color:tc.text,fontSize:11,fontWeight:700}}>{TC[row.c.type]?.label||row.c.type}</span></td>
-        <td style={{padding:"10px 14px",color:C.textMid,fontSize:12,fontFamily:"monospace"}}>{row.c.debut&&row.c.fin?(row.c.pause_debut&&row.c.pause_fin?`${row.c.debut}–${row.c.pause_debut} / ${row.c.pause_fin}–${row.c.fin}`:`${row.c.debut} – ${row.c.fin}`):"—"}</td>
+        <td style={{padding:"10px 14px",color:C.textMid,fontSize:12,fontFamily:"'Courier New',monospace"}}>{row.c.debut&&row.c.fin?(row.c.pause_debut&&row.c.pause_fin?`${row.c.debut}–${row.c.pause_debut} / ${row.c.pause_fin}–${row.c.fin}`:`${row.c.debut} – ${row.c.fin}`):"—"}</td>
         <td style={{padding:"10px 14px",textAlign:"right",fontWeight:700,color:C.text,fontSize:12}}>{row.h>0?`${row.h}h`:"—"}</td>
        </tr>
       );
@@ -6486,6 +6618,127 @@ function NotesFraisView({ client, isAdminPreview=false }) {
           </Td>
          </Tr>
         ))}
+       </tbody>
+      </table>
+     </div>
+    )}
+   </Card>
+  </div>
+ );
+}
+
+// ─── STOCK ──────────────────────────────────────────────────────
+const STOCK_CATEGORIES = ["Farines & céréales","Matières grasses","Sucres & additifs","Produits laitiers","Emballages","Boissons","Autre"];
+const STOCK_UNITES = ["kg","g","L","unité","sachet","carton"];
+
+function StockView({ client, isAdminPreview=false }) {
+ const [stock,setStock]=useState([]);
+ const [loading,setLoading]=useState(true);
+ const [form,setForm]=useState({produit:"",categorie:STOCK_CATEGORIES[0],quantite:"",unite:"kg",seuil_alerte:"",fournisseur:""});
+ const [saving,setSaving]=useState(false);
+
+ useEffect(()=>{
+  (async()=>{
+   setLoading(true);
+   try {
+    const{data}=await supabase.from("stock").select("*").eq("client_id",client.id).order("produit");
+    setStock(data||[]);
+   } catch(e){ console.error("Stock load:",e); }
+   setLoading(false);
+  })();
+ },[client.id]);
+
+ const references=stock.length;
+ const sousSeuil=stock.filter(s=>Number(s.quantite)<=Number(s.seuil_alerte)).length;
+ const fournisseurs=new Set(stock.map(s=>s.fournisseur).filter(Boolean)).size;
+
+ const addStock = async () => {
+  if(!form.produit||form.quantite===""||saving) return;
+  setSaving(true);
+  try {
+   const{data,error}=await supabase.from("stock").insert({
+    client_id:client.id, produit:form.produit, categorie:form.categorie,
+    quantite:Number(form.quantite), unite:form.unite,
+    seuil_alerte:Number(form.seuil_alerte)||0, fournisseur:form.fournisseur
+   }).select();
+   if(error){ console.error("addStock:",error); alert("Erreur lors de l'ajout : "+error.message); }
+   else if(data&&data.length>0){ setStock(prev=>[...prev,data[0]].sort((a,b)=>a.produit.localeCompare(b.produit))); setForm({...form,produit:"",quantite:"",seuil_alerte:"",fournisseur:""}); }
+  } catch(e){ console.error("addStock:",e); }
+  setSaving(false);
+ };
+
+ const adjustQuantite = async (row,delta) => {
+  const newQ=Math.max(0,Number(row.quantite)+delta);
+  const prevStock=stock;
+  setStock(stock.map(s=>s.id===row.id?{...s,quantite:newQ}:s));
+  const{error}=await supabase.from("stock").update({quantite:newQ}).eq("id",row.id);
+  if(error){ console.error("adjustQuantite:",error); setStock(prevStock); alert("Erreur lors de la mise à jour : "+error.message); }
+ };
+
+ const deleteStock = async row => {
+  const prevStock=stock;
+  setStock(stock.filter(s=>s.id!==row.id));
+  const{error}=await supabase.from("stock").delete().eq("id",row.id);
+  if(error){ console.error("deleteStock:",error); setStock(prevStock); alert("Erreur lors de la suppression : "+error.message); }
+ };
+
+ return (
+  <div style={{padding:24}} className="fade-up">
+   <div style={{marginBottom:20}}>
+    <div style={{fontSize:18,fontWeight:900,color:C.text}}>Mon stock</div>
+    <div style={{fontSize:12,color:C.textLight,marginTop:2}}>Suivi des quantités et alertes de réapprovisionnement</div>
+   </div>
+   <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:20}}>
+    <KpiCard label="Références suivies" value={references} color={C.primary}/>
+    <KpiCard label="Sous le seuil d'alerte" value={sousSeuil} sub={sousSeuil>0?"à réapprovisionner":"tout est ok"} color={sousSeuil>0?C.red:C.green}/>
+    <KpiCard label="Fournisseurs" value={fournisseurs} color={C.textMid}/>
+   </div>
+   {!isAdminPreview&&(
+    <Card style={{padding:18,marginBottom:20}}>
+     <div style={{fontSize:14,fontWeight:800,color:C.text,marginBottom:12}}>Ajouter une référence</div>
+     <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
+      <FormRow label="Produit"><input value={form.produit} onChange={e=>setForm({...form,produit:e.target.value})} className="inp" placeholder="Ex: Farine T55" style={{width:180}}/></FormRow>
+      <FormRow label="Catégorie"><select value={form.categorie} onChange={e=>setForm({...form,categorie:e.target.value})} className="inp">{STOCK_CATEGORIES.map(c=><option key={c}>{c}</option>)}</select></FormRow>
+      <FormRow label="Quantité"><input type="number" min="0" step="0.1" value={form.quantite} onChange={e=>setForm({...form,quantite:e.target.value})} className="inp" style={{width:90}}/></FormRow>
+      <FormRow label="Unité"><select value={form.unite} onChange={e=>setForm({...form,unite:e.target.value})} className="inp">{STOCK_UNITES.map(u=><option key={u}>{u}</option>)}</select></FormRow>
+      <FormRow label="Seuil d'alerte"><input type="number" min="0" step="0.1" value={form.seuil_alerte} onChange={e=>setForm({...form,seuil_alerte:e.target.value})} className="inp" style={{width:100}}/></FormRow>
+      <FormRow label="Fournisseur"><input value={form.fournisseur} onChange={e=>setForm({...form,fournisseur:e.target.value})} className="inp" placeholder="Ex: Moulin Dupont" style={{width:160}}/></FormRow>
+      <Btn onClick={addStock} disabled={saving}>{saving?"Ajout...":"Ajouter"}</Btn>
+     </div>
+    </Card>
+   )}
+   <Card>
+    <SectionHead title="Inventaire"/>
+    {loading?(
+     <div style={{padding:24,textAlign:"center",color:C.textLight,fontSize:13}}>Chargement...</div>
+    ):stock.length===0?(
+     <div style={{padding:24,textAlign:"center",color:C.textLight,fontSize:13}}>Aucune référence en stock pour l'instant.</div>
+    ):(
+     <div style={{overflowX:"auto"}}>
+      <table style={{width:"100%",borderCollapse:"collapse"}}>
+       <thead><tr><Th>Produit</Th><Th>Catégorie</Th><Th right>Quantité</Th><Th right>Seuil alerte</Th><Th>Fournisseur</Th><Th></Th></tr></thead>
+       <tbody>
+        {stock.map(s=>{
+         const bas=Number(s.quantite)<=Number(s.seuil_alerte);
+         return (
+          <Tr key={s.id} style={bas?{background:C.redBg}:{}}>
+           <Td bold>{s.produit}</Td>
+           <Td color={C.textMid}>{s.categorie}</Td>
+           <Td right bold color={bas?C.red:C.text}>{s.quantite} {s.unite}</Td>
+           <Td right color={C.textLight}>{s.seuil_alerte} {s.unite}</Td>
+           <Td color={C.textMid}>{s.fournisseur||"—"}</Td>
+           <Td right>
+            {!isAdminPreview&&(
+             <div style={{display:"flex",gap:6,justifyContent:"flex-end",alignItems:"center"}}>
+              <Btn variant="ghost" small onClick={()=>adjustQuantite(s,-1)}>−1</Btn>
+              <Btn variant="ghost" small onClick={()=>adjustQuantite(s,1)}>+1</Btn>
+              <Btn variant="ghost" small onClick={()=>deleteStock(s)}>Supprimer</Btn>
+             </div>
+            )}
+           </Td>
+          </Tr>
+         );
+        })}
        </tbody>
       </table>
      </div>
@@ -7724,7 +7977,7 @@ function AlertesView({ clients, singleClient, moisIdx, moisYear }) {
         <KpiCard label="Points sains" value={ok.length} sub="Tout va bien" color={C.green}/>
       </div>
       {critiques.map((a,i)=>(
-        <div key={i} style={{background:C.white,border:`2px solid ${C.red}44`,borderLeft:`5px solid ${C.red}`,borderRadius:10,padding:"16px 20px",marginBottom:12,display:"flex",gap:14,alignItems:"flex-start"}}>
+        <div key={i} style={{background:C.white,border:`2px solid ${C.red}`,borderRadius:10,padding:"18px 22px",marginBottom:12,display:"flex",gap:14,alignItems:"flex-start"}}>
           <div style={{flex:1}}>
             <div style={{display:"flex",gap:10,marginBottom:8,alignItems:"center",flexWrap:"wrap"}}>
               <Pill color={C.red} bg={C.redBg}>CRITIQUE</Pill>
@@ -7741,7 +7994,7 @@ function AlertesView({ clients, singleClient, moisIdx, moisYear }) {
         </div>
       ))}
       {attention.map((a,i)=>(
-        <div key={i} style={{background:C.white,border:`1.5px solid ${C.orange}44`,borderLeft:`5px solid ${C.orange}`,borderRadius:10,padding:"16px 20px",marginBottom:12,display:"flex",gap:14,alignItems:"flex-start"}}>
+        <div key={i} style={{background:C.white,border:`2px solid ${C.orange}`,borderRadius:10,padding:"18px 22px",marginBottom:12,display:"flex",gap:14,alignItems:"flex-start"}}>
           <div style={{flex:1}}>
             <div style={{display:"flex",gap:10,marginBottom:8,alignItems:"center",flexWrap:"wrap"}}>
               <Pill color={C.orange} bg={C.orangeBg}>VIGILANCE</Pill>
@@ -7758,7 +8011,7 @@ function AlertesView({ clients, singleClient, moisIdx, moisYear }) {
         </div>
       ))}
       {ok.map((a,i)=>(
-        <div key={i} style={{background:C.greenBg,border:`1px solid ${C.green}33`,borderLeft:`4px solid ${C.green}`,borderRadius:10,padding:"14px 20px",marginBottom:10,display:"flex",gap:12,alignItems:"center"}}>
+        <div key={i} style={{background:C.greenBg,border:`2px solid ${C.green}`,borderRadius:10,padding:"16px 22px",marginBottom:10,display:"flex",gap:12,alignItems:"center"}}>
           <div>
             <div style={{fontWeight:800,fontSize:13,color:C.green}}>{a.kpi}</div>
             <div style={{fontSize:12,color:C.textMid,marginTop:2}}>{a.msg}</div>
@@ -7964,13 +8217,15 @@ export default function App() {
         if(!cd||cd.length===0) return;
         const extras=cd.map(c=>({
           id:c.id,name:c.name,sector:c.sector,color:c.color,manager:c.manager,cabinet_id:c.cabinet_id,planningEnabled:c.planning_enabled!==false,
-          congesEnabled:c.conges_enabled!==false,pointageEnabled:c.pointage_enabled!==false,notesFraisEnabled:c.notes_frais_enabled!==false,tachesEnabled:c.taches_enabled!==false,equipeTachesEnabled:c.equipe_taches_enabled!==false,
+          congesEnabled:c.conges_enabled!==false,pointageEnabled:c.pointage_enabled!==false,notesFraisEnabled:c.notes_frais_enabled!==false,tachesEnabled:c.taches_enabled!==false,equipeTachesEnabled:c.equipe_taches_enabled!==false,stockEnabled:c.stock_enabled!==false,
           since:c.since,status:c.status,email:c.email||(ud||[]).find(u=>u.client_id===c.id)?.email||"",
           kpis:c.kpis||{ca:0,marge:0,charges:0,salaires:0,ebe:0,result:0,tresorerie:0},
           emprunts:c.emprunts||[],investissements:c.investissements||[],
           tresorerie:c.tresorerie||{soldeInitial:0,ajustements:[]},
           is:c.is_data||{totalPrecedent:0,taux:15},
           previsionnel:c.previsionnel||{adjustments:{}},
+          impactJournal:c.impact_journal||{total:0,totalLabel:"Valeur créée",periode:"",items:[]},
+          impactJournalEnabled:c.impact_journal_enabled===true,
           imports:(id2||[]).filter(i=>i.client_id===c.id).map(i=>({
             id:i.id,type:i.type,label:i.label,mois:i.mois,
             rows:i.rows||[],count:i.count,importedAt:i.imported_at,
@@ -8053,6 +8308,8 @@ export default function App() {
         tresorerie:client.tresorerie||{soldeInitial:0,ajustements:[]},
         is_data:client.is||{totalPrecedent:0,taux:15},
         previsionnel:client.previsionnel||{adjustments:{}},
+        impact_journal:client.impactJournal||{total:0,totalLabel:"Valeur créée",periode:"",items:[]},
+        impact_journal_enabled:client.impactJournalEnabled===true,
       },{onConflict:"id"});
     } catch(e){console.error("Supabase save error:",e);}
   };
@@ -8097,12 +8354,15 @@ export default function App() {
         tresorerie:updated.tresorerie||{soldeInitial:0,ajustements:[]},
         is_data:updated.is||{totalPrecedent:0,taux:15},
         previsionnel:updated.previsionnel||{adjustments:{}},
+        impact_journal:updated.impactJournal||{total:0,totalLabel:"Valeur créée",periode:"",items:[]},
+        impact_journal_enabled:updated.impactJournalEnabled===true,
         planning_enabled:updated.planningEnabled!==false,
         conges_enabled:updated.congesEnabled!==false,
         pointage_enabled:updated.pointageEnabled!==false,
         notes_frais_enabled:updated.notesFraisEnabled!==false,
         taches_enabled:updated.tachesEnabled!==false,
         equipe_taches_enabled:updated.equipeTachesEnabled!==false,
+        stock_enabled:updated.stockEnabled!==false,
       }).eq("id",id).eq("updated_at",client.updated_at).select();
       if(upsertError) throw upsertError;
       if(!updateResult||updateResult.length===0){
@@ -8185,7 +8445,7 @@ export default function App() {
 
   const visibleClients = previewCabinet ? clients.filter(c=>c.cabinet_id===previewCabinet.id) : clients;
   const ADMIN_TITLES={clients:`Portefeuille clients (${visibleClients.length})`,acces:"Accès & mots de passe clients",saisie:"Saisie & Import CSV",financier:"Donnees financieres",alertes:"Centre d'alertes",rapports:"Rapports IA",cabinets:"Cabinets partenaires"};
-  const CLIENT_TITLES={dashboard:"Tableau de bord",alertes:"Mes alertes",ventes:"Mes ventes",achats:"Mes coûts d'achat",charges:"Mes charges",salaires:"Ma masse salariale",creances:"Mes créances clients",dettes:"Mes dettes fournisseurs",resultat:"Mon resultat financier",tva:"Ma TVA",tresorerie:"Ma tresorerie",emprunts:"Mes emprunts",investissements:"Mes investissements",roi:"Calculateur ROI",embauche:"Simulateur d'embauche",is:"Mon impot (IS)",catalogue:"Mon catalogue produits", comparaison:"Comparaison de périodes", previsionnel:"Prévisionnel", planning:"Planning & équipe", conges:"Congés & absences", notesfrais:"Notes de frais", taches:"Tâches", equipetaches:"Gestion d'équipe & Tâches", pointage:"Pointage"};
+  const CLIENT_TITLES={dashboard:"Tableau de bord",alertes:"Mes alertes",ventes:"Mes ventes",achats:"Mes coûts d'achat",charges:"Mes charges",salaires:"Ma masse salariale",creances:"Mes créances clients",dettes:"Mes dettes fournisseurs",resultat:"Mon resultat financier",tva:"Ma TVA",tresorerie:"Ma tresorerie",emprunts:"Mes emprunts",investissements:"Mes investissements",roi:"Calculateur ROI",embauche:"Simulateur d'embauche",is:"Mon impot (IS)",catalogue:"Mon catalogue produits", comparaison:"Comparaison de périodes", previsionnel:"Prévisionnel", planning:"Planning & équipe", conges:"Congés & absences", notesfrais:"Notes de frais", taches:"Tâches", equipetaches:"Gestion d'équipe & Tâches", pointage:"Pointage", stock:"Mon stock"};
 
   // Modal credentials nouveau client (admin)
   const CredentialsModal = newClientCredentials ? (
@@ -8217,7 +8477,7 @@ export default function App() {
     return (
       <div style={{display:"flex",height:"100vh",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif"}}>
         <GlobalCSS/>
-        <ClientSidebar view={view} setView={setView} onLogout={()=>setPreviewClient(null)} clientName={live.name} alertCount={calcAlertes(live,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length} planningEnabled={live.planningEnabled} congesEnabled={live.congesEnabled} pointageEnabled={live.pointageEnabled} notesFraisEnabled={live.notesFraisEnabled} tachesEnabled={live.tachesEnabled} equipeTachesEnabled={live.equipeTachesEnabled} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
+        <ClientSidebar view={view} setView={setView} onLogout={()=>setPreviewClient(null)} clientName={live.name} alertCount={calcAlertes(live,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length} planningEnabled={live.planningEnabled} congesEnabled={live.congesEnabled} pointageEnabled={live.pointageEnabled} notesFraisEnabled={live.notesFraisEnabled} tachesEnabled={live.tachesEnabled} equipeTachesEnabled={live.equipeTachesEnabled} stockEnabled={live.stockEnabled} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <TopBar
             title={`Aperçu client · ${live.name}`}
@@ -8302,7 +8562,7 @@ export default function App() {
         <GlobalCSS/>
         {/* Popup première connexion · priorité absolue */}
         {user.firstLogin&&<FirstLoginModal user={user} onComplete={(u)=>setUser(u)}/>}
-        <ClientSidebar view={view} setView={setView} onLogout={handleLogout} clientName={client?.name||user.name} alertCount={client?calcAlertes(client,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length:0} planningEnabled={client?.planningEnabled} congesEnabled={client?.congesEnabled} pointageEnabled={client?.pointageEnabled} notesFraisEnabled={client?.notesFraisEnabled} tachesEnabled={client?.tachesEnabled} equipeTachesEnabled={client?.equipeTachesEnabled} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
+        <ClientSidebar view={view} setView={setView} onLogout={handleLogout} clientName={client?.name||user.name} alertCount={client?calcAlertes(client,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length:0} planningEnabled={client?.planningEnabled} congesEnabled={client?.congesEnabled} pointageEnabled={client?.pointageEnabled} notesFraisEnabled={client?.notesFraisEnabled} tachesEnabled={client?.tachesEnabled} equipeTachesEnabled={client?.equipeTachesEnabled} stockEnabled={client?.stockEnabled} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <TopBar title={CLIENT_TITLES[view]||"Dashboard"} user={user} onMenuToggle={()=>setMenuOpen(o=>!o)}/>
           <div style={{flex:1,overflowY:"auto",background:"linear-gradient(155deg,#f0faf8 0%,#ffffff 45%,#ecfdf5 100%)"}}>
