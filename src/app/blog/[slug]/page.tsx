@@ -18,11 +18,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const post = await getPostBySlug(slug);
   if (!post) return {};
   const url = `https://www.nvm-finance.fr/blog/${post.slug}`;
+  const canonical = post.canonical_url || url;
   return {
     title: `${post.title} | Blog NVM Finance`,
     description: post.excerpt,
-    alternates: { canonical: url },
-    openGraph: { title: post.title, description: post.excerpt, url, type: "article" },
+    alternates: { canonical },
+    openGraph: { title: post.title, description: post.excerpt, url: canonical, type: "article" },
     twitter: { card: "summary_large_image", title: post.title, description: post.excerpt },
   };
 }
@@ -82,7 +83,7 @@ export default async function Page({ params }: Props) {
     datePublished: post.published_at,
     author: { "@type": "Organization", name: "NVM Finance", url: "https://www.nvm-finance.fr" },
     publisher: { "@type": "Organization", name: "NVM Finance", url: "https://www.nvm-finance.fr" },
-    mainEntityOfPage: `https://www.nvm-finance.fr/blog/${post.slug}`,
+    mainEntityOfPage: post.canonical_url || `https://www.nvm-finance.fr/blog/${post.slug}`,
   };
 
   return (

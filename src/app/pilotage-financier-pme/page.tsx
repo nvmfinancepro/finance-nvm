@@ -62,6 +62,7 @@ export default function Page() {
             <span style={{ fontSize: 15, fontWeight: 900, color: C.primary }}>NVM Finance</span>
           </a>
           <nav style={{ display: "flex", gap: 18 }}>
+            <a href="/blog" style={{ fontSize: 13, fontWeight: 700, color: C.mid, textDecoration: "none" }}>Blog</a>
             <a href="/services" style={{ fontSize: 13, fontWeight: 700, color: C.mid, textDecoration: "none" }}>Nos offres</a>
             <a href="/on-vous-montre" style={{ fontSize: 13, fontWeight: 700, color: C.mid, textDecoration: "none" }}>On vous montre</a>
           </nav>

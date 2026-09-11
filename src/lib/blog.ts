@@ -11,6 +11,7 @@ export type BlogPost = {
   author: string;
   published_at: string | null;
   created_at: string;
+  canonical_url: string | null;
 };
 
 const supabase = createClient(

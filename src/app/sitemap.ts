@@ -38,11 +38,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 0.7,
     },
-    ...posts.map((p) => ({
-      url: `${base}/blog/${p.slug}`,
-      lastModified: p.published_at ? new Date(p.published_at) : undefined,
-      changeFrequency: "monthly" as const,
-      priority: 0.6,
-    })),
+    // Les articles avec canonical_url pointent vers une autre page déjà listée
+    // ci-dessus (contenu repris d'un guide existant) — on ne les liste pas en double.
+    ...posts
+      .filter((p) => !p.canonical_url)
+      .map((p) => ({
+        url: `${base}/blog/${p.slug}`,
+        lastModified: p.published_at ? new Date(p.published_at) : undefined,
+        changeFrequency: "monthly" as const,
+        priority: 0.6,
+      })),
   ];
 }
