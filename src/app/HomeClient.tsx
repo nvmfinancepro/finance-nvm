@@ -614,7 +614,7 @@ export default function SitePage() {
             </div>
           </div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",paddingTop:24,flexWrap:"wrap",gap:12}}>
-            <p style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,.25)"}}>© 2026 NVM Finance · Tous droits réservés</p>
+            <p style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,.25)"}}>© 2026 NVM Finance · Tous droits réservés · <a href="/partenaires" style={{color:"rgba(255,255,255,.25)",textDecoration:"none"}}>Partenaires</a></p>
             <p style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,.25)"}}>ANALYSE FINANCIÈRE · SUIVI DE PERFORMANCE · PILOTAGE D'ACTIVITÉ</p>
           </div>
         </div>
