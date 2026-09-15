@@ -3,7 +3,7 @@ import DiagnosticClient from "./DiagnosticClient";
 
 const title = "Diagnostic financier gratuit en 30 secondes | NVM Finance";
 const description =
-  "Testez la santé financière de votre entreprise gratuitement, sans compte ni mot de passe. 3 chiffres, une note sur 100, instantané.";
+  "Testez la santé financière de votre entreprise gratuitement, sans compte ni mot de passe. 5 curseurs, une note sur 100, instantané.";
 
 export const metadata: Metadata = {
   title,
