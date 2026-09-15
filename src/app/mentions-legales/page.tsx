@@ -87,7 +87,7 @@ export default function Page() {
             <Logo width={70}/>
             <button onClick={()=>setMenuOpen(false)} style={{fontSize:20,cursor:"pointer",color:"#6aaca8",background:"none",border:"none",padding:4}}>✕</button>
           </div>
-          {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"},{h:"/on-vous-montre",l:"On vous montre"},{h:"/auth/login",l:"Espace client",ext:true}].map((lk,i)=>(
+          {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"},{h:"/on-vous-montre",l:"On vous montre"},{h:"/diagnostic",l:"Simulateur"},{h:"/auth/login",l:"Espace client",ext:true}].map((lk,i)=>(
             <a key={i} href={lk.h} target={lk.ext?"_blank":undefined} rel={lk.ext?"noopener noreferrer":undefined} onClick={()=>setMenuOpen(false)}
               style={{display:"block",padding:"16px 24px",fontSize:15,fontWeight:700,color:"#002e2c",textDecoration:"none",borderBottom:"1px solid #c8e8e5"}}>
               {lk.l}

@@ -93,6 +93,7 @@ export default function Page() {
           <nav style={{ display: "flex", gap: 18 }}>
             <a href="/services" style={{ fontSize: 13, fontWeight: 700, color: C.mid, textDecoration: "none" }}>Nos offres</a>
             <a href="/on-vous-montre" style={{ fontSize: 13, fontWeight: 700, color: C.mid, textDecoration: "none" }}>On vous montre</a>
+            <a href="/diagnostic" style={{ fontSize: 13, fontWeight: 700, color: C.mid, textDecoration: "none" }}>Simulateur</a>
           </nav>
         </div>
       </header>
