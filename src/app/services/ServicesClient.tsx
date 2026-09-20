@@ -52,17 +52,35 @@ const Check = () => (
 export default function ServicesPage() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [loadingPlan, setLoadingPlan] = useState<string|null>(null);
+
+  const startCheckout = async (plan: string) => {
+    setLoadingPlan(plan);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+      });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+      else { alert("Une erreur est survenue, réessayez."); setLoadingPlan(null); }
+    } catch {
+      alert("Une erreur est survenue, réessayez.");
+      setLoadingPlan(null);
+    }
+  };
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  type OffreItem = { tag:string; best:boolean; name:string; items:string[]; prix:string; sticker?:string; cta:string };
+  type OffreItem = { tag:string; best:boolean; name:string; items:string[]; prix:string; sticker?:string; cta:string; includesLabel?:string; advisor?:string; checkout?:string };
   const offres: OffreItem[] = [
     {
-      tag:"Offre Finance", best:true,
-      name:"Finances pilotées chaque mois, conseiller inclus.",
+      tag:"Offre Tableau de bord", best:false,
+      name:"Votre visibilité financière, en autonomie.",
       items:[
         "Tableau de bord complet",
         "Suivi ventes, charges, marges",
@@ -71,25 +89,37 @@ export default function ServicesPage() {
         "Trésorerie, TVA, IS",
         "Emprunts & investissements",
         "Alertes des potentiels risques",
-        "Analyse mensuelle conseiller",
-        "Recommandations d'optimisation",
-        "Automatisation des process",
         "Anticipation des risques",
         "Prévisionnel",
       ],
-      prix:"490€ HT/mois", cta:"Démarrer",
+      prix:"200€ HT/mois", cta:"Démarrer", checkout:"dashboard",
+    },
+    {
+      tag:"Offre Finance", best:true,
+      name:"Finances pilotées chaque mois, conseiller inclus.",
+      includesLabel:"Offre Tableau de bord incluse",
+      advisor:"Conseiller dédié, disponible chaque mois",
+      items:[
+        "Recherche de performance",
+        "Sécurisation de l'entreprise",
+        "Anticipation & prévention des dangers",
+        "Développement de l'entreprise",
+      ],
+      prix:"490€ HT/mois", cta:"Démarrer", checkout:"finance",
     },
     {
       tag:"Module Gestion", best:false,
       name:"L'opérationnel au même endroit que vos finances.",
       items:[
         "Planning d'équipe",
+        "Pointage",
+        "Gestion des congés et absences",
+        "Notes de frais",
         "Gestion des tâches (Kanban)",
-        "Suivi des congés et absences",
         "Checklist onboarding",
         "Gestion du stock incluse",
       ],
-      prix:"100€ HT/mois", sticker:"-20% avec l'Offre Finance", cta:"Démarrer",
+      prix:"100€ HT/mois", sticker:"-20% avec une offre Finance", cta:"Démarrer", checkout:"gestion",
     },
     {
       tag:"Sur-mesure", best:false,
@@ -183,9 +213,9 @@ export default function ServicesPage() {
         </p>
       </div>
 
-      {/* 3 OFFRES */}
+      {/* 4 OFFRES */}
       <section className="section-pad" style={{padding:"64px 48px",maxWidth:1200,margin:"0 auto"}}>
-        <div className="offre-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:24}}>
+        <div className="offre-grid" style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:24}}>
           {offres.map((o,i)=>(
             <div key={i} className="offre-card" style={{background:"#fff",borderRadius:20,border:o.best?`2px solid ${C.primary}`:`1px solid ${C.border}`,boxShadow:o.best?"0 8px 40px rgba(0,86,83,.15)":"0 2px 12px rgba(0,86,83,.05)",display:"flex",flexDirection:"column",overflow:"hidden",transition:"all .3s"}}>
               {/* Bannière toujours présente pour garder l'alignement des cartes */}
@@ -195,9 +225,20 @@ export default function ServicesPage() {
               <div style={{padding:"24px 20px",flex:1}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
                   <div style={{fontSize:10,fontWeight:800,color:C.primary,letterSpacing:"0.1em",textTransform:"uppercase"}}>{o.tag}</div>
-                  {o.sticker && <div style={{background:"#dcfce7",color:"#15803d",fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:100,border:"1px solid #86efac",whiteSpace:"nowrap"}}>{o.sticker}</div>}
+                  {o.sticker && <div style={{background:C.bg,color:C.primary,fontSize:10,fontWeight:800,padding:"3px 10px",borderRadius:100,border:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>{o.sticker}</div>}
                 </div>
-                <div style={{fontSize:18,fontWeight:900,color:C.text,marginBottom:20,lineHeight:1.2}}>{o.name}</div>
+                <div style={{fontSize:18,fontWeight:900,color:C.text,marginBottom:o.includesLabel?10:20,lineHeight:1.2}}>{o.name}</div>
+                {o.includesLabel && (
+                  <div style={{fontSize:12.5,fontWeight:700,color:C.mid,marginBottom:12}}>{o.includesLabel}</div>
+                )}
+                {o.advisor && (
+                  <div style={{display:"flex",alignItems:"center",gap:10,background:C.bg,border:`1px solid ${C.primary}33`,borderRadius:12,padding:"10px 14px",marginBottom:16}}>
+                    <div style={{width:30,height:30,borderRadius:"50%",background:C.primary,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                      <svg viewBox="0 0 24 24" fill="none" width="15" height="15"><circle cx="12" cy="8" r="4" stroke="#fff" strokeWidth="2"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg>
+                    </div>
+                    <span style={{fontSize:13,fontWeight:800,color:C.text,lineHeight:1.3}}>{o.advisor}</span>
+                  </div>
+                )}
                 {/* Items en 2 colonnes si > 6 (Offre Finance), sinon 1 colonne */}
                 <div style={{display:"grid",gridTemplateColumns:o.items.length>6?"1fr 1fr":"1fr",gap:o.items.length>6?"8px 12px":"10px",marginBottom:24}}>
                   {o.items.map((it,j)=>(
@@ -210,9 +251,15 @@ export default function ServicesPage() {
               </div>
               <div style={{padding:"20px",borderTop:`1px solid ${C.border}`,background:o.best?C.bg:"#f8fffe",marginTop:"auto"}}>
                 <span style={{fontSize:26,fontWeight:900,color:C.text}}>{o.prix}</span>
-                <a href="https://calendly.com/nvmfinance-pro/30min" style={{display:"block",marginTop:14,background:o.best?C.primary:"white",color:o.best?"#fff":C.primary,padding:"11px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",textAlign:"center",border:`2px solid ${C.primary}`,transition:"all .2s"}}>
-                  {o.cta}
-                </a>
+                {o.checkout ? (
+                  <button onClick={()=>startCheckout(o.checkout as string)} disabled={loadingPlan===o.checkout} style={{display:"block",width:"100%",marginTop:14,background:o.best?C.primary:"white",color:o.best?"#fff":C.primary,padding:"11px",borderRadius:100,fontSize:13,fontWeight:800,textAlign:"center",border:`2px solid ${C.primary}`,transition:"all .2s",cursor:loadingPlan===o.checkout?"default":"pointer",opacity:loadingPlan===o.checkout?0.7:1}}>
+                    {loadingPlan===o.checkout?"Redirection…":o.cta}
+                  </button>
+                ) : (
+                  <a href="https://calendly.com/nvmfinance-pro/30min" style={{display:"block",marginTop:14,background:o.best?C.primary:"white",color:o.best?"#fff":C.primary,padding:"11px",borderRadius:100,fontSize:13,fontWeight:800,textDecoration:"none",textAlign:"center",border:`2px solid ${C.primary}`,transition:"all .2s"}}>
+                    {o.cta}
+                  </a>
+                )}
               </div>
             </div>
           ))}
