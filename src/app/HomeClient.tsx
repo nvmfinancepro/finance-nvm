@@ -310,7 +310,7 @@ export default function SitePage() {
       {/* HEADER */}
       <header style={{position:"sticky",top:0,zIndex:100,background:"#fff",borderBottom:`1px solid ${C.border}`,transition:"all .4s"}}>
         <div className="nav-inner" style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 48px"}}>
-          <Logo width={80}/>
+          <a href="/" style={{display:"flex",alignItems:"center"}}><Logo width={80}/></a>
           <div className="desktop-links" style={{display:"flex",gap:4,alignItems:"center"}}>
             {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"},{h:"/on-vous-montre",l:"On vous montre"},{h:"/diagnostic",l:"Simulateur"},{h:"/blog",l:"Blog"}].map((lk,i)=>(
               <a key={i} href={lk.h} className="nav-link" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8,transition:"all .2s"}}>{lk.l}</a>

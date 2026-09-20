@@ -61,7 +61,7 @@ export default function Page() {
         }
       `}</style>
       <header style={{background:scrolled?"rgba(255,255,255,.97)":"rgba(255,255,255,.85)",backdropFilter:"blur(20px)",borderBottom:`1px solid ${C.border}`,position:"sticky",top:0,zIndex:100,transition:"all .3s"}}>
-        <div style={{display:"flex",justifyContent:"center",paddingTop:18,paddingBottom:12}}><Logo width={80}/></div>
+        <div style={{display:"flex",justifyContent:"center",paddingTop:18,paddingBottom:12}}><a href="/" style={{display:"flex"}}><Logo width={80}/></a></div>
         <div className="desktop-nav-bar" style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 48px 14px",borderTop:`1px solid ${C.border}`}}>
           <div style={{display:"flex",gap:4}}>
             <a href="/" style={{fontSize:13,fontWeight:700,color:C.mid,textDecoration:"none",padding:"7px 14px",borderRadius:8}}>Accueil</a>

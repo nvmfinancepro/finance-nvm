@@ -37,7 +37,7 @@ export default function BlogClient({ posts }: { posts: BlogPost[] }) {
 
       <header style={{ background: "#fff", borderBottom: `1px solid ${C.border}`, position: "sticky", top: 0, zIndex: 100 }}>
         <div className="nav-inner" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 48px" }}>
-          <Logo width={80} />
+          <a href="/" style={{ display: "flex", alignItems: "center" }}><Logo width={80} /></a>
           <div className="desktop-links" style={{ display: "flex", gap: 4, alignItems: "center" }}>
             {NAV_LINKS.map((lk, i) => (
               <a key={i} href={lk.h} className="nav-link" style={{ fontSize: 13, fontWeight: 700, color: C.mid, textDecoration: "none", padding: "7px 14px", borderRadius: 8, transition: "all .2s" }}>{lk.l}</a>
