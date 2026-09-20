@@ -34,6 +34,16 @@ export async function POST(req: NextRequest) {
           quantity: 1,
         },
       ],
+      // Lu par /api/webhooks/stripe pour savoir quel client_id/rôle provisionner.
+      metadata: { plan },
+      custom_fields: [
+        {
+          key: "company_name",
+          label: { type: "custom", custom: "Nom de votre entreprise" },
+          type: "text",
+          text: { minimum_length: 1, maximum_length: 120 },
+        },
+      ],
       success_url: `${siteUrl}/services?checkout=success`,
       cancel_url: `${siteUrl}/services?checkout=cancel`,
     });
