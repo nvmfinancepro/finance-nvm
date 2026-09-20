@@ -3734,8 +3734,8 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
  {/* KPIs synthèse */}
  <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:20}}>
  <KpiCard label="Solde de départ" value={fmt(treso)} sub="Trésorerie initiale" color={treso>=0?C.green:C.red}/>
- <KpiCard label={`Solde estimé · ${MONTHS[moisIdx]}`} value={fmt(soldeCeMois)} sub={soldeCeMois>=0?"Position saine":"Decouviert"} color={soldeCeMois>=0?C.green:C.red}/>
- <KpiCard label="Point le plus bas" value={fmt(minC)} sub={minC<0?"Tresorerie négative":""} color={minC>=0?C.text:C.red}/>
+ <KpiCard label={`Solde estimé · ${MONTHS[moisIdx]}`} value={fmt(soldeCeMois)} sub={soldeCeMois>=0?"Position saine":"Découvert"} color={soldeCeMois>=0?C.green:C.red}/>
+ <KpiCard label="Point le plus bas" value={fmt(minC)} sub={minC<0?"Trésorerie négative":""} color={minC>=0?C.text:C.red}/>
  <KpiCard label="Point le plus haut" value={fmt(maxC)} color={C.green}/>
  </div>
 
