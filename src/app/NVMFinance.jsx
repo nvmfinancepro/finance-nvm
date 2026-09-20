@@ -389,6 +389,22 @@ function LoginPage({ onLogin }) {
           setLoading(false);
           return;
         }
+        // client_users est un cache legacy qui peut être absent (ex: échec silencieux
+        // de l'upsert d'invitation) — profiles reste la source de vérité, donc on
+        // retente via profiles avant de conclure à un échec de connexion.
+        const {data: clientProfile} = await supabase.from("profiles").select("*").eq("id", data.user.id).eq("role","CLIENT").single();
+        if (clientProfile) {
+          onLogin({
+            id:"c"+clientProfile.client_id,
+            email:data.user.email,
+            role:"CLIENT",
+            clientId:clientProfile.client_id,
+            name:clientProfile.name||"",
+            firstLogin:false
+          });
+          setLoading(false);
+          return;
+        }
         // Sinon chercher un profil cabinet
         const {data: cabinetProfile} = await supabase.from("profiles").select("*").eq("id", data.user.id).eq("role","CABINET").single();
         if (cabinetProfile) {
@@ -8362,6 +8378,15 @@ export default function App() {
         setView("dashboard");
         return;
       }
+      // client_users est un cache legacy qui peut être absent (ex: échec silencieux
+      // de l'upsert d'invitation) — profiles reste la source de vérité, donc on
+      // retente via profiles avant de conclure à un échec de connexion.
+      const {data:clientProfile} = await supabase.from("profiles").select("*").eq("id",session.user.id).eq("role","CLIENT").single();
+      if(clientProfile) {
+        setUser({id:"c"+clientProfile.client_id,email,role:"CLIENT",clientId:clientProfile.client_id,name:clientProfile.name||"",firstLogin:false});
+        setView("dashboard");
+        return;
+      }
       const {data:cabinetProfile} = await supabase.from("profiles").select("*").eq("id",session.user.id).eq("role","CABINET").single();
       if(cabinetProfile) {
         setUser({id:"cab"+cabinetProfile.cabinet_id,email,role:"CABINET",cabinetId:cabinetProfile.cabinet_id,name:cabinetProfile.name||"Cabinet",firstLogin:false});
@@ -8595,10 +8620,13 @@ export default function App() {
           alert("Le client a été créé, mais l'invitation par email a échoué : "+inv.error+"\nRéessayez l'invitation depuis l'onglet Accès clients.");
           setNewClientCredentials(null);
         } else {
-          // Invitation réussie → ajouter dans client_users
-          await supabase.from("client_users").upsert({
-            client_id:data.id, email:newC.email, first_login:false
+          // Invitation réussie → ajouter dans client_users (cache legacy encore lu par
+          // l'onglet Accès clients ; password reste requis par la colonne NOT NULL même si
+          // l'auth ne s'appuie plus dessus depuis le passage à 100% Supabase Auth)
+          const {error: cuError} = await supabase.from("client_users").upsert({
+            client_id:data.id, email:newC.email, password:"", first_login:false
           },{onConflict:"email"});
+          if (cuError) console.error("Erreur upsert client_users:", cuError);
           setNewClientCredentials({name:newC.name,email:newC.email});
         }
       } else {
@@ -8703,6 +8731,13 @@ export default function App() {
               if(clientUser) {
                 setTimeout(()=>{ setResetMode(false); setUser({id:"c"+clientUser.client_id,email:userEmail,role:"CLIENT",clientId:clientUser.client_id,name:"",firstLogin:false}); setView("dashboard"); },2000);
               } else {
+                // client_users est un cache legacy qui peut être absent (ex: échec silencieux
+                // de l'upsert d'invitation) — profiles reste la source de vérité.
+                const {data:clientProfile} = await supabase.from("profiles").select("*").eq("id",sess.session.user.id).eq("role","CLIENT").single();
+                if(clientProfile) {
+                  setTimeout(()=>{ setResetMode(false); setUser({id:"c"+clientProfile.client_id,email:userEmail,role:"CLIENT",clientId:clientProfile.client_id,name:clientProfile.name||"",firstLogin:false}); setView("dashboard"); },2000);
+                  return;
+                }
                 const {data:cabinetProfile} = await supabase.from("profiles").select("*").eq("id",sess.session.user.id).eq("role","CABINET").single();
                 if(cabinetProfile) {
                   setTimeout(()=>{ setResetMode(false); setUser({id:"cab"+cabinetProfile.cabinet_id,email:userEmail,role:"CABINET",cabinetId:cabinetProfile.cabinet_id,name:cabinetProfile.name||"Cabinet",firstLogin:false}); setView("clients"); },2000);
