@@ -3,9 +3,9 @@ import "@/styles/globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.nvm-finance.fr"),
-  title: "NVM Finance",
+  title: "NVM Finance | DAF externalisé & contrôle de gestion pour PME",
   description:
-    "Pilotage financier externalisé et outils de gestion pour PME françaises : analyse mensuelle, trésorerie, planning et bien plus.",
+    "DAF externalisé pour PME françaises : contrôle de gestion, pilotage de la trésorerie, alertes automatiques et développement business (outils sur mesure).",
   verification: {
     google: "BiGXExOnRDbNP0e1Nc9X4T6drt9toOMRpyWn_G8g2Hk",
   },

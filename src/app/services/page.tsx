@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import ServicesClient from "./ServicesClient";
 
-const title = "Offres : pilotage financier, module gestion & sur-mesure | NVM Finance";
+const title = "Offres DAF externalisé & contrôle de gestion | NVM Finance";
 const description =
-  "Pilotage financier mensuel dès 490€ HT/mois, module gestion (planning, tâches, stock) et outils sur-mesure. Trouvez l'offre adaptée à votre PME.";
+  "DAF externalisé dès 200€ HT/mois : tableau de bord, conseiller dédié en option, module gestion (planning, tâches, stock) et outils sur mesure.";
 
 export const metadata: Metadata = {
   title,
