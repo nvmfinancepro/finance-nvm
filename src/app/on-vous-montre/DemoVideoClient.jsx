@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { LogoSVG } from "@/components/ui/Logo";
+import WhatsAppWidget from "@/components/WhatsAppWidget";
 
 const C = { primary: "#005653", green: "#21C45D", text: "#002e2c", mid: "#2d6b68", border: "#c8e8e5" };
 
@@ -12,6 +13,7 @@ export default function DemoVideoClient() {
 
   return (
     <div style={{ fontFamily: "'Nunito',sans-serif", background: "#f0f9f7", minHeight: "100vh", color: C.text }}>
+      <WhatsAppWidget/>
       <style>{`
         .drawer{display:none!important;}
         .mobile-ham{display:none;}

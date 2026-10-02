@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import WhatsAppWidget from "@/components/WhatsAppWidget";
 
 const C = { primary:"#005653", green:"#21C45D", bg:"#ecfdf5", text:"#002e2c", mid:"#2d6b68", light:"#a7d4d0", border:"#c8e8e5" };
 
@@ -136,6 +137,7 @@ export default function ServicesPage() {
 
   return (
     <div style={{fontFamily:"'Nunito',sans-serif",background:"#f8fffe",color:C.text,minHeight:"100vh"}}>
+      <WhatsAppWidget/>
       <style>{`
         .drawer{display:none!important;}
         .mobile-ham{display:none;}

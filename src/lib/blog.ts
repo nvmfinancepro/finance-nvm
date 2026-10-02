@@ -7,6 +7,7 @@ export type BlogPost = {
   excerpt: string;
   body: string;
   theme: string;
+  image_url: string | null;
   status: string;
   author: string;
   published_at: string | null;

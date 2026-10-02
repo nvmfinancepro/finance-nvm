@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { LogoSVG } from "@/components/ui/Logo";
 import WhatsAppWidget from "@/components/WhatsAppWidget";
 import type { BlogPost } from "@/lib/blog";
@@ -13,17 +14,57 @@ const Logo = ({ width = 120 }: { width?: number }) => (
 
 const NAV_LINKS = [{ h: "/", l: "Accueil" }, { h: "/services", l: "Nos offres" }, { h: "/on-vous-montre", l: "On vous montre" }, { h: "/diagnostic", l: "Simulateur" }, { h: "/blog", l: "Blog" }] as const;
 
+const sectionStyle = { maxWidth: 760, margin: "0 auto", padding: "0 24px" };
+const pStyle = { fontSize: 16, lineHeight: 1.75, color: C.mid, marginBottom: 16 };
+
 function formatDate(iso: string | null) {
   if (!iso) return "";
   return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 }
 
-export default function BlogClient({ posts }: { posts: BlogPost[] }) {
+// Convention de rédaction (voir /api/blog/generate) : "**Titre**" sur sa propre ligne = sous-titre,
+// "- " en début de ligne = puce, ligne vide = saut de paragraphe.
+function renderBody(body: string) {
+  const lines = body.split("\n");
+  const blocks: ReactNode[] = [];
+  let listBuffer: string[] = [];
+  const flushList = (key: string) => {
+    if (listBuffer.length === 0) return;
+    blocks.push(
+      <ul key={key} style={{ paddingLeft: 20, margin: "0 0 16px" }}>
+        {listBuffer.map((item, i) => (
+          <li key={i} style={{ ...pStyle, marginBottom: 8 }}>{item}</li>
+        ))}
+      </ul>
+    );
+    listBuffer = [];
+  };
+  lines.forEach((line, i) => {
+    const trimmed = line.trim();
+    if (/^\*\*.+\*\*$/.test(trimmed)) {
+      flushList(`ul-${i}`);
+      blocks.push(
+        <h2 key={i} style={{ fontSize: 24, fontWeight: 900, color: C.text, marginTop: 40, marginBottom: 14 }}>
+          {trimmed.replace(/\*\*/g, "")}
+        </h2>
+      );
+    } else if (trimmed.startsWith("- ")) {
+      listBuffer.push(trimmed.slice(2));
+    } else if (trimmed) {
+      flushList(`ul-${i}`);
+      blocks.push(<p key={i} style={pStyle}>{trimmed}</p>);
+    }
+  });
+  flushList("ul-end");
+  return blocks;
+}
+
+export default function BlogPostClient({ post }: { post: BlogPost }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <div style={{ fontFamily: "'Nunito',sans-serif", background: "#fff", color: C.text, minHeight: "100vh" }}>
-      <WhatsAppWidget/>
+      <WhatsAppWidget />
       <style>{`
         .drawer{display:none!important;}
         .mobile-ham{display:none;}
@@ -76,48 +117,46 @@ export default function BlogClient({ posts }: { posts: BlogPost[] }) {
         </div>
       </header>
 
-      <div style={{ maxWidth: 760, margin: "0 auto", padding: "56px 24px 96px" }}>
-        <p style={{ fontSize: 12, fontWeight: 800, color: C.green, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 12 }}>Blog</p>
-        <h1 style={{ fontSize: 38, fontWeight: 900, color: C.text, lineHeight: 1.2, marginBottom: 20 }}>
-          Gestion et pilotage financier des PME
-        </h1>
-        <p style={{ fontSize: 16, lineHeight: 1.75, color: C.mid, marginBottom: 44 }}>
-          Trésorerie, comptabilité, pilotage financier, automatisation : des articles pratiques pour dirigeants de
-          TPE/PME, sans jargon.
-        </p>
-
-        {posts.length === 0 ? (
-          <p style={{ fontSize: 15, color: C.mid }}>Aucun article publié pour l&apos;instant. Revenez bientôt.</p>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
-            {posts.map((p) => (
-              <a
-                key={p.id}
-                href={`/blog/${p.slug}`}
-                style={{ display: "flex", gap: 20, alignItems: "stretch", padding: "24px 26px", background: C.bg, borderRadius: 16, textDecoration: "none", color: "inherit" }}
-              >
-                {p.image_url && (
-                  <img
-                    src={p.image_url}
-                    alt=""
-                    style={{ width: 120, height: 120, borderRadius: 12, objectFit: "cover", flexShrink: 0 }}
-                  />
-                )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                {p.theme && (
-                  <div style={{ fontSize: 11, fontWeight: 800, color: C.green, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
-                    {p.theme}
-                  </div>
-                )}
-                <div style={{ fontSize: 21, fontWeight: 900, color: C.text, marginBottom: 8, lineHeight: 1.3 }}>{p.title}</div>
-                <p style={{ fontSize: 14, lineHeight: 1.6, color: C.mid, marginBottom: 10 }}>{p.excerpt}</p>
-                <div style={{ fontSize: 12, fontWeight: 700, color: C.light }}>{formatDate(p.published_at)}</div>
-                </div>
-              </a>
-            ))}
-          </div>
+      <article style={{ padding: "0 0 96px" }}>
+        {post.image_url && (
+          <img
+            src={post.image_url}
+            alt=""
+            style={{ width: "100%", maxHeight: 420, objectFit: "cover", display: "block", marginBottom: 40 }}
+          />
         )}
-      </div>
+        <div style={sectionStyle}>
+          {post.theme && (
+            <p style={{ fontSize: 12, fontWeight: 800, color: C.green, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 12 }}>
+              {post.theme}
+            </p>
+          )}
+          <h1 style={{ fontSize: 38, fontWeight: 900, color: C.text, lineHeight: 1.2, marginBottom: 14 }}>{post.title}</h1>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.light, marginBottom: 32 }}>
+            {post.author} · {formatDate(post.published_at)}
+          </div>
+
+          {renderBody(post.body)}
+
+          <div style={{ marginTop: 48, padding: "32px 28px", background: C.bg, borderRadius: 20, textAlign: "center" }}>
+            <p style={{ fontSize: 17, fontWeight: 800, color: C.text, marginBottom: 16 }}>
+              Envie de reprendre la main sur votre gestion ?
+            </p>
+            <a
+              href="https://calendly.com/nvmfinance-pro/30min"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ background: C.primary, color: "#fff", padding: "14px 32px", borderRadius: 100, fontSize: 15, fontWeight: 800, textDecoration: "none", display: "inline-block", boxShadow: "0 4px 24px rgba(0,86,83,.25)" }}
+            >
+              Demander une analyse gratuite
+            </a>
+          </div>
+
+          <div style={{ marginTop: 32 }}>
+            <a href="/blog" style={{ fontSize: 14, fontWeight: 700, color: C.primary, textDecoration: "none" }}>← Tous les articles</a>
+          </div>
+        </div>
+      </article>
 
       <footer style={{ background: "#002e2c", padding: "32px 24px", textAlign: "center" }}>
         <p style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,.4)" }}>

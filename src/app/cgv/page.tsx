@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import WhatsAppWidget from "@/components/WhatsAppWidget";
 const C = { primary:"#005653", green:"#21C45D", bg:"#ecfdf5", text:"#002e2c", mid:"#2d6b68", light:"#a7d4d0", border:"#c8e8e5" };
 const LogoSVG = ({ width=160, showLabel=false, labelColor="#005653", fillColor="#005552", brightGreen="#21C45D" }) => (
   <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:Math.round(width*0.07)}}>
@@ -48,6 +49,7 @@ export default function Page() {
   }, []);
   return (
     <div style={{fontFamily:"'Nunito',sans-serif",background:"#fff",color:C.text,minHeight:"100vh"}}>
+      <WhatsAppWidget/>
       <style>{`
         @media(max-width:768px){
           .desktop-nav-bar{display:none!important;}

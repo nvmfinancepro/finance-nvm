@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { CSSProperties } from "react";
 import { LogoSVG } from "@/components/ui/Logo";
+import WhatsAppWidget from "@/components/WhatsAppWidget";
 
 const C = { primary: "#005653", green: "#21C45D", bg: "#ecfdf5", text: "#002e2c", mid: "#2d6b68", light: "#a7d4d0", border: "#c8e8e5" };
 
@@ -53,6 +54,7 @@ const liStyle: CSSProperties = { fontSize: 16, lineHeight: 1.75, color: C.mid, m
 export default function Page() {
   return (
     <div style={{ fontFamily: "'Nunito',sans-serif", background: "#fff", color: C.text, minHeight: "100vh" }}>
+      <WhatsAppWidget/>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
       <header style={{ background: "#fff", borderBottom: `1px solid ${C.border}`, padding: "16px 24px" }}>

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { LogoSVG } from "@/components/ui/Logo";
+import WhatsAppWidget from "@/components/WhatsAppWidget";
 
 const C = { primary: "#005653", green: "#21C45D", red: "#e5484d", orange: "#f5a524", bg: "#ecfdf5", text: "#002e2c", mid: "#2d6b68", light: "#a7d4d0", border: "#c8e8e5" };
 
@@ -140,6 +141,7 @@ export default function DiagnosticClient() {
 
   return (
     <div style={{ fontFamily: "'Nunito',sans-serif", background: "#fff", color: C.text, minHeight: "100vh" }}>
+      <WhatsAppWidget/>
       <style>{`
         .drawer{display:none!important;}
         .mobile-ham{display:none;}

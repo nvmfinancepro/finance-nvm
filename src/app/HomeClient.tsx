@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import WhatsAppWidget from "@/components/WhatsAppWidget";
 
 // Chargé après le rendu initial : ces composants ne rendent rien tant que /api/reviews
 // n'a pas répondu (fetch côté client), donc aucun contenu SSR/LCP n'en dépend — inutile
@@ -123,12 +124,23 @@ const ALERTS_DEMO = [
   {title:"IS à anticiper · provision conseillée",  desc:"Sur la base du bénéfice actuel : provisionnez ~4 200 € pour l'IS du trimestre.",dot:"#005653",bg:"#f0faf8",border:"#c8e8e5",date:"Maintenant",lv:"Info"},
 ];
 
+const FAQS = [
+  { q: "Qu'est-ce qu'un DAF externalisé, concrètement ?", a: "C'est un directeur financier à temps partagé : on pilote votre rentabilité et votre trésorerie chaque mois, on vous alerte avant un problème, et on vous aide à agir — sans que vous ayez à recruter un DAF à temps plein." },
+  { q: "Quelle différence avec mon expert-comptable ?", a: "Votre comptable produit vos chiffres légaux une fois les comptes clôturés. Nous, on pilote vos finances au jour le jour, on alerte avant que ça devienne un problème, et on transforme l'analyse en actions concrètes. Les deux sont complémentaires, pas concurrents." },
+  { q: "Mes données sont-elles en sécurité ?", a: "Oui. Les données de chaque client sont cloisonnées (aucun autre client n'y a accès), hébergées en Europe, et vous gardez la main sur ce que vous importez." },
+  { q: "Combien de temps pour démarrer ?", a: "Mise en place en 48h. Vous importez vos premières données, et le tableau de bord est immédiatement disponible." },
+  { q: "Quelle est la différence entre l'offre Tableau de bord et l'offre Finance ?", a: "L'offre Tableau de bord (200€ HT/mois) vous donne la visibilité complète en autonomie. L'offre Finance (490€ HT/mois) ajoute un conseiller dédié qui analyse vos chiffres chaque mois et pousse des actions concrètes." },
+  { q: "Je suis déjà suivi par un cabinet comptable, c'est compatible ?", a: "Oui, complètement. On ne remplace pas votre comptable (bilan, liasse fiscale, TVA restent de son ressort) — on s'occupe du pilotage et de la rentabilité au quotidien, ce que la plupart des cabinets ne couvrent pas." },
+  { q: "Puis-je arrêter à tout moment ?", a: "Oui, sans engagement. Vous pouvez résilier quand vous le souhaitez." },
+];
+
 export default function SitePage() {
   const [loaded, setLoaded] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [heroVisible, setHeroVisible] = useState(false);
   const [statsKey, setStatsKey] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [faqOpen, setFaqOpen] = useState<number | null>(0);
   const [demoTab, setDemoTab] = useState(0);
   const [demoVisible, setDemoVisible] = useState(false);
   const [scanStep, setScanStep] = useState(-1);
@@ -246,6 +258,7 @@ export default function SitePage() {
 
   return (
     <div style={{fontFamily:"'Nunito',sans-serif", background:"#fff", color:C.text, minHeight:"100vh", overflowX:"hidden"}}>
+      <WhatsAppWidget/>
       <style>{`
         *{box-sizing:border-box;}
         @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
@@ -580,6 +593,41 @@ export default function SitePage() {
 
       {/* AVIS GOOGLE */}
       <ReviewsSection data={reviews}/>
+
+      {/* FAQ */}
+      <section className="section-pad" style={{padding:"80px 48px",maxWidth:860,margin:"0 auto"}}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{__html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: FAQS.map(f => ({
+              "@type": "Question",
+              name: f.q,
+              acceptedAnswer: { "@type": "Answer", text: f.a },
+            })),
+          })}}
+        />
+        <h2 style={{fontSize:"clamp(26px,3vw,36px)",fontWeight:900,color:C.text,marginBottom:36,textAlign:"center"}}>Questions fréquentes</h2>
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {FAQS.map((f,i)=>(
+            <div key={i} style={{border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden",background:"#fff"}}>
+              <button
+                onClick={()=>setFaqOpen(faqOpen===i?null:i)}
+                style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,padding:"18px 22px",background:"none",border:"none",cursor:"pointer",textAlign:"left",fontFamily:"inherit"}}
+              >
+                <span style={{fontSize:15,fontWeight:800,color:C.text}}>{f.q}</span>
+                <span style={{flexShrink:0,width:22,height:22,borderRadius:"50%",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:900,color:C.primary,transform:faqOpen===i?"rotate(45deg)":"none",transition:"transform .2s"}}>+</span>
+              </button>
+              {faqOpen===i && (
+                <div style={{padding:"0 22px 20px"}}>
+                  <p style={{fontSize:14,lineHeight:1.7,color:C.mid,margin:0}}>{f.a}</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
 
       {/* FOOTER */}
       <footer className="footer" style={{background:"#002e2c",padding:"48px 48px 24px"}}>
