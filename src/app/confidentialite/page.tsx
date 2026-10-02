@@ -113,11 +113,11 @@ export default function Page() {
         
         <div style={{marginBottom:40}}>
           <h2 style={{fontSize:20,fontWeight:800,color:C.primary,marginBottom:16,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>Responsable du traitement</h2>
-          <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Nathan Van Meer — Auto-entrepreneur</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>SIRET : 99486751300016 — Annecy (74000), France</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Email : nathan@nvm-finance.fr</p>
+          <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Nathan Van Meer, Auto-entrepreneur</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>SIRET : 99486751300016 · Annecy (74000), France</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Email : nathan@nvm-finance.fr</p>
         </div>
         <div style={{marginBottom:40}}>
           <h2 style={{fontSize:20,fontWeight:800,color:C.primary,marginBottom:16,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>Cabinets comptables partenaires</h2>
-          <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Si votre dossier est géré par un cabinet comptable partenaire utilisant NVM Finance, ce cabinet est responsable du traitement de vos données au sens du RGPD : il détermine les finalités et moyens du traitement de votre dossier et reste votre interlocuteur principal.</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>NVM Finance agit alors en tant que sous-traitant (article 28 du RGPD) : nous fournissons l'infrastructure technique d'hébergement et de traitement, sans utiliser vos données à d'autres fins que celles définies par le cabinet.</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Vous pouvez exercer vos droits auprès de votre cabinet ou directement auprès de NVM Finance (voir ci-dessous) — les deux transmettront votre demande à l'autre si nécessaire.</p>
+          <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Si votre dossier est géré par un cabinet comptable partenaire utilisant NVM Finance, ce cabinet est responsable du traitement de vos données au sens du RGPD : il détermine les finalités et moyens du traitement de votre dossier et reste votre interlocuteur principal.</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>NVM Finance agit alors en tant que sous-traitant (article 28 du RGPD) : nous fournissons l'infrastructure technique d'hébergement et de traitement, sans utiliser vos données à d'autres fins que celles définies par le cabinet.</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Vous pouvez exercer vos droits auprès de votre cabinet ou directement auprès de NVM Finance (voir ci-dessous) : les deux transmettront votre demande à l'autre si nécessaire.</p>
         </div>
         <div style={{marginBottom:40}}>
           <h2 style={{fontSize:20,fontWeight:800,color:C.primary,marginBottom:16,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>Données collectées</h2>
@@ -167,7 +167,7 @@ export default function Page() {
             </div>
           </div>
           <div style={{display:"flex",justifyContent:"space-between",paddingTop:24,flexWrap:"wrap",gap:12}}>
-            <p style={{fontSize:11,color:"rgba(255,255,255,.25)"}}>© 2026 NVM Finance — Tous droits réservés</p>
+            <p style={{fontSize:11,color:"rgba(255,255,255,.25)"}}>© 2026 NVM Finance · Tous droits réservés</p>
             <p style={{fontSize:11,color:"rgba(255,255,255,.25)"}}>Auto-entrepreneur · SIRET 99486751300016 · Annecy</p>
           </div>
         </div>

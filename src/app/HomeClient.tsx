@@ -125,12 +125,12 @@ const ALERTS_DEMO = [
 ];
 
 const FAQS = [
-  { q: "Qu'est-ce qu'un DAF externalisé, concrètement ?", a: "C'est un directeur financier à temps partagé : on pilote votre rentabilité et votre trésorerie chaque mois, on vous alerte avant un problème, et on vous aide à agir — sans que vous ayez à recruter un DAF à temps plein." },
+  { q: "Qu'est-ce que le contrôle de gestion externalisé, concrètement ?", a: "On pilote votre rentabilité et votre trésorerie chaque mois, on vous alerte avant un problème, et on vous aide à agir. Sans que vous ayez à recruter en interne." },
   { q: "Quelle différence avec mon expert-comptable ?", a: "Votre comptable produit vos chiffres légaux une fois les comptes clôturés. Nous, on pilote vos finances au jour le jour, on alerte avant que ça devienne un problème, et on transforme l'analyse en actions concrètes. Les deux sont complémentaires, pas concurrents." },
   { q: "Mes données sont-elles en sécurité ?", a: "Oui. Les données de chaque client sont cloisonnées (aucun autre client n'y a accès), hébergées en Europe, et vous gardez la main sur ce que vous importez." },
   { q: "Combien de temps pour démarrer ?", a: "Mise en place en 48h. Vous importez vos premières données, et le tableau de bord est immédiatement disponible." },
   { q: "Quelle est la différence entre l'offre Tableau de bord et l'offre Finance ?", a: "L'offre Tableau de bord (200€ HT/mois) vous donne la visibilité complète en autonomie. L'offre Finance (490€ HT/mois) ajoute un conseiller dédié qui analyse vos chiffres chaque mois et pousse des actions concrètes." },
-  { q: "Je suis déjà suivi par un cabinet comptable, c'est compatible ?", a: "Oui, complètement. On ne remplace pas votre comptable (bilan, liasse fiscale, TVA restent de son ressort) — on s'occupe du pilotage et de la rentabilité au quotidien, ce que la plupart des cabinets ne couvrent pas." },
+  { q: "Je suis déjà suivi par un cabinet comptable, c'est compatible ?", a: "Oui, complètement. On ne remplace pas votre comptable (bilan, liasse fiscale, TVA restent de son ressort). On s'occupe du pilotage et de la rentabilité au quotidien, ce que la plupart des cabinets ne couvrent pas." },
   { q: "Puis-je arrêter à tout moment ?", a: "Oui, sans engagement. Vous pouvez résilier quand vous le souhaitez." },
 ];
 

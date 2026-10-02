@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import HomeClient from "./HomeClient";
 
-const title = "DAF externalisé PME — Contrôle de gestion | NVM Finance";
+const title = "Contrôle de gestion externalisé pour PME | NVM Finance";
 const description =
-  "DAF externalisé pour PME : un conseiller dédié pilote votre rentabilité et votre trésorerie chaque mois, alertes automatiques et outils sur mesure inclus.";
+  "Contrôle de gestion externalisé pour PME : un conseiller dédié pilote votre rentabilité et votre trésorerie chaque mois, alertes automatiques et outils sur mesure inclus.";
 
 export const metadata: Metadata = {
   title,
@@ -35,8 +35,8 @@ export default function Page() {
             "@type": "ProfessionalService",
             name: "NVM Finance",
             description:
-              "DAF externalisé et contrôle de gestion pour PME françaises : pilotage financier, trésorerie, alertes automatiques et développement business.",
-            serviceType: "DAF externalisé / Contrôle de gestion externalisé",
+              "Contrôle de gestion externalisé pour PME françaises : pilotage financier, trésorerie, alertes automatiques et développement business.",
+            serviceType: "Contrôle de gestion externalisé",
             url: "https://www.nvm-finance.fr",
             email: "nathan@nvm-finance.fr",
             telephone: "+33783657639",

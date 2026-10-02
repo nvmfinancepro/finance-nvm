@@ -110,16 +110,16 @@ export default function Page() {
             régulièrement :
           </p>
           <ul style={{ paddingLeft: 20, margin: "0 0 16px" }}>
-            <li style={liStyle}><strong style={{ color: C.text }}>La trésorerie</strong> — le solde disponible et son évolution prévisible, pour ne jamais être pris au dépourvu par une échéance.</li>
-            <li style={liStyle}><strong style={{ color: C.text }}>La marge</strong> — ce qu&apos;il reste une fois les coûts directs déduits du chiffre d&apos;affaires, produit par produit ou activité par activité.</li>
-            <li style={liStyle}><strong style={{ color: C.text }}>Le BFR (besoin en fonds de roulement)</strong> — l&apos;argent immobilisé entre le moment où l&apos;entreprise paie ses charges et celui où elle encaisse ses ventes ; un BFR qui dérive est souvent le premier signe de tension de trésorerie à venir.</li>
-            <li style={liStyle}><strong style={{ color: C.text }}>L&apos;EBE (excédent brut d&apos;exploitation)</strong> — la rentabilité générée par l&apos;activité courante, avant amortissements et éléments financiers ou exceptionnels : l&apos;indicateur le plus fiable pour juger si le cœur de métier est rentable.</li>
-            <li style={liStyle}><strong style={{ color: C.text }}>La masse salariale</strong> — son poids rapporté au chiffre d&apos;affaires, et son évolution par rapport à la croissance réelle de l&apos;activité.</li>
-            <li style={liStyle}><strong style={{ color: C.text }}>Les créances clients et dettes fournisseurs</strong> — les délais de paiement réels, dans les deux sens, qui pèsent directement sur la trésorerie.</li>
+            <li style={liStyle}><strong style={{ color: C.text }}>La trésorerie</strong> : le solde disponible et son évolution prévisible, pour ne jamais être pris au dépourvu par une échéance.</li>
+            <li style={liStyle}><strong style={{ color: C.text }}>La marge</strong> : ce qu&apos;il reste une fois les coûts directs déduits du chiffre d&apos;affaires, produit par produit ou activité par activité.</li>
+            <li style={liStyle}><strong style={{ color: C.text }}>Le BFR (besoin en fonds de roulement)</strong> : l&apos;argent immobilisé entre le moment où l&apos;entreprise paie ses charges et celui où elle encaisse ses ventes. Un BFR qui dérive est souvent le premier signe de tension de trésorerie à venir.</li>
+            <li style={liStyle}><strong style={{ color: C.text }}>L&apos;EBE (excédent brut d&apos;exploitation)</strong> : la rentabilité générée par l&apos;activité courante, avant amortissements et éléments financiers ou exceptionnels. L&apos;indicateur le plus fiable pour juger si le cœur de métier est rentable.</li>
+            <li style={liStyle}><strong style={{ color: C.text }}>La masse salariale</strong> : son poids rapporté au chiffre d&apos;affaires, et son évolution par rapport à la croissance réelle de l&apos;activité.</li>
+            <li style={liStyle}><strong style={{ color: C.text }}>Les créances clients et dettes fournisseurs</strong> : les délais de paiement réels, dans les deux sens, qui pèsent directement sur la trésorerie.</li>
           </ul>
           <p style={pStyle}>
-            Ce qui change la donne, ce n&apos;est pas la liste des indicateurs — la plupart des dirigeants les
-            connaissent déjà de nom — c&apos;est la régularité du suivi. Un même indicateur regardé une fois par an ne
+            Ce qui change la donne, ce n&apos;est pas la liste des indicateurs. La plupart des dirigeants les
+            connaissent déjà de nom. C&apos;est la régularité du suivi. Un même indicateur regardé une fois par an ne
             raconte pas la même histoire que regardé chaque mois, avec sa tendance et son contexte.
           </p>
 
@@ -142,12 +142,12 @@ export default function Page() {
           <h2 style={h2Style}>À partir de quelle taille d&apos;entreprise se lancer ?</h2>
           <p style={pStyle}>
             Il n&apos;y a pas de seuil de chiffre d&apos;affaires ou d&apos;effectif à partir duquel le pilotage financier
-            devient pertinent — la question à se poser est plutôt celle de la complexité. Dès qu&apos;une PME gère
+            devient pertinent. La question à se poser est plutôt celle de la complexité. Dès qu&apos;une PME gère
             plusieurs sources de revenus, des délais de paiement clients et fournisseurs qui ne coïncident pas, une
             masse salariale qui pèse significativement dans les charges, ou un projet d&apos;investissement ou
             d&apos;emprunt à venir, suivre ces éléments au fil de l&apos;eau devient plus utile qu&apos;une revue annuelle. À
             l&apos;inverse, recruter un directeur financier à temps plein n&apos;a souvent de sens qu&apos;à partir d&apos;une
-            taille bien supérieure — d&apos;où l&apos;intérêt d&apos;un pilotage financier externalisé entre les deux : plus
+            taille bien supérieure. D&apos;où l&apos;intérêt d&apos;un pilotage financier externalisé entre les deux : plus
             structuré qu&apos;un suivi artisanal, sans le coût fixe d&apos;un recrutement.
           </p>
 
@@ -160,8 +160,8 @@ export default function Page() {
             concrètes et un prévisionnel actualisé, pas seulement des chiffres.
           </p>
           <p style={pStyle}>
-            Nous concevons aussi des outils de gestion pour PME dans ce même tableau de bord — planning d&apos;équipe,
-            gestion des tâches, suivi des congés et du stock, automatisation de vos process opérationnels — pour que
+            Nous concevons aussi des outils de gestion pour PME dans ce même tableau de bord (planning d&apos;équipe,
+            gestion des tâches, suivi des congés et du stock, automatisation de vos process opérationnels) pour que
             le pilotage financier et l&apos;opérationnel du quotidien vivent au même endroit. Ce volet fait l&apos;objet
             de son propre guide sur l&apos;
             <a href="/automatisation-gestion-pme" style={{ color: C.primary, fontWeight: 700 }}>automatisation de la gestion PME</a>,

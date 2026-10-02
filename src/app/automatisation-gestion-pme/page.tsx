@@ -112,14 +112,14 @@ export default function Page() {
             Certaines catégories de tâches reviennent, quel que soit le secteur d&apos;activité :
           </p>
           <ul style={{ paddingLeft: 20, margin: "0 0 16px" }}>
-            <li style={liStyle}><strong style={{ color: C.text }}>L&apos;organisation d&apos;équipe</strong> — répartir les personnes sur les créneaux ou les missions, gérer les absences et les remplacements, sans reconstituer un tableau à chaque imprévu.</li>
-            <li style={liStyle}><strong style={{ color: C.text }}>Le suivi d&apos;activité</strong> — savoir, à tout moment, où en est un dossier, une commande ou une intervention, sans avoir à interroger la personne qui s&apos;en occupe.</li>
-            <li style={liStyle}><strong style={{ color: C.text }}>Les process répétitifs</strong> — les étapes qui reviennent à l&apos;identique à chaque nouveau client, chaque nouvelle recrue ou chaque nouvelle commande, et qui gagnent à être suivies via une trame plutôt que réinventées à chaque fois.</li>
-            <li style={liStyle}><strong style={{ color: C.text }}>La remontée d&apos;information</strong> — centraliser ce qui circule aujourd&apos;hui par messages, appels ou tableurs épars, pour que l&apos;information existe à un seul endroit fiable.</li>
+            <li style={liStyle}><strong style={{ color: C.text }}>L&apos;organisation d&apos;équipe</strong> : répartir les personnes sur les créneaux ou les missions, gérer les absences et les remplacements, sans reconstituer un tableau à chaque imprévu.</li>
+            <li style={liStyle}><strong style={{ color: C.text }}>Le suivi d&apos;activité</strong> : savoir, à tout moment, où en est un dossier, une commande ou une intervention, sans avoir à interroger la personne qui s&apos;en occupe.</li>
+            <li style={liStyle}><strong style={{ color: C.text }}>Les process répétitifs</strong> : les étapes qui reviennent à l&apos;identique à chaque nouveau client, chaque nouvelle recrue ou chaque nouvelle commande, et qui gagnent à être suivies via une trame plutôt que réinventées à chaque fois.</li>
+            <li style={liStyle}><strong style={{ color: C.text }}>La remontée d&apos;information</strong> : centraliser ce qui circule aujourd&apos;hui par messages, appels ou tableurs épars, pour que l&apos;information existe à un seul endroit fiable.</li>
           </ul>
           <p style={pStyle}>
             Prises une par une, ces tâches semblent mineures. Additionnées sur une semaine, puis sur une année, elles
-            représentent souvent un temps considérable — du temps qui n&apos;est disponible ni pour développer
+            représentent souvent un temps considérable, du temps qui n&apos;est disponible ni pour développer
             l&apos;activité, ni pour se consacrer aux clients.
           </p>
 
@@ -153,8 +153,8 @@ export default function Page() {
           <h2 style={h2Style}>Comment NVM Finance vous accompagne</h2>
           <p style={pStyle}>
             C&apos;est le second volet de <a href="/services" style={{ color: C.primary, fontWeight: 700 }}>nos offres</a> :
-            des outils de gestion sur mesure — planning d&apos;équipe, gestion des tâches, suivi des congés et du
-            stock — conçus pour automatiser vos process opérationnels et centraliser ce qui, aujourd&apos;hui, est
+            des outils de gestion sur mesure (planning d&apos;équipe, gestion des tâches, suivi des congés et du
+            stock) conçus pour automatiser vos process opérationnels et centraliser ce qui, aujourd&apos;hui, est
             dispersé entre plusieurs outils ou dans la tête d&apos;une seule personne. Le détail des formules et des
             tarifs est disponible sur la <a href="/services" style={{ color: C.primary, fontWeight: 700 }}>page Nos offres</a>,
             avec une mise en place rapide et sans engagement.

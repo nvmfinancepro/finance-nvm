@@ -171,7 +171,7 @@ export default function Page() {
             </div>
           </div>
           <div style={{display:"flex",justifyContent:"space-between",paddingTop:24,flexWrap:"wrap",gap:12}}>
-            <p style={{fontSize:11,color:"rgba(255,255,255,.25)"}}>© 2026 NVM Finance — Tous droits réservés</p>
+            <p style={{fontSize:11,color:"rgba(255,255,255,.25)"}}>© 2026 NVM Finance · Tous droits réservés</p>
             <p style={{fontSize:11,color:"rgba(255,255,255,.25)"}}>Auto-entrepreneur · SIRET 99486751300016 · Annecy</p>
           </div>
         </div>

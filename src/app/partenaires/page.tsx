@@ -162,7 +162,7 @@ export default function Page() {
           <p style={{ fontSize: 12, fontWeight: 800, color: C.green, letterSpacing: "0.08em", textTransform: "uppercase", marginTop: 56, marginBottom: 8 }}>Service 1</p>
           <h2 style={{ ...h2Style, marginTop: 0 }}>Pilotage financier</h2>
           <p style={pStyle}>
-            Nous sommes une entreprise de DAF externalisé. On regroupe tout le visuel financier de l&apos;entreprise,
+            Nous sommes une entreprise de contrôle de gestion externalisé. On regroupe tout le visuel financier de l&apos;entreprise,
             au même endroit.
           </p>
 
