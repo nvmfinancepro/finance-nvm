@@ -13,7 +13,7 @@ export default function WhatsAppWidget() {
       aria-label="Nous contacter sur WhatsApp"
       style={{
         position: "fixed",
-        right: 20,
+        left: 20,
         bottom: 20,
         zIndex: 999,
         display: "flex",
