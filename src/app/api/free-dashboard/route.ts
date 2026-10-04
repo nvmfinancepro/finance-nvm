@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { notifyWhatsApp } from "@/lib/whatsapp";
+import { checkEmail, cleanPhone } from "@/lib/contact-validation";
 
 // Inscription en libre-service au tableau de bord gratuit : crée le dossier
 // client et le compte (mot de passe choisi dans le formulaire, email considéré
@@ -9,7 +10,6 @@ import { notifyWhatsApp } from "@/lib/whatsapp";
 // Route publique (pas de Bearer) : protégée par un honeypot et une limite par IP.
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE_RE = /^[+0-9 ().-]{8,20}$/;
 
 // Limite best-effort par instance serverless : 5 tentatives / heure / IP.
 // Désactivée en local, où tous les essais viennent de la même IP.
@@ -32,17 +32,22 @@ export async function POST(req: NextRequest) {
 
   const company = String(body.company || "").trim().slice(0, 120);
   const email = String(body.email || "").trim().toLowerCase().slice(0, 200);
-  const phone = String(body.phone || "").trim().slice(0, 20);
+  const phone = cleanPhone(String(body.phone || "").slice(0, 25));
   const password = String(body.password || "");
 
   if (!company) return NextResponse.json({ error: "Le nom de l'entreprise est requis." }, { status: 400 });
   if (!EMAIL_RE.test(email)) return NextResponse.json({ error: "Adresse email invalide." }, { status: 400 });
-  if (!PHONE_RE.test(phone)) return NextResponse.json({ error: "Numéro de téléphone invalide." }, { status: 400 });
+  if (!phone) return NextResponse.json({ error: "Numéro de téléphone invalide. Indiquez un numéro où votre conseiller peut vous joindre." }, { status: 400 });
   if (password.length < 8 || password.length > 72) return NextResponse.json({ error: "Le mot de passe doit faire au moins 8 caractères." }, { status: 400 });
 
   const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "unknown";
   if (rateLimited(ip)) {
     return NextResponse.json({ error: "Trop de tentatives, réessayez plus tard." }, { status: 429 });
+  }
+
+  const emailCheck = await checkEmail(email);
+  if (!emailCheck.ok) {
+    return NextResponse.json({ error: emailCheck.error, suggestion: emailCheck.suggestion }, { status: 400 });
   }
 
   const supabaseAdmin = createClient(
