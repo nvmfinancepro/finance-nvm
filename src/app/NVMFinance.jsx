@@ -805,7 +805,7 @@ function AdminClients({ clients, cabinets, onViewAsClient, onAddClient, onUpdate
  const [editSaving,setEditSaving]=useState(false);
  const [confirmDelete,setConfirmDelete]=useState(null);
 
- const startEdit=(c)=>{ setEditId(c.id); setEditC({plan:c.plan??null,name:c.name,sector:c.sector,manager:c.manager,status:c.status,email:c.email||"",planningEnabled:c.planningEnabled!==false,congesEnabled:c.congesEnabled!==false,pointageEnabled:c.pointageEnabled!==false,notesFraisEnabled:c.notesFraisEnabled!==false,tachesEnabled:c.tachesEnabled!==false,equipeTachesEnabled:c.equipeTachesEnabled!==false,stockEnabled:c.stockEnabled!==false,impactJournalEnabled:c.impactJournalEnabled===true,impactJournalTotal:c.impactJournal?.total||0,impactJournalItems:c.impactJournal?.items||[]}); };
+ const startEdit=(c)=>{ setEditId(c.id); setEditC({plan:c.plan??null,phone:c.phone,name:c.name,sector:c.sector,manager:c.manager,status:c.status,email:c.email||"",planningEnabled:c.planningEnabled!==false,congesEnabled:c.congesEnabled!==false,pointageEnabled:c.pointageEnabled!==false,notesFraisEnabled:c.notesFraisEnabled!==false,tachesEnabled:c.tachesEnabled!==false,equipeTachesEnabled:c.equipeTachesEnabled!==false,stockEnabled:c.stockEnabled!==false,impactJournalEnabled:c.impactJournalEnabled===true,impactJournalTotal:c.impactJournal?.total||0,impactJournalItems:c.impactJournal?.items||[]}); };
  const addImpactItem=(kind)=>{
    const blank = kind==="temps"
      ? {id:Date.now(),date:"",label:"",kind:"temps",avant:"",apres:"",frequence:""}
@@ -827,7 +827,7 @@ function AdminClients({ clients, cabinets, onViewAsClient, onAddClient, onUpdate
     setEditSaving(true);
     // Écriture unique via onUpdateClient (verrou optimiste + rollback + alerte déjà gérés là-bas) —
     // ne pas dupliquer avec un second appel Supabase direct en parallèle.
-    await onUpdateClient(editId,{plan:editC.plan??null,name:editC.name,sector:editC.sector,manager:editC.manager,email:editC.email,planningEnabled:editC.planningEnabled,congesEnabled:editC.congesEnabled,pointageEnabled:editC.pointageEnabled,notesFraisEnabled:editC.notesFraisEnabled,tachesEnabled:editC.tachesEnabled,equipeTachesEnabled:editC.equipeTachesEnabled,stockEnabled:editC.stockEnabled,impactJournalEnabled:editC.impactJournalEnabled,impactJournal:{total:Number(editC.impactJournalTotal)||0,totalLabel:"Valeur créée",items:(editC.impactJournalItems||[]).filter(it=>it.label)}});
+    await onUpdateClient(editId,{plan:editC.plan??null,...(editC.phone!==undefined?{phone:editC.phone}:{}),name:editC.name,sector:editC.sector,manager:editC.manager,email:editC.email,planningEnabled:editC.planningEnabled,congesEnabled:editC.congesEnabled,pointageEnabled:editC.pointageEnabled,notesFraisEnabled:editC.notesFraisEnabled,tachesEnabled:editC.tachesEnabled,equipeTachesEnabled:editC.equipeTachesEnabled,stockEnabled:editC.stockEnabled,impactJournalEnabled:editC.impactJournalEnabled,impactJournal:{total:Number(editC.impactJournalTotal)||0,totalLabel:"Valeur créée",items:(editC.impactJournalItems||[]).filter(it=>it.label)}});
     setEditId(null);
     setEditSaving(false);
   };
@@ -879,6 +879,7 @@ function AdminClients({ clients, cabinets, onViewAsClient, onAddClient, onUpdate
  <div style={{padding:20,display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
  <FormRow label="Raison sociale"><input value={editC.name||""} onChange={e=>setEditC({...editC,name:e.target.value})} className="inp"/></FormRow>
  <FormRow label="E-mail client"><input value={editC.email||""} onChange={e=>setEditC({...editC,email:e.target.value})} className="inp" type="email" placeholder="email@client.fr"/></FormRow>
+ {editC.phone!==undefined&&<FormRow label="Téléphone"><input value={editC.phone||""} onChange={e=>setEditC({...editC,phone:e.target.value})} className="inp" type="tel" placeholder="06 00 00 00 00"/></FormRow>}
  <FormRow label="Responsable du dossier"><input value={editC.manager||""} onChange={e=>setEditC({...editC,manager:e.target.value})} className="inp"/></FormRow>
  <FormRow label="Secteur"><select value={editC.sector||""} onChange={e=>setEditC({...editC,sector:e.target.value})} className="inp">{SECTORS.map(s=><option key={s}>{s}</option>)}</select></FormRow>
  </div>
@@ -1009,6 +1010,17 @@ function AdminClients({ clients, cabinets, onViewAsClient, onAddClient, onUpdate
  {c.cabinet_id&&cabinets?.length>0&&(
    <div style={{marginBottom:12}}>
      <Pill color={C.orange}>Géré par {cabinets.find(cab=>cab.id===c.cabinet_id)?.name||"un cabinet"}</Pill>
+   </div>
+ )}
+ {c.plan==="dashboard"&&(
+   <div style={{marginBottom:12}}>
+     <Pill color={C.green}>Gratuit · tableau de bord</Pill>
+   </div>
+ )}
+ {(c.email||c.phone)&&(
+   <div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:12,padding:"8px 10px",background:C.bg,borderRadius:8}}>
+     {c.phone&&<a href={`tel:${c.phone.replace(/[^+0-9]/g,"")}`} style={{fontSize:12,fontWeight:800,color:C.primary,textDecoration:"none"}}>☎ {c.phone}</a>}
+     {c.email&&<a href={`mailto:${c.email}`} style={{fontSize:12,fontWeight:700,color:C.textMid,textDecoration:"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>✉ {c.email}</a>}
    </div>
  )}
  <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
@@ -8675,7 +8687,7 @@ export default function App() {
         // dans le même onglet, la liste du compte précédent resterait affichée.
         if(!cd||cd.length===0){ setClients([]); return; }
         const extras=cd.map(c=>({
-          id:c.id,name:c.name,sector:c.sector,color:c.color,manager:c.manager,cabinet_id:c.cabinet_id,plan:c.plan||null,planningEnabled:c.planning_enabled!==false,
+          id:c.id,name:c.name,sector:c.sector,color:c.color,manager:c.manager,cabinet_id:c.cabinet_id,plan:c.plan||null,...("phone" in c?{phone:c.phone||""}:{}),planningEnabled:c.planning_enabled!==false,
           congesEnabled:c.conges_enabled!==false,pointageEnabled:c.pointage_enabled!==false,notesFraisEnabled:c.notes_frais_enabled!==false,tachesEnabled:c.taches_enabled!==false,equipeTachesEnabled:c.equipe_taches_enabled!==false,stockEnabled:c.stock_enabled!==false,
           since:c.since,status:c.status,email:c.email||(ud||[]).find(u=>u.client_id===c.id)?.email||"",
           kpis:c.kpis||{ca:0,marge:0,charges:0,salaires:0,ebe:0,result:0,tresorerie:0},
@@ -8843,6 +8855,7 @@ export default function App() {
         equipe_taches_enabled:updated.equipeTachesEnabled!==false,
         stock_enabled:updated.stockEnabled!==false,
         ...(updated.plan!==undefined?{plan:updated.plan}:{}),
+        ...(updated.phone!==undefined?{phone:updated.phone||null}:{}),
       }).eq("id",id).eq("updated_at",client.updated_at).select();
       if(upsertError) throw upsertError;
       if(!updateResult||updateResult.length===0){

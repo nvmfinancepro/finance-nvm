@@ -120,6 +120,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Écriture séparée et non bloquante : l'inscription doit continuer de marcher
+  // même si la migration 032 (colonne phone) n'est pas encore appliquée.
+  const { error: phoneError } = await supabaseAdmin.from("clients").update({ phone }).eq("id", newClient.id);
+  if (phoneError) console.error("free-dashboard: téléphone non enregistré (migration 032 ?)", phoneError.message);
+
   // Même raisonnement que /api/invite : le trigger handle_new_user ne fait pas
   // confiance aux métadonnées, c'est ici qu'on attribue rôle et rattachement.
   if (created.user?.id) {
