@@ -668,6 +668,10 @@ function ClientSidebar({ view, setView, onLogout, clientName, alertCount, planni
  {id:"emprunts", icon:"", label:"Mes emprunts"},
  {id:"investissements",icon:"", label:"Mes investissements"},
  ]},
+ { label:"ANALYSE", items:[
+ {id:"comparaison",   icon:"↔", label:"Comparaison périodes"},
+ {id:"previsionnel",  icon:"→", label:"Prévisionnel"},
+ ]},
  { label:"OUTILS FINANCIERS", items:[
  {id:"roi", icon:"", label:"Calculateur ROI"},
  {id:"embauche", icon:"", label:"Simulateur d'embauche"},
@@ -680,10 +684,6 @@ function ClientSidebar({ view, setView, onLogout, clientName, alertCount, planni
  ...(tachesEnabled!==false ? [{id:"taches", icon:"", label:"Tâches"}] : []),
  ...(equipeTachesEnabled!==false ? [{id:"equipetaches", icon:"", label:"Gestion d'équipe & Tâches"}] : []),
  ...(stockEnabled!==false ? [{id:"stock", icon:"", label:"Mon stock"}] : []),
- ]},
- { label:"ANALYSE", items:[
- {id:"comparaison",   icon:"↔", label:"Comparaison périodes"},
- {id:"previsionnel",  icon:"→", label:"Prévisionnel"},
  ]},
  ];
  // Repli/dépli par section · tout ouvert par défaut (comportement identique à avant tant qu'on ne clique pas),
