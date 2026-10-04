@@ -287,7 +287,7 @@ function validateRows(rows, type) {
 }
 
 // CSV PREVIEW MODAL
-function CSVPreviewModal({ file, rows, headers, mois, onConfirm, onCancel, errors }) {
+function CSVPreviewModal({ file, rows, headers, mois, onConfirm, onCancel, errors, groups, undated=0 }) {
  const [selectedMois, setSelectedMois] = useState(mois||"2025-10");
  return (
  <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -299,12 +299,20 @@ function CSVPreviewModal({ file, rows, headers, mois, onConfirm, onCancel, error
  </div>
  <Btn variant="ghost" small onClick={onCancel}> Fermer</Btn>
  </div>
+ {groups ? (
+ <div style={{padding:"12px 20px",background:C.bg,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+ <span style={{fontSize:12,fontWeight:800,color:C.textMid}}>Répartition par mois :</span>
+ {groups.map(g=><Pill key={g.mois} color={C.primary}>{MONTHS[parseInt(g.mois.split("-")[1])-1]?.slice(0,4)} {g.mois.split("-")[0]} · {g.rows.length} ligne{g.rows.length>1?"s":""}</Pill>)}
+ {undated>0&&<span style={{fontSize:11,color:C.orange,fontWeight:700}}>{undated} ligne{undated>1?"s":""} sans date lisible → {mois}</span>}
+ </div>
+ ) : (
  <div style={{padding:"12px 20px",background:C.bg,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:16}}>
  <span style={{fontSize:12,fontWeight:800,color:C.textMid}}> Mois de rattachement :</span>
  <input type="month" value={selectedMois} onChange={e=>setSelectedMois(e.target.value)}
  style={{padding:"6px 10px",border:`1.5px solid ${C.border}`,borderRadius:7,fontSize:13,color:C.text,fontFamily:"inherit",background:"white"}}/>
  <span style={{fontSize:11,color:C.textLight}}>Ce mois sera associé à toutes les lignes importées</span>
  </div>
+ )}
  {errors.length>0&&(
  <div style={{padding:"10px 18px",background:C.redBg,borderBottom:`1px solid ${C.red}22`}}>
  <div style={{fontSize:12,fontWeight:800,color:C.red,marginBottom:4}}>{errors.length} erreur{errors.length>1?"s":""}</div>
@@ -342,7 +350,7 @@ function CSVPreviewModal({ file, rows, headers, mois, onConfirm, onCancel, error
  <div style={{padding:"14px 20px",borderTop:`1px solid ${C.border}`,display:"flex",gap:10,justifyContent:"flex-end",background:C.bg}}>
  <Btn variant="ghost" onClick={onCancel}>Annuler</Btn>
  <Btn variant={errors.length>0?"danger":"success"} onClick={()=>onConfirm(rows,selectedMois)}>
- {errors.length>0?`Importer quand même`:` Valider et importer · ${selectedMois}`}
+ {errors.length>0?`Importer quand même`:groups?` Valider et importer · ${groups.length} mois`:` Valider et importer · ${selectedMois}`}
  </Btn>
  </div>
  </div>
@@ -1255,6 +1263,20 @@ const FREE_LOCKED_VIEWS={
  stock:{title:"Stock",desc:"Votre stock suivi en temps réel, avec alertes de réapprovisionnement.",tool:true},
 };
 
+function LockedStrip({ viewId, label, isAdminPreview, setView }) {
+ return (
+ <div style={{position:"relative",borderRadius:16,overflow:"hidden",border:`1.5px dashed ${C.border}`}}>
+ <div aria-hidden="true" style={{filter:"blur(6px)",opacity:.5,pointerEvents:"none",display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,padding:14}}>
+ {["Trésorerie","CAF","Charge emprunts","Investissements"].map(l=><div key={l} style={{height:84,borderRadius:14,background:"#e3f4f1"}}/>)}
+ </div>
+ <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",gap:16,flexWrap:"wrap",padding:"10px 16px",textAlign:"center"}}>
+ <span style={{fontSize:13,fontWeight:800,color:C.text}}>{label}</span>
+ <Btn small onClick={()=>setView&&setView(viewId)} disabled={!setView}>Voir avec mon conseiller →</Btn>
+ </div>
+ </div>
+ );
+}
+
 function ToolPlaceholder() {
  return (
  <div style={{padding:24,display:"flex",flexDirection:"column",gap:14}}>
@@ -1311,17 +1333,30 @@ function LockedFeature({ viewId, isAdminPreview, children }) {
 // salaire_brut, cotisations_patronales).
 const CLIENT_IMPORT_MODULES=[
  {id:"ventes_produits",label:"Mes ventes",hint:"Une ligne par vente ou par jour de ventes. Le coût d'achat ne concerne que la revente de marchandises : laissez 0 sinon.",
-  template:"date;libelle;ca_ht;cout_achat_ht\n2026-09-05;Ventes de la semaine;3250,00;1100,00\n2026-09-12;Prestation client Martin;800,00;0",
+  template:"date;libelle;ca_ht;cout_achat_ht\n05/09/2026;Ventes de la semaine;3250,00;1100,00\n12/09/2026;Prestation client Martin;800,00;0\n03/10/2026;Ventes de la semaine;3400,00;1150,00",
   numeric:["ca_ht","cout_achat_ht"]},
  {id:"charges",label:"Mes charges",hint:"Loyer, fournisseurs, abonnements, assurances… Type : fixe ou variable.",
-  template:"date;fournisseur;libelle;montant_ht;taux_tva;type\n2026-09-01;Bailleur;Loyer;1200,00;0;fixe\n2026-09-03;Fournisseur A;Achats matières;650,00;20;variable",
+  template:"date;fournisseur;libelle;montant_ht;taux_tva;type\n01/09/2026;Bailleur;Loyer;1200,00;0;fixe\n03/09/2026;Fournisseur A;Achats matières;650,00;20;variable\n01/10/2026;Bailleur;Loyer;1200,00;0;fixe",
   numeric:["montant_ht","taux_tva"]},
- {id:"salaires",label:"Mes salaires",hint:"Une ligne par salarié, avec les montants du bulletin de paie du mois.",
-  template:"nom_prenom;salaire_brut;cotisations_patronales;salaire_net\nSalarié 1;2200,00;950,00;1720,00",
+ {id:"salaires",label:"Mes salaires",hint:"Une ligne par salarié et par mois, avec les montants du bulletin de paie.",
+  template:"mois;nom_prenom;salaire_brut;cotisations_patronales;salaire_net\n09/2026;Salarié 1;2200,00;950,00;1720,00\n10/2026;Salarié 1;2200,00;950,00;1720,00",
   numeric:["salaire_brut","cotisations_patronales","salaire_net"]},
 ];
 // "1 250,50 €" → "1250.50" : le format Excel français, sinon parseFloat tronque à 1.
 function normNum(v){ return String(v??"").replace(/[\s €]/g,"").replace(",","."); }
+// Mois ("AAAA-MM") d'une ligne, depuis sa colonne mois ou date : 2026-09-05, 2026-09,
+// 05/09/2026, 05-09-2026, 05.09.26, 09/2026… null si illisible.
+function monthOfRow(row){
+ for(const raw of [row.mois,row.date]){
+  const v=String(raw??"").trim(); if(!v) continue;
+  let y,m,mt;
+  if((mt=v.match(/^(\d{4})[-/.](\d{1,2})(?:[-/.]\d{1,2})?/))){ y=+mt[1]; m=+mt[2]; }
+  else if((mt=v.match(/^\d{1,2}[-/.](\d{1,2})[-/.](\d{2,4})/))){ m=+mt[1]; y=+mt[2]; if(y<100) y+=2000; }
+  else if((mt=v.match(/^(\d{1,2})[-/.](\d{4})$/))){ m=+mt[1]; y=+mt[2]; }
+  if(y>=2000&&y<=2100&&m>=1&&m<=12) return `${y}-${String(m).padStart(2,"0")}`;
+ }
+ return null;
+}
 function prevMonthKey(){ const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; }
 
 function ClientImportWelcome({ onStart }) {
@@ -1368,19 +1403,30 @@ function ClientImport({ client, onSaveImport, onDeleteImport }) {
  });
  const added=mod==="ventes_produits"?["marge_ht"]:mod==="charges"?["tva_recuperable"]:[];
  const outHeaders=[...headers,...added.filter(h=>!headers.includes(h))];
- setCsvPreview({file,headers:outHeaders,rows:clean,errors:validateRows(clean,mod),mois:moisImport});
+ // Chaque ligne va dans le mois de sa date ; sans date lisible, dans le mois choisi.
+ const byMonth={}; let undated=0;
+ clean.forEach(r=>{ const k=monthOfRow(r); if(!k) undated++; (byMonth[k||moisImport]=byMonth[k||moisImport]||[]).push(r); });
+ const groups=Object.keys(byMonth).sort().map(k=>({mois:k,rows:byMonth[k]}));
+ setCsvPreview({file,headers:outHeaders,rows:clean,errors:validateRows(clean,mod),mois:moisImport,groups,undated});
  };
  reader.readAsText(file,"utf-8");
  e.target.value="";
  };
 
- const handleConfirm=async(rows,mois)=>{
+ const handleConfirm=async()=>{
+ const groups=csvPreview?.groups||[];
  setSaving(true);
- const ok=await onSaveImport({type:mod,label:mdl.label,mois,rows,count:rows.length,importedAt:new Date().toLocaleDateString("fr-FR")});
+ const importedAt=new Date().toLocaleDateString("fr-FR");
+ const failed=[];
+ for(const g of groups){
+ const ok=await onSaveImport({type:mod,label:mdl.label,mois:g.mois,rows:g.rows,count:g.rows.length,importedAt});
+ if(!ok) failed.push(g.mois);
+ }
  setSaving(false);
  setCsvPreview(null);
- if(ok) flash(`${rows.length} ligne${rows.length>1?"s":""} importée${rows.length>1?"s":""} dans « ${mdl.label} » · ${mois}`);
- else flash("L'import a échoué, réessayez. Si le problème continue, contactez votre conseiller.",false);
+ const total=groups.reduce((s,g)=>s+g.rows.length,0);
+ if(!failed.length) flash(`${total} ligne${total>1?"s":""} importée${total>1?"s":""} dans « ${mdl.label} » sur ${groups.length} mois`);
+ else flash(`L'import a échoué pour : ${failed.join(", ")}. Réessayez, ou contactez votre conseiller si le problème continue.`,false);
  };
 
  const step=(n,title,children)=>(
@@ -1399,7 +1445,7 @@ function ClientImport({ client, onSaveImport, onDeleteImport }) {
 
  return (
  <div style={{padding:24,display:"flex",flexDirection:"column",gap:20}} className="fade-up">
- {csvPreview&&<CSVPreviewModal file={csvPreview.file} rows={csvPreview.rows} headers={csvPreview.headers} errors={csvPreview.errors} mois={csvPreview.mois} onConfirm={saving?()=>{}:handleConfirm} onCancel={()=>setCsvPreview(null)}/>}
+ {csvPreview&&<CSVPreviewModal file={csvPreview.file} rows={csvPreview.rows} headers={csvPreview.headers} errors={csvPreview.errors} mois={csvPreview.mois} groups={csvPreview.groups} undated={csvPreview.undated} onConfirm={saving?()=>{}:handleConfirm} onCancel={()=>setCsvPreview(null)}/>}
 
  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
  {CLIENT_IMPORT_MODULES.map(m=>(
@@ -1419,12 +1465,12 @@ function ClientImport({ client, onSaveImport, onDeleteImport }) {
  </>
  ))}
  {step(2,"Remplissez-le dans Excel",(
- <div style={{fontSize:12.5,color:C.textMid,lineHeight:1.6}}>Remplacez les lignes d&apos;exemple par vos chiffres, sans changer la première ligne (les titres des colonnes). Montants hors taxes. Enregistrez ensuite au format <strong>CSV (point-virgule)</strong> : Fichier &gt; Enregistrer sous &gt; CSV.</div>
+ <div style={{fontSize:12.5,color:C.textMid,lineHeight:1.6}}>Remplacez les lignes d&apos;exemple par vos chiffres, sans changer la première ligne (les titres des colonnes). Montants hors taxes. <strong>Un seul fichier peut couvrir plusieurs mois, voire toute l&apos;année</strong> : chaque ligne est rangée dans son mois grâce à sa date. Enregistrez ensuite au format <strong>CSV (point-virgule)</strong> : Fichier &gt; Enregistrer sous &gt; CSV.</div>
  ))}
  {step(3,"Importez-le",(
  <div style={{display:"flex",flexDirection:"column",gap:12}}>
  <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
- <span style={{fontSize:12.5,fontWeight:800,color:C.text}}>Mois concerné :</span>
+ <span style={{fontSize:12.5,fontWeight:800,color:C.text}}>Mois pour les lignes sans date :</span>
  <input type="month" value={moisImport} onChange={e=>setMoisImport(e.target.value)}
  style={{padding:"7px 12px",border:`1.5px solid ${C.border}`,borderRadius:8,fontSize:13,fontWeight:700,color:C.text,fontFamily:"inherit",background:"white"}}/>
  </div>
@@ -1433,7 +1479,7 @@ function ClientImport({ client, onSaveImport, onDeleteImport }) {
  <div style={{fontSize:11.5,color:C.textLight}}>Vous pourrez vérifier les lignes avant de valider</div>
  <input type="file" accept=".csv,.txt" onChange={handleFile} style={{display:"none"}}/>
  </label>
- <div style={{fontSize:11.5,color:C.textLight}}>Réimporter le même mois remplace les données de ce mois.</div>
+ <div style={{fontSize:11.5,color:C.textLight}}>Les mois présents dans le fichier remplacent les données déjà importées pour ces mois.</div>
  </div>
  ))}
  {msg&&<div style={{fontSize:13,fontWeight:800,color:msg.ok?C.green:C.red}}>{msg.text}</div>}
@@ -2239,7 +2285,10 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
   });
 
   // ── Coefficient de saisonnalité : ratio CA mois / moyenne CA
-  const avgCA = months12.reduce((s,m)=>s+m.ca,0)/12||1;
+  // Moyenne sur les seuls mois avec du CA : diviser par 12 avec des mois vides
+  // (client récent, historique partiel) faisait paraître chaque mois « au-dessus de la moyenne ».
+  const monthsWithCA = months12.filter(m=>m.ca>0);
+  const avgCA = monthsWithCA.length ? monthsWithCA.reduce((s,m)=>s+m.ca,0)/monthsWithCA.length : 1;
   const saisonnalite = months12.map(m=>({ l:m.l, coef:m.ca>0?(m.ca/avgCA):0, ca:m.ca }));
 
   // ── Trésorerie cumulative
@@ -2561,9 +2610,12 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
         </div>
         <div style={{display:"flex"}}>
           {[
-            {l:"CA mensuel",v:fmt(kpis.ca),sub:kpis.ca>avgCA?"Au-dessus de la moyenne":"En dessous de la moyenne"},
+            {l:"CA mensuel",v:fmt(kpis.ca),sub:monthsWithCA.length<2?"Ce mois-ci":kpis.ca>avgCA?"Au-dessus de la moyenne":"En dessous de la moyenne"},
             {l:"Résultat net",v:fmt(kpis.result),sub:kpis.result>=0?"Bénéficiaire":"Déficitaire"},
-            {l:"Trésorerie",v:fmt(treso),sub:treso>=0?"Position saine":"Position tendue"},
+            // Offre gratuite : pas de solde bancaire saisi, la trésorerie afficherait 0 € « saine ».
+            client.plan==="dashboard"
+              ? {l:"Marge brute",v:fmt(kpis.marge),sub:`${pct(kpis.ca>0?kpis.marge/kpis.ca*100:0)} du CA`}
+              : {l:"Trésorerie",v:fmt(treso),sub:treso>=0?"Position saine":"Position tendue"},
             {l:"EBE",v:fmt(kpis.ebe),sub:`${pct(kpis.ca>0?kpis.ebe/kpis.ca*100:0)} du CA`},
           ].map((it,i)=>(
             <div key={i} style={{flex:1,paddingRight:20,marginRight:20,borderRight:i<3?"1px solid rgba(255,255,255,0.18)":"none"}}>
@@ -2643,12 +2695,16 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
       </div>
       <div>
         <div style={{fontSize:11,fontWeight:800,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10}}>Trésorerie & financement</div>
+        {client.plan==="dashboard" ? (
+          <LockedStrip viewId="tresorerie" isAdminPreview={isAdminPreview} setView={setView} label="Votre trésorerie, vos emprunts et vos investissements, suivis avec votre conseiller."/>
+        ) : (
         <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>
           <KpiCard label="Trésorerie" value={fmt(treso)} sub={treso>=0?"Position saine":"Tendue"} color={treso>=0?C.green:C.red}/>
           <KpiCard label="CAF" value={fmt(kpis.result+kpis.amort)} sub="Résultat + Amortissements" color={C.primary}/>
           <KpiCard label="Charge emprunts" value={fmt(chargeEmprunt)} sub={`${emprunts.length} contrat(s) actif(s)`} color={C.red}/>
           <KpiCard label="VNC investissements" value={fmt(vncTotal)} sub="Valeur nette comptable" color={C.orange}/>
         </div>
+        )}
       </div>
 
       {/* ── G1 · CA & Marge + Saisonnalité côte à côte ── */}
@@ -2687,7 +2743,7 @@ function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMo
             <SaisonnaliteChart data={saisonnalite} h={100}/>
             <div style={{marginTop:8,padding:"7px 10px",background:C.bg,borderRadius:6,fontSize:11,color:C.textMid}}>
               Fort : <strong style={{color:C.green}}>{saisonnalite.reduce((a,b)=>b.coef>a.coef?b:a,saisonnalite[0]).l}</strong> ({saisonnalite.reduce((a,b)=>b.coef>a.coef?b:a,saisonnalite[0]).coef.toFixed(2)}x) ·
-              Faible : <strong style={{color:C.orange}}>{saisonnalite.filter(s=>s.coef>0).reduce((a,b)=>b.coef<a.coef?b:a,saisonnalite[0]).l}</strong>
+              Faible : <strong style={{color:C.orange}}>{(()=>{const f=saisonnalite.filter(s=>s.coef>0);return f.length?f.reduce((a,b)=>b.coef<a.coef?b:a,f[0]).l:"—";})()}</strong>
             </div>
           </div>
         </Card>
@@ -8136,8 +8192,12 @@ function calcAlertes(client, moisIdx, moisYear) {
     action:"Action urgente : réduction immédiate des charges ou augmentation du CA."
   });
 
+  // Sans solde de départ saisi, la trésorerie vaut 0 par défaut : ne pas en tirer
+  // d'alerte (« trésorerie insuffisante » fausse pour un dossier pas encore configuré).
+  const tresoConfiguree = !!client.tresorerie?.dateSolde || (client.tresorerie?.soldeInitial||0)!==0;
+
   // ── Trésorerie négative
-  if (treso < 0) alerts.push({
+  if (tresoConfiguree && treso < 0) alerts.push({
     level:"red", kpi:"Trésorerie négative",
     current: fmt(treso), threshold:"> 0 €",
     msg:`Votre trésorerie est négative (${fmt(treso)}). Vous êtes en situation de découvert bancaire.`,
@@ -8146,7 +8206,7 @@ function calcAlertes(client, moisIdx, moisYear) {
 
   // ── Trésorerie < 1 mois de charges
   const chargesMensuelles = kpis.charges + kpis.salaires + chargeEmprunt;
-  if (treso >= 0 && treso < chargesMensuelles) alerts.push({
+  if (tresoConfiguree && treso >= 0 && treso < chargesMensuelles) alerts.push({
     level:"orange", kpi:"Trésorerie insuffisante",
     current: fmt(treso), threshold:`> ${fmt(Math.round(chargesMensuelles))} (1 mois)`,
     msg:`Votre trésorerie (${fmt(treso)}) couvre moins d'un mois de charges (${fmt(Math.round(chargesMensuelles))}/mois). Marge de sécurité insuffisante.`,
