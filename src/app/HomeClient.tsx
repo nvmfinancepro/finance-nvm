@@ -78,28 +78,30 @@ function useCountUp(target: number, duration: number=1800, start: boolean=false,
 
 const GRAPH_POINTS = [42,48,39,55,49,62,58,68,64,74,70,88];
 
-const IconChart = () => (
-  <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-    <rect x="4" y="20" width="6" height="12" rx="2" fill="rgba(33,196,93,.25)"/>
-    <rect x="14" y="13" width="6" height="19" rx="2" fill="rgba(33,196,93,.45)"/>
-    <rect x="24" y="6" width="6" height="26" rx="2" fill="#21C45D"/>
-    <path d="M7 20 Q17 13 27 8" stroke="rgba(255,255,255,.3)" strokeWidth="1.5" strokeDasharray="3 2"/>
+const LeverMoney = () => (
+  <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+    <circle cx="20" cy="28" r="15" stroke="#005653" strokeWidth="2"/>
+    <path d="M25.5 21.5a7.5 7.5 0 1 0 0 13" stroke="#005653" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M12 26h10M12 30h10" stroke="#005653" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M32 16L43 5M36 5h7v7" stroke="#21C45D" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 
-const IconShield = () => (
-  <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-    <path d="M18 3 L30 8 L30 18 C30 25 24 30 18 32 C12 30 6 25 6 18 L6 8 Z" fill="rgba(33,196,93,.15)" stroke="#21C45D" strokeWidth="1.5"/>
-    <path d="M12 18 L16 22 L24 13" stroke="#21C45D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+const LeverGrowth = () => (
+  <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+    <path d="M6 42h36" stroke="#005653" strokeWidth="2" strokeLinecap="round"/>
+    <rect x="9" y="30" width="6" height="12" rx="1.5" stroke="#005653" strokeWidth="2"/>
+    <rect x="21" y="23" width="6" height="19" rx="1.5" stroke="#005653" strokeWidth="2"/>
+    <rect x="33" y="15" width="6" height="27" rx="1.5" stroke="#005653" strokeWidth="2"/>
+    <path d="M8 22L20 13l7 4 13-11" stroke="#21C45D" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M34 6h6v6" stroke="#21C45D" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 
-const IconRocket = () => (
-  <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-    <path d="M18 5 C18 5 26 10 26 20 L18 31 L10 20 C10 10 18 5 18 5Z" fill="rgba(33,196,93,.15)" stroke="#21C45D" strokeWidth="1.5"/>
-    <circle cx="18" cy="17" r="3.5" fill="#21C45D"/>
-    <path d="M10 22 L6 27" stroke="rgba(33,196,93,.5)" strokeWidth="1.5" strokeLinecap="round"/>
-    <path d="M26 22 L30 27" stroke="rgba(33,196,93,.5)" strokeWidth="1.5" strokeLinecap="round"/>
+const LeverShield = () => (
+  <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+    <path d="M24 5l15 6v11c0 9.5-6.4 17.4-15 21-8.6-3.6-15-11.5-15-21V11l15-6z" stroke="#005653" strokeWidth="2" strokeLinejoin="round"/>
+    <path d="M17 24l5 5 9-10" stroke="#21C45D" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 
@@ -129,7 +131,7 @@ const FAQS = [
   { q: "Quelle différence avec mon expert-comptable ?", a: "Votre comptable produit vos chiffres légaux une fois les comptes clôturés. Nous, on pilote vos finances au jour le jour, on alerte avant que ça devienne un problème, et on transforme l'analyse en actions concrètes. Les deux sont complémentaires, pas concurrents." },
   { q: "Mes données sont-elles en sécurité ?", a: "Oui. Les données de chaque client sont cloisonnées (aucun autre client n'y a accès), hébergées en Europe, et vous gardez la main sur ce que vous importez." },
   { q: "Combien de temps pour démarrer ?", a: "Mise en place en 48h. Vous importez vos premières données, et le tableau de bord est immédiatement disponible." },
-  { q: "Quelle est la différence entre l'offre Tableau de bord et l'offre Finance ?", a: "L'offre Tableau de bord (200€ HT/mois) vous donne la visibilité complète en autonomie. L'offre Finance (490€ HT/mois) ajoute un conseiller dédié qui analyse vos chiffres chaque mois et pousse des actions concrètes." },
+  { q: "Quelles sont vos offres ?", a: "Le tableau de bord est gratuit : vous avez la visibilité complète en autonomie. Le pilotage mensuel (490€ HT/mois, sans engagement) ajoute un conseiller dédié qui analyse vos chiffres chaque mois, audit complet inclus, et suit la mise en œuvre des actions. L'audit one shot (3 000€ HT) est un état des lieux complet avec plan d'action, que vous appliquez ensuite seul." },
   { q: "Je suis déjà suivi par un cabinet comptable, c'est compatible ?", a: "Oui, complètement. On ne remplace pas votre comptable (bilan, liasse fiscale, TVA restent de son ressort). On s'occupe du pilotage et de la rentabilité au quotidien, ce que la plupart des cabinets ne couvrent pas." },
   { q: "Puis-je arrêter à tout moment ?", a: "Oui, sans engagement. Vous pouvez résilier quand vous le souhaitez." },
 ];
@@ -294,6 +296,7 @@ export default function SitePage() {
           .hero-notif{display:none!important;}
           .pillar-grid{grid-template-columns:1fr!important;}
           .steps-grid{grid-template-columns:1fr 1fr!important;}
+          .levers-grid{grid-template-columns:1fr!important;}
           .step-arrow{display:none!important;}
           .feat-grid{grid-template-columns:1fr 1fr!important;gap:12px!important;}
           .check-grid{grid-template-columns:1fr!important;gap:32px!important;}
@@ -368,10 +371,11 @@ export default function SitePage() {
         <div className="hero-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:72,alignItems:"center",maxWidth:1200,margin:"0 auto",position:"relative"}}>
           <div>
             <h1 style={{...a(.1),fontSize:"clamp(38px,4.5vw,58px)",fontWeight:900,lineHeight:1.1,color:C.text,marginBottom:24}}>
+              <span style={{display:"block",fontSize:14,fontWeight:800,color:C.green,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:16}}>Contrôle de gestion externalisé</span>
               Prenez les bonnes<br/>décisions. Avec les<br/><em style={{color:C.primary,fontStyle:"normal",borderBottom:`3px solid ${C.green}`}}>bons chiffres.</em>
             </h1>
             <p style={{...a(.2),fontSize:17,fontWeight:600,color:C.mid,lineHeight:1.75,marginBottom:12,maxWidth:460}}>
-              Un conseiller dédié analyse vos chiffres chaque mois, identifie ce qui vous coûte cher et vous aide à l'optimiser. On automatise les process trop lourds, et on intègre les outils de gestion dont votre entreprise a besoin, le tout au même endroit.
+              On rend vos finances lisibles, un conseiller les analyse chaque mois, puis on actionne les bons leviers : gagner plus, développer votre activité et sécuriser votre entreprise.
             </p>
             <p style={{...a(.22),fontSize:14,fontWeight:800,color:C.primary,marginBottom:36}}>Mise en place en 48h · Sans engagement.</p>
             <div className="cta-btns" style={{...a(.3),display:"flex",gap:12,flexWrap:"wrap",marginBottom:40}}>
@@ -379,7 +383,7 @@ export default function SitePage() {
               <a href="/on-vous-montre" className="cta-outline" style={{background:"#fff",color:C.primary,padding:"15px 32px",borderRadius:100,fontSize:15,fontWeight:800,textDecoration:"none",border:`2px solid ${C.light}`,transition:"all .2s"}}>On vous montre →</a>
             </div>
             <div className="stats-row" style={{...a(.4),display:"flex",gap:0,paddingTop:28,borderTop:`1px solid ${C.border}`}}>
-              {[{n:"+40%",l:"Gain de rentabilité moyen constaté"},{n:"−3h",l:"Gagnées par semaine sur la gestion financière"},{n:"1 outil",l:"Pour piloter finances ET opérations"}].map((t,i)=>(
+              {[{n:"+40%",l:"Gain de rentabilité moyen constaté"},{n:"−3h",l:"Gagnées par semaine sur la gestion financière"},{n:"0 €",l:"Pour votre tableau de bord financier"}].map((t,i)=>(
                 <div key={i} style={{flex:1,paddingRight:24,borderRight:i<2?`1px solid ${C.border}`:"none",marginRight:i<2?24:0}}>
                   <div style={{fontSize:28,fontWeight:900,color:C.primary}}>{t.n}</div>
                   <div style={{fontSize:11,fontWeight:700,color:"#6aaca8",marginTop:4,lineHeight:1.4}}>{t.l}</div>
@@ -446,28 +450,28 @@ export default function SitePage() {
         </div>
       </section>
 
-      {/* COMMENT CA MARCHE */}
+      {/* CE QU'ON VOUS APPORTE */}
       <section className="section-pad" style={{padding:"96px 48px",background:"#fff"}}>
         <div style={{maxWidth:1100,margin:"0 auto"}}>
           <div style={{textAlign:"center",marginBottom:64}}>
-            <div style={{display:"inline-block",background:C.bg,color:C.primary,fontSize:11,fontWeight:800,padding:"5px 14px",borderRadius:100,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:14,border:`1px solid ${C.border}`}}>Méthode</div>
+            <div style={{display:"inline-block",background:C.bg,color:C.primary,fontSize:11,fontWeight:800,padding:"5px 14px",borderRadius:100,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:14,border:`1px solid ${C.border}`}}>Ce qu&apos;on vous apporte</div>
             <h2 style={{fontSize:"clamp(28px,3.5vw,44px)",fontWeight:900,color:C.text,marginBottom:12,lineHeight:1.12}}>
-              De la donnée à la décision,<br/><em style={{color:C.primary,fontStyle:"normal"}}>en 4 étapes.</em>
+              Voyez clair. Gagnez plus.<br/><em style={{color:C.primary,fontStyle:"normal"}}>Sécurisez.</em>
             </h2>
+            <p style={{fontSize:16,fontWeight:600,color:C.mid,maxWidth:560,margin:"0 auto",lineHeight:1.7}}>
+              On rend vos chiffres lisibles, un conseiller les analyse chaque mois, et on actionne trois leviers.
+            </p>
           </div>
-          <div className="steps-grid" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:24}}>
+          <div className="levers-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:24}}>
             {[
-              {num:"01",icon:<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="5" width="18" height="13" rx="3" stroke={C.primary} strokeWidth="1.6"/><path d="M6 9h10M6 13h6" stroke={C.primary} strokeWidth="1.6" strokeLinecap="round"/></svg>,titre:"Visualisez",desc:"Toutes vos données financières et opérationnelles dans un tableau de bord clair, mis à jour chaque mois."},
-              {num:"02",icon:<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="8" stroke={C.primary} strokeWidth="1.6"/><path d="M8 8l3 3 3-3" stroke={C.primary} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M11 11v4" stroke={C.primary} strokeWidth="1.6" strokeLinecap="round"/></svg>,titre:"Analysez",desc:"Un conseiller dédié décortique vos chiffres et identifie ce qui doit changer."},
-              {num:"03",icon:<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M4 17 L8 11 L12 14 L16 7 L20 5" stroke={C.primary} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M17 5h3v3" stroke={C.primary} strokeWidth="1.6" strokeLinecap="round"/></svg>,titre:"Optimisez",desc:"Des solutions concrètes pour réduire vos coûts et développer votre activité."},
-              {num:"04",icon:<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M5 11h12M13 7l4 4-4 4" stroke={C.primary} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M5 7V5a1 1 0 011-1h4" stroke={C.primary} strokeWidth="1.6" strokeLinecap="round"/></svg>,titre:"Automatisez",desc:"Les process trop lourds ou trop coûteux sont automatisés pour vous faire gagner du temps."},
+              {ic:<LeverMoney/>,titre:"Gagnez plus",desc:"On repère ce qui vous coûte trop cher et ce qui rapporte le plus : prix, marges, fournisseurs, abonnements, tâches à automatiser avec des outils de gestion."},
+              {ic:<LeverGrowth/>,titre:"Développez",desc:"Vous savez où investir, quand recruter et quels produits ou clients pousser, chiffres à l'appui."},
+              {ic:<LeverShield/>,titre:"Sécurisez",desc:"Trésorerie, impayés clients, échéances fiscales : les problèmes sont anticipés avant d'arriver. Pas de mauvaise surprise."},
             ].map((s,i)=>(
-              <div key={i} className="feat-card" style={{background:"#f8fffe",borderRadius:20,padding:"28px 24px",border:`1px solid ${C.border}`,position:"relative",transition:"all .3s",cursor:"default"}}>
-                <div style={{fontSize:44,fontWeight:900,color:C.border,lineHeight:1,marginBottom:16,letterSpacing:"-0.02em",fontVariantNumeric:"tabular-nums"}}>{s.num}</div>
-                <div style={{width:44,height:44,borderRadius:12,background:C.bg,border:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"center",marginBottom:14}}>{s.icon}</div>
-                <div style={{fontSize:16,fontWeight:900,color:C.text,marginBottom:8}}>{s.titre}</div>
-                <p style={{fontSize:13,fontWeight:600,color:C.mid,lineHeight:1.7,margin:0}}>{s.desc}</p>
-                {i<3 && <div className="step-arrow" style={{position:"absolute",top:"42%",right:-13,width:26,height:26,borderRadius:"50%",background:"#fff",border:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:C.light,zIndex:1}}>›</div>}
+              <div key={i} className="feat-card" style={{background:"#f8fffe",borderRadius:20,padding:"32px 28px",border:`1px solid ${C.border}`,transition:"all .3s",cursor:"default"}}>
+                <div style={{marginBottom:16}}>{s.ic}</div>
+                <div style={{fontSize:19,fontWeight:900,color:C.text,marginBottom:10}}>{s.titre}</div>
+                <p style={{fontSize:14,fontWeight:600,color:C.mid,lineHeight:1.7,margin:0}}>{s.desc}</p>
               </div>
             ))}
           </div>
@@ -543,34 +547,19 @@ export default function SitePage() {
 
             {/* Texte (droite) */}
             <div>
-              <div style={{display:"inline-block",background:"#fff",color:C.primary,fontSize:11,fontWeight:800,padding:"5px 14px",borderRadius:100,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16,border:`1px solid ${C.border}`}}>Outils de gestion</div>
+              <div style={{display:"inline-block",background:"#fff",color:C.primary,fontSize:11,fontWeight:800,padding:"5px 14px",borderRadius:100,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16,border:`1px solid ${C.border}`}}>Levier rentabilité</div>
               <h2 style={{fontSize:"clamp(26px,3vw,40px)",fontWeight:900,color:C.text,lineHeight:1.15,marginBottom:20}}>
-                Un outil de gestion <em style={{color:C.primary,fontStyle:"normal"}}>sur mesure.</em>
+                Moins de temps perdu, <em style={{color:C.primary,fontStyle:"normal"}}>plus de marge.</em>
               </h2>
               <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.75,marginBottom:32}}>
-                Vous avez des tâches du quotidien que vous aimeriez faciliter ou automatiser ? On vous construit l'outil qui s'en charge, seul ou intégré à votre espace NVM Finance. Planning d'équipe, suivi des congés, gestion du stock : ces besoins courants sont déjà prêts à l'emploi, et on peut créer exactement ce qu'il vous manque.
+                Quand l'analyse montre qu'une tâche répétitive vous coûte trop cher, on met en place l'outil qui s'en charge : planning d'équipe, congés, stock, ou un outil créé sur mesure.
               </p>
-              <a href="/services" style={{display:"inline-flex",alignItems:"center",gap:8,background:C.primary,color:"#fff",padding:"13px 28px",borderRadius:100,fontSize:14,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 20px rgba(0,86,83,.25)",transition:"all .2s"}}>
+              <a href="/automatisation-gestion-pme" style={{display:"inline-flex",alignItems:"center",gap:8,background:C.primary,color:"#fff",padding:"13px 28px",borderRadius:100,fontSize:14,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 20px rgba(0,86,83,.25)",transition:"all .2s"}}>
                 Découvrir les outils de gestion →
               </a>
             </div>
           </div>
         </div>
-      </section>
-
-      {/* 3 PILIERS */}
-      <section className="pillar-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",background:C.primary}}>
-        {[
-          {ic:<IconChart/>,t:"Conseiller inclus",p:"Un expert humain lit vos chiffres chaque mois, identifie les dérives et vous donne une lecture claire et exploitable, pas juste un tableau."},
-          {ic:<IconShield/>,t:"Anticipation des risques",p:"Notre système détecte les problèmes avant qu'ils impactent votre activité. Alertes automatiques, analyse experte et optimisation des charges."},
-          {ic:<IconRocket/>,t:"Tout au même endroit",p:"Process automatisés, outils de gestion intégrés (planning, tâches, stock), pour centraliser finances et opérationnel sans jongler entre plusieurs logiciels."},
-        ].map((p,i)=>(
-          <div key={i} className="pillar" style={{padding:"44px 40px",borderLeft:i>0?"1px solid rgba(255,255,255,.1)":"none",transition:"background .25s",cursor:"default"}}>
-            <div style={{marginBottom:16}}>{p.ic}</div>
-            <div style={{fontSize:12,fontWeight:800,color:C.green,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>{p.t}</div>
-            <p style={{fontSize:14,fontWeight:600,color:"rgba(255,255,255,.65)",lineHeight:1.7,margin:0}}>{p.p}</p>
-          </div>
-        ))}
       </section>
 
       {/* CTA */}

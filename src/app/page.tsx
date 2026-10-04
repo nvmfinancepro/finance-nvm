@@ -3,7 +3,7 @@ import HomeClient from "./HomeClient";
 
 const title = "Contrôle de gestion externalisé pour PME | NVM Finance";
 const description =
-  "Contrôle de gestion externalisé pour PME : un conseiller dédié pilote votre rentabilité et votre trésorerie chaque mois, alertes automatiques et outils sur mesure inclus.";
+  "Contrôle de gestion externalisé pour PME : tableau de bord gratuit, et un conseiller dédié qui analyse vos chiffres chaque mois pour gagner plus, vous développer et sécuriser votre entreprise.";
 
 export const metadata: Metadata = {
   title,
@@ -35,7 +35,7 @@ export default function Page() {
             "@type": "ProfessionalService",
             name: "NVM Finance",
             description:
-              "Contrôle de gestion externalisé pour PME françaises : pilotage financier, trésorerie, alertes automatiques et développement business.",
+              "Contrôle de gestion externalisé pour PME françaises : visibilité financière, analyse mensuelle par un conseiller, rentabilité, développement et sécurisation de l'entreprise.",
             serviceType: "Contrôle de gestion externalisé",
             url: "https://www.nvm-finance.fr",
             email: "nathan@nvm-finance.fr",

@@ -117,7 +117,7 @@ export default function Page() {
         </div>
         <div style={{marginBottom:40}}>
           <h2 style={{fontSize:20,fontWeight:800,color:C.primary,marginBottom:16,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>Tarifs</h2>
-          <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Les prix sont en euros HT. NVM Finance se réserve le droit de les modifier avec 30 jours de préavis.</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Offres : Offre Finance 490€ HT/mois, Module Outils de gestion 150€ HT/mois (120€ HT/mois en complément de l'Offre Finance), Sur-mesure : sur devis.</p>
+          <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Les prix sont en euros HT. NVM Finance se réserve le droit de les modifier avec 30 jours de préavis.</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Offres : Tableau de bord gratuit ; Pilotage mensuel 490€ HT/mois, sans engagement, incluant un audit complet réalisé progressivement sur les 3 premiers mois d'abonnement ; Audit one shot 3 000€ HT, paiement unique ; Outils de gestion sur mesure : sur devis.</p>
         </div>
         <div style={{marginBottom:40}}>
           <h2 style={{fontSize:20,fontWeight:800,color:C.primary,marginBottom:16,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>Paiement</h2>
@@ -125,7 +125,7 @@ export default function Page() {
         </div>
         <div style={{marginBottom:40}}>
           <h2 style={{fontSize:20,fontWeight:800,color:C.primary,marginBottom:16,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>Résiliation</h2>
-          <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Abonnements mensuels résiliables à tout moment avec 30 jours de préavis.</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Les prestations à l'unité sont non remboursables une fois le service délivré.</p>
+          <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Abonnements mensuels résiliables à tout moment avec 30 jours de préavis.</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>En cas de résiliation du Pilotage mensuel avant la fin du 3e mois, seuls les éléments d'audit déjà réalisés sont remis au client ; la résiliation ne donne pas droit à la remise de l'audit complet.</p><p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.7,marginBottom:8}}>Les prestations à l'unité sont non remboursables une fois le service délivré.</p>
         </div>
         <div style={{marginBottom:40}}>
           <h2 style={{fontSize:20,fontWeight:800,color:C.primary,marginBottom:16,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>Obligations du client</h2>

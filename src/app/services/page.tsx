@@ -3,7 +3,7 @@ import ServicesClient from "./ServicesClient";
 
 const title = "Offres de contrôle de gestion externalisé | NVM Finance";
 const description =
-  "Contrôle de gestion externalisé dès 200€ HT/mois : tableau de bord, conseiller dédié en option, module gestion (planning, tâches, stock) et outils sur mesure.";
+  "Contrôle de gestion externalisé : tableau de bord gratuit, pilotage mensuel avec conseiller dédié à 490€ HT/mois sans engagement, ou audit complet one shot.";
 
 export const metadata: Metadata = {
   title,

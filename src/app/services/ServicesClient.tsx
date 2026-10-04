@@ -54,6 +54,29 @@ export default function ServicesPage() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string|null>(null);
+  const [signupOpen, setSignupOpen] = useState(false);
+  const [signup, setSignup] = useState({ company:"", email:"", phone:"", website:"" });
+  const [signupStatus, setSignupStatus] = useState<"idle"|"sending"|"done">("idle");
+  const [signupError, setSignupError] = useState<string|null>(null);
+
+  const submitSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSignupStatus("sending");
+    setSignupError(null);
+    try {
+      const res = await fetch("/api/free-dashboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(signup),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) setSignupStatus("done");
+      else { setSignupError(data.error || "Une erreur est survenue, réessayez."); setSignupStatus("idle"); }
+    } catch {
+      setSignupError("Une erreur est survenue, réessayez.");
+      setSignupStatus("idle");
+    }
+  };
 
   const startCheckout = async (plan: string) => {
     setLoadingPlan(plan);
@@ -77,61 +100,49 @@ export default function ServicesPage() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  type OffreItem = { tag:string; best:boolean; name:string; items:string[]; prix:string; sticker?:string; cta:string; includesLabel?:string; advisor?:string; checkout?:string };
+  type OffreItem = { tag:string; best:boolean; name:string; items:string[]; prix:string; prixNote?:string; sticker?:string; cta:string; includesLabel?:string; advisor?:string; checkout?:string; signup?:boolean };
   const offres: OffreItem[] = [
     {
-      tag:"Offre Tableau de bord", best:false,
+      tag:"Tableau de bord", best:false,
       name:"Votre visibilité financière, en autonomie.",
       items:[
         "Tableau de bord complet",
-        "Suivi ventes, charges, marges",
+        "Ventes, charges, marges",
         "Masse salariale",
         "Créances clients & dettes fournisseurs",
         "Trésorerie, TVA, IS",
         "Emprunts & investissements",
-        "Alertes des potentiels risques",
-        "Anticipation des risques",
+        "Alertes automatiques",
         "Prévisionnel",
       ],
-      prix:"200€ HT/mois", cta:"Démarrer", checkout:"dashboard",
+      prix:"Gratuit", prixNote:"Sans carte bancaire", cta:"Créer mon tableau de bord", signup:true,
     },
     {
-      tag:"Offre Finance", best:true,
-      name:"Finances pilotées chaque mois, conseiller inclus.",
-      includesLabel:"Offre Tableau de bord incluse",
+      tag:"Pilotage mensuel", best:true,
+      name:"Un conseiller qui pilote vos finances avec vous, chaque mois.",
+      includesLabel:"Tableau de bord inclus",
       advisor:"Conseiller dédié, disponible chaque mois",
       items:[
-        "Recherche de performance",
-        "Sécurisation de l'entreprise",
-        "Anticipation & prévention des dangers",
-        "Développement de l'entreprise",
+        "Rentabilité : ce qui coûte trop cher, ce qui rapporte le plus",
+        "Développement : où investir, quand recruter, quoi pousser",
+        "Sécurité : trésorerie, impayés, risques anticipés",
+        "Point mensuel avec votre conseiller",
+        "Plan d'action suivi et ajusté chaque mois",
+        "Outils de gestion et automatisations mis en place",
       ],
-      prix:"490€ HT/mois", cta:"Démarrer", checkout:"finance",
+      prix:"490€ HT/mois", prixNote:"Sans engagement", cta:"Démarrer", checkout:"finance",
     },
     {
-      tag:"Module Gestion", best:false,
-      name:"L'opérationnel au même endroit que vos finances.",
+      tag:"Audit one shot", best:false,
+      name:"Un état des lieux complet, à un instant donné.",
       items:[
-        "Planning d'équipe",
-        "Pointage",
-        "Gestion des congés et absences",
-        "Notes de frais",
-        "Gestion des tâches (Kanban)",
-        "Checklist onboarding",
-        "Gestion du stock incluse",
+        "Analyse des 6 derniers mois",
+        "Rentabilité, coûts, trésorerie, risques",
+        "Plan d'action chiffré et priorisé",
+        "Restitution en visio avec un conseiller",
+        "Tableau de bord inclus",
       ],
-      prix:"100€ HT/mois", sticker:"-20% avec une offre Finance", cta:"Démarrer", checkout:"gestion",
-    },
-    {
-      tag:"Sur-mesure", best:false,
-      name:"Un outil unique pour votre besoin précis.",
-      items:[
-        "Outil dédié sur mesure",
-        "Intégré au logiciel ou indépendant",
-        "Accompagnement projet complet",
-        "Site web",
-      ],
-      prix:"Sur devis", cta:"Nous contacter",
+      prix:"3 000€ HT", prixNote:"Paiement unique", cta:"En parler avec un conseiller",
     },
   ];
 
@@ -140,9 +151,16 @@ export default function ServicesPage() {
       <WhatsAppWidget/>
       <style>{`
         .drawer{display:none!important;}
+        .compare-label{display:none;}
         .mobile-ham{display:none;}
         .nav-link:hover{color:#005653!important;background:#f0faf8;}
+        @media(max-width:1000px){
+          .offre-grid{grid-template-columns:1fr!important;max-width:520px;margin:0 auto;}
+        }
         @media(max-width:768px){
+          .compare-row{grid-template-columns:1fr!important;}
+          .compare-head{display:none!important;}
+          .compare-label{display:inline!important;}
           .desktop-links{display:none!important;}
           .desktop-actions{display:none!important;}
           .mobile-ham{display:flex!important;}
@@ -208,21 +226,21 @@ export default function ServicesPage() {
       {/* HERO */}
       <div className="hero-pad" style={{background:C.primary,padding:"64px 48px",textAlign:"center"}}>
         <h1 style={{fontSize:"clamp(32px,4vw,52px)",fontWeight:900,color:"#fff",marginBottom:16,lineHeight:1.08}}>
-          Une offre adaptée à chaque étape<br/>de votre croissance.
+          Voyez clair, gagnez plus,<br/>sécurisez votre entreprise.
         </h1>
         <p style={{fontSize:17,fontWeight:600,color:"rgba(255,255,255,.7)",maxWidth:520,margin:"0 auto"}}>
-          Commencez simplement et montez en puissance selon vos besoins.
+          Commencez gratuitement avec votre tableau de bord, puis confiez le pilotage à un conseiller.
         </p>
       </div>
 
-      {/* 4 OFFRES */}
+      {/* 3 OFFRES */}
       <section className="section-pad" style={{padding:"64px 48px",maxWidth:1200,margin:"0 auto"}}>
-        <div className="offre-grid" style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:24}}>
+        <div className="offre-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:24,alignItems:"stretch"}}>
           {offres.map((o,i)=>(
             <div key={i} className="offre-card" style={{background:"#fff",borderRadius:20,border:o.best?`2px solid ${C.primary}`:`1px solid ${C.border}`,boxShadow:o.best?"0 8px 40px rgba(0,86,83,.15)":"0 2px 12px rgba(0,86,83,.05)",display:"flex",flexDirection:"column",overflow:"hidden",transition:"all .3s"}}>
               {/* Bannière toujours présente pour garder l'alignement des cartes */}
               <div style={{background:o.best?C.primary:"transparent",color:o.best?"#fff":"transparent",fontSize:10,fontWeight:800,textAlign:"center",padding:"7px",letterSpacing:"0.1em",textTransform:"uppercase",userSelect:"none"}}>
-                {o.best?"Le plus populaire":"·"}
+                {o.best?"Recommandé":"·"}
               </div>
               <div style={{padding:"24px 20px",flex:1}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
@@ -241,8 +259,7 @@ export default function ServicesPage() {
                     <span style={{fontSize:13,fontWeight:800,color:C.text,lineHeight:1.3}}>{o.advisor}</span>
                   </div>
                 )}
-                {/* Items en 2 colonnes si > 6 (Offre Finance), sinon 1 colonne */}
-                <div style={{display:"grid",gridTemplateColumns:o.items.length>6?"1fr 1fr":"1fr",gap:o.items.length>6?"8px 12px":"10px",marginBottom:24}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr",gap:10,marginBottom:24}}>
                   {o.items.map((it,j)=>(
                     <div key={j} style={{display:"flex",alignItems:"flex-start",gap:7}}>
                       <Check/>
@@ -253,7 +270,39 @@ export default function ServicesPage() {
               </div>
               <div style={{padding:"20px",borderTop:`1px solid ${C.border}`,background:o.best?C.bg:"#f8fffe",marginTop:"auto"}}>
                 <span style={{fontSize:26,fontWeight:900,color:C.text}}>{o.prix}</span>
-                {o.checkout ? (
+                {o.prixNote && <div style={{fontSize:11.5,fontWeight:700,color:"#6aaca8",marginTop:2}}>{o.prixNote}</div>}
+                {o.signup ? (
+                  signupStatus==="done" ? (
+                    <div style={{marginTop:14,background:C.bg,border:`1px solid ${C.border}`,borderRadius:14,padding:"14px 16px"}}>
+                      <div style={{fontSize:14,fontWeight:900,color:C.primary,marginBottom:4}}>C&apos;est fait !</div>
+                      <div style={{fontSize:12.5,fontWeight:600,color:C.mid,lineHeight:1.55}}>Vérifiez votre boîte mail pour choisir votre mot de passe. Un conseiller vous appelle rapidement pour importer vos premières données.</div>
+                    </div>
+                  ) : signupOpen ? (
+                    <form onSubmit={submitSignup} style={{marginTop:14,display:"flex",flexDirection:"column",gap:8}}>
+                      {[
+                        {k:"company",ph:"Nom de votre entreprise",type:"text",ac:"organization"},
+                        {k:"email",ph:"Email",type:"email",ac:"email"},
+                        {k:"phone",ph:"Téléphone",type:"tel",ac:"tel"},
+                      ].map(f=>(
+                        <input key={f.k} required type={f.type} autoComplete={f.ac} placeholder={f.ph}
+                          value={signup[f.k as "company"|"email"|"phone"]}
+                          onChange={e=>setSignup(prev=>({...prev,[f.k]:e.target.value}))}
+                          style={{width:"100%",boxSizing:"border-box",padding:"11px 14px",borderRadius:10,border:`1.5px solid ${C.border}`,fontSize:13.5,fontWeight:600,color:C.text,fontFamily:"inherit",outline:"none"}}/>
+                      ))}
+                      <input type="text" tabIndex={-1} autoComplete="off" aria-hidden="true" value={signup.website}
+                        onChange={e=>setSignup(prev=>({...prev,website:e.target.value}))}
+                        style={{position:"absolute",left:"-9999px",width:1,height:1,opacity:0}}/>
+                      {signupError && <div style={{fontSize:12,fontWeight:700,color:"#dc2626"}}>{signupError}</div>}
+                      <button type="submit" disabled={signupStatus==="sending"} style={{background:C.primary,color:"#fff",padding:"11px",borderRadius:100,fontSize:13,fontWeight:800,border:`2px solid ${C.primary}`,cursor:signupStatus==="sending"?"default":"pointer",opacity:signupStatus==="sending"?0.7:1,fontFamily:"inherit"}}>
+                        {signupStatus==="sending"?"Création…":"Créer mon accès gratuit"}
+                      </button>
+                    </form>
+                  ) : (
+                    <button onClick={()=>setSignupOpen(true)} style={{display:"block",width:"100%",marginTop:14,background:"white",color:C.primary,padding:"11px",borderRadius:100,fontSize:13,fontWeight:800,textAlign:"center",border:`2px solid ${C.primary}`,cursor:"pointer",fontFamily:"inherit"}}>
+                      {o.cta}
+                    </button>
+                  )
+                ) : o.checkout ? (
                   <button onClick={()=>startCheckout(o.checkout as string)} disabled={loadingPlan===o.checkout} style={{display:"block",width:"100%",marginTop:14,background:o.best?C.primary:"white",color:o.best?"#fff":C.primary,padding:"11px",borderRadius:100,fontSize:13,fontWeight:800,textAlign:"center",border:`2px solid ${C.primary}`,transition:"all .2s",cursor:loadingPlan===o.checkout?"default":"pointer",opacity:loadingPlan===o.checkout?0.7:1}}>
                     {loadingPlan===o.checkout?"Redirection…":o.cta}
                   </button>
@@ -268,10 +317,45 @@ export default function ServicesPage() {
         </div>
       </section>
 
+      {/* AUDIT OU MENSUEL */}
+      <section className="section-pad" style={{padding:"0 48px 72px",maxWidth:960,margin:"0 auto"}}>
+        <h2 style={{fontSize:"clamp(24px,3vw,34px)",fontWeight:900,color:C.text,textAlign:"center",marginBottom:10,lineHeight:1.15}}>
+          Audit ou pilotage mensuel ?
+        </h2>
+        <p style={{fontSize:16,fontWeight:700,color:C.mid,textAlign:"center",marginBottom:32}}>
+          Avec l&apos;audit, on fait le bilan et vous appliquez seul. Avec le pilotage mensuel, on applique les actions avec vous, chaque mois.
+        </p>
+        <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:20,overflow:"hidden",boxShadow:"0 2px 12px rgba(0,86,83,.05)"}}>
+          <div className="compare-row compare-head" style={{display:"grid",gridTemplateColumns:"1.1fr 1fr 1fr",background:"#f8fffe",borderBottom:`1px solid ${C.border}`}}>
+            <div style={{padding:"14px 18px"}}/>
+            <div style={{padding:"14px 18px",fontSize:12,fontWeight:800,color:C.mid,textTransform:"uppercase",letterSpacing:"0.06em"}}>Audit one shot</div>
+            <div style={{padding:"14px 18px",fontSize:12,fontWeight:800,color:C.primary,textTransform:"uppercase",letterSpacing:"0.06em",background:C.bg}}>Pilotage mensuel</div>
+          </div>
+          {[
+            {l:"Audit complet de l'entreprise", a:"Oui", m:"Oui, inclus"},
+            {l:"Plan d'action chiffré", a:"Oui", m:"Oui, mis à jour chaque mois"},
+            {l:"Mise en œuvre des actions", a:"Par vous, seul", m:"Suivie avec votre conseiller"},
+            {l:"Alertes et anticipation des risques", a:"À la date de l'audit", m:"En continu"},
+            {l:"Outils de gestion et automatisations", a:"Recommandés", m:"Mis en place"},
+            {l:"Gains mesurés dans le temps", a:"Non", m:"Oui"},
+            {l:"Prix", a:"3 000€ HT, une fois", m:"490€ HT/mois, sans engagement"},
+          ].map((r,i,arr)=>(
+            <div key={i} className="compare-row" style={{display:"grid",gridTemplateColumns:"1.1fr 1fr 1fr",borderBottom:i<arr.length-1?`1px solid ${C.border}`:"none"}}>
+              <div style={{padding:"14px 18px",fontSize:13.5,fontWeight:800,color:C.text}}>{r.l}</div>
+              <div style={{padding:"14px 18px",fontSize:13.5,fontWeight:600,color:C.mid}}><span className="compare-label" style={{fontWeight:800}}>Audit : </span>{r.a}</div>
+              <div style={{padding:"14px 18px",fontSize:13.5,fontWeight:800,color:C.primary,background:C.bg}}><span className="compare-label">Mensuel : </span>{r.m}</div>
+            </div>
+          ))}
+        </div>
+        <p style={{fontSize:12.5,fontWeight:600,color:"#6aaca8",textAlign:"center",marginTop:14}}>
+          Dans le pilotage mensuel, l&apos;audit complet est réalisé progressivement sur les 3 premiers mois.
+        </p>
+      </section>
+
       {/* CTA */}
       <section className="hero-pad" style={{background:C.primary,padding:"64px 48px",textAlign:"center"}}>
         <h2 style={{fontSize:34,fontWeight:900,color:"#fff",marginBottom:12,lineHeight:1.1}}>Pas sûr de quelle offre choisir ?</h2>
-        <p style={{fontSize:16,fontWeight:600,color:"rgba(255,255,255,.7)",marginBottom:32}}>On fait le point ensemble en 20 minutes, gratuitement.</p>
+        <p style={{fontSize:16,fontWeight:600,color:"rgba(255,255,255,.7)",marginBottom:32}}>On fait le point ensemble en 30 minutes, gratuitement.</p>
         <a href="https://calendly.com/nvmfinance-pro/30min" style={{background:C.green,color:C.text,padding:"16px 44px",borderRadius:100,fontSize:16,fontWeight:900,textDecoration:"none",display:"inline-block",boxShadow:"0 4px 24px rgba(33,196,93,.3)"}}>
           Prendre RDV gratuitement →
         </a>

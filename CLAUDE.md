@@ -36,7 +36,7 @@ There is also a **legacy, untracked-in-migrations** pair of tables, `admin_users
 
 ### Data model & Supabase
 
-All data access from `NVMFinance.jsx` is direct-to-Supabase from the browser (anon key) — there is no CRUD API layer. The only server API routes are `/api/invite`, `/api/delete-user`, `/api/create-cabinet`, `/api/ai`, `/api/planning/generate` — all require a `Authorization: Bearer <access_token>` header and verify the caller server-side (see any of these files for the pattern).
+All data access from `NVMFinance.jsx` is direct-to-Supabase from the browser (anon key) — there is no CRUD API layer. The authenticated server API routes are `/api/invite`, `/api/delete-user`, `/api/create-cabinet`, `/api/ai`, `/api/planning/generate` — all require a `Authorization: Bearer <access_token>` header and verify the caller server-side (see any of these files for the pattern). `/api/free-dashboard` is the one deliberately public route: self-serve signup to the free dashboard (creates the client with `plan='dashboard'`, invites the user, WhatsApps Nathan via CallMeBot); it is guarded only by a honeypot field and a best-effort per-IP rate limit.
 
 Supabase tables (see `supabase/migrations/`, currently up to `017`):
 - `profiles` — role + client/cabinet binding, RLS: own row readable, ADMIN full access
@@ -83,6 +83,8 @@ NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY   # server-only — used by /api/invite, /api/delete-user, /api/create-cabinet
 GROQ_API_KEY                # server-only — used by /api/ai, /api/planning/generate
+CALLMEBOT_PHONE             # server-only — WhatsApp notification target for /api/free-dashboard
+CALLMEBOT_APIKEY            # server-only — CallMeBot key for that notification
 NEXT_PUBLIC_SITE_URL
 ```
 

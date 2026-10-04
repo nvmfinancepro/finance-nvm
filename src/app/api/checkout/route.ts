@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 
 const PLANS: Record<string, { name: string; amountCents: number }> = {
-  dashboard: { name: "Offre Tableau de bord", amountCents: 20000 },
-  finance: { name: "Offre Finance", amountCents: 49000 },
+  finance: { name: "Pilotage mensuel", amountCents: 49000 },
   gestion: { name: "Module Gestion", amountCents: 10000 },
 };
 
