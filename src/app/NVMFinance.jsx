@@ -264,7 +264,7 @@ function downloadCSV(content, filename) {
 
 // CSV PARSER
 function parseCSV(text) {
- const lines = text.trim().split("\n").map(l=>l.trim()).filter(Boolean);
+ const lines = text.replace(/^\uFEFF/,"").trim().split("\n").map(l=>l.trim()).filter(Boolean);
  if (lines.length < 2) return { headers:[], rows:[] };
  const sep = lines[0].includes(";") ? ";" : ",";
  const headers = lines[0].split(sep).map(h=>h.trim().toLowerCase().replace(/\s+/g,"_"));
@@ -618,12 +618,13 @@ function SidebarBase({ children, role, onLogout, open, onClose }) {
  </>
  );
 }
-function NavItem({ icon, label, badge, badgeColor, active, onClick }) {
+function NavItem({ icon, label, badge, badgeColor, active, onClick, locked }) {
  return (
  <div onClick={onClick} style={{display:"flex",alignItems:"center",gap:9,padding:"9px 10px",borderRadius:8,marginBottom:2,cursor:"pointer",background:active?"rgba(255,255,255,0.15)":"transparent",color:active?"white":"rgba(255,255,255,0.55)",transition:"all .15s",fontSize:13,fontWeight:active?800:500}}>
  <span style={{fontSize:14,width:18,textAlign:"center",flexShrink:0}}>{icon}</span>
  <span style={{flex:1}}>{label}</span>
  {badge>0&&<span style={{background:badgeColor||"rgba(255,255,255,0.2)",color:"white",borderRadius:12,padding:"1px 7px",fontSize:10,fontWeight:900}}>{badge}</span>}
+ {locked&&<svg width="12" height="12" viewBox="0 0 16 16" fill="none" style={{flexShrink:0,opacity:.7}}><rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2" stroke="currentColor" strokeWidth="1.5"/></svg>}
  </div>
  );
 }
@@ -633,10 +634,13 @@ function AdminSidebar({ view, setView, onLogout, clientCount, alertCount, open, 
  if(role!=="CABINET") nav.push({id:"blog",icon:"",label:"Blog"},{id:"cabinets",icon:"",label:"Cabinets partenaires"});
  return <SidebarBase role={role==="CABINET"?"Espace Cabinet":"Espace Administrateur"} onLogout={onLogout} open={open} onClose={onClose}><nav style={{flex:1,padding:"10px 8px",overflowY:"auto"}}>{nav.map(item=><NavItem key={item.id} {...item} active={view===item.id} onClick={()=>{setView(item.id);onClose&&onClose();}}/>)}</nav></SidebarBase>;
 }
-function ClientSidebar({ view, setView, onLogout, clientName, alertCount, planningEnabled, congesEnabled, pointageEnabled, notesFraisEnabled, tachesEnabled, equipeTachesEnabled, stockEnabled, open, onClose }) {
+function ClientSidebar({ view, setView, onLogout, clientName, alertCount, planningEnabled, congesEnabled, pointageEnabled, notesFraisEnabled, tachesEnabled, equipeTachesEnabled, stockEnabled, open, onClose, freePlan }) {
+ // Offre gratuite : les outils de gestion restent visibles (floutés, cadenas) pour donner envie.
+ if(freePlan){ planningEnabled=congesEnabled=pointageEnabled=notesFraisEnabled=tachesEnabled=equipeTachesEnabled=stockEnabled=true; }
  const sections = [
  { label:"VUE D'ENSEMBLE", items:[
  {id:"dashboard", icon:"", label:"Tableau de bord"},
+ {id:"import", icon:"↑", label:"Importer mes données"},
  {id:"alertes", icon:"", label:"Mes alertes", badge:alertCount, badgeColor:C.red},
  ]},
  { label:"MON ACTIVITÉ", items:[
@@ -692,7 +696,7 @@ function ClientSidebar({ view, setView, onLogout, clientName, alertCount, planni
   <span style={{fontSize:9,color:"rgba(255,255,255,0.35)",fontWeight:800,letterSpacing:"0.12em"}}>{sec.label}</span>
   <span style={{fontSize:9,color:"rgba(255,255,255,0.35)"}}>{isCollapsed?"▸":"▾"}</span>
   </div>
-  {!isCollapsed&&sec.items.map(item=><NavItem key={item.id} {...item} active={view===item.id} onClick={()=>{setView(item.id);onClose&&onClose();}}/>)}
+  {!isCollapsed&&sec.items.map(item=><NavItem key={item.id} {...item} locked={freePlan&&!!FREE_LOCKED_VIEWS[item.id]} active={view===item.id} onClick={()=>{setView(item.id);onClose&&onClose();}}/>)}
   </div>
   );
  })}
@@ -801,7 +805,7 @@ function AdminClients({ clients, cabinets, onViewAsClient, onAddClient, onUpdate
  const [editSaving,setEditSaving]=useState(false);
  const [confirmDelete,setConfirmDelete]=useState(null);
 
- const startEdit=(c)=>{ setEditId(c.id); setEditC({name:c.name,sector:c.sector,manager:c.manager,status:c.status,email:c.email||"",planningEnabled:c.planningEnabled!==false,congesEnabled:c.congesEnabled!==false,pointageEnabled:c.pointageEnabled!==false,notesFraisEnabled:c.notesFraisEnabled!==false,tachesEnabled:c.tachesEnabled!==false,equipeTachesEnabled:c.equipeTachesEnabled!==false,stockEnabled:c.stockEnabled!==false,impactJournalEnabled:c.impactJournalEnabled===true,impactJournalTotal:c.impactJournal?.total||0,impactJournalItems:c.impactJournal?.items||[]}); };
+ const startEdit=(c)=>{ setEditId(c.id); setEditC({plan:c.plan??null,name:c.name,sector:c.sector,manager:c.manager,status:c.status,email:c.email||"",planningEnabled:c.planningEnabled!==false,congesEnabled:c.congesEnabled!==false,pointageEnabled:c.pointageEnabled!==false,notesFraisEnabled:c.notesFraisEnabled!==false,tachesEnabled:c.tachesEnabled!==false,equipeTachesEnabled:c.equipeTachesEnabled!==false,stockEnabled:c.stockEnabled!==false,impactJournalEnabled:c.impactJournalEnabled===true,impactJournalTotal:c.impactJournal?.total||0,impactJournalItems:c.impactJournal?.items||[]}); };
  const addImpactItem=(kind)=>{
    const blank = kind==="temps"
      ? {id:Date.now(),date:"",label:"",kind:"temps",avant:"",apres:"",frequence:""}
@@ -823,7 +827,7 @@ function AdminClients({ clients, cabinets, onViewAsClient, onAddClient, onUpdate
     setEditSaving(true);
     // Écriture unique via onUpdateClient (verrou optimiste + rollback + alerte déjà gérés là-bas) —
     // ne pas dupliquer avec un second appel Supabase direct en parallèle.
-    await onUpdateClient(editId,{name:editC.name,sector:editC.sector,manager:editC.manager,email:editC.email,planningEnabled:editC.planningEnabled,congesEnabled:editC.congesEnabled,pointageEnabled:editC.pointageEnabled,notesFraisEnabled:editC.notesFraisEnabled,tachesEnabled:editC.tachesEnabled,equipeTachesEnabled:editC.equipeTachesEnabled,stockEnabled:editC.stockEnabled,impactJournalEnabled:editC.impactJournalEnabled,impactJournal:{total:Number(editC.impactJournalTotal)||0,totalLabel:"Valeur créée",items:(editC.impactJournalItems||[]).filter(it=>it.label)}});
+    await onUpdateClient(editId,{plan:editC.plan??null,name:editC.name,sector:editC.sector,manager:editC.manager,email:editC.email,planningEnabled:editC.planningEnabled,congesEnabled:editC.congesEnabled,pointageEnabled:editC.pointageEnabled,notesFraisEnabled:editC.notesFraisEnabled,tachesEnabled:editC.tachesEnabled,equipeTachesEnabled:editC.equipeTachesEnabled,stockEnabled:editC.stockEnabled,impactJournalEnabled:editC.impactJournalEnabled,impactJournal:{total:Number(editC.impactJournalTotal)||0,totalLabel:"Valeur créée",items:(editC.impactJournalItems||[]).filter(it=>it.label)}});
     setEditId(null);
     setEditSaving(false);
   };
@@ -877,6 +881,14 @@ function AdminClients({ clients, cabinets, onViewAsClient, onAddClient, onUpdate
  <FormRow label="E-mail client"><input value={editC.email||""} onChange={e=>setEditC({...editC,email:e.target.value})} className="inp" type="email" placeholder="email@client.fr"/></FormRow>
  <FormRow label="Responsable du dossier"><input value={editC.manager||""} onChange={e=>setEditC({...editC,manager:e.target.value})} className="inp"/></FormRow>
  <FormRow label="Secteur"><select value={editC.sector||""} onChange={e=>setEditC({...editC,sector:e.target.value})} className="inp">{SECTORS.map(s=><option key={s}>{s}</option>)}</select></FormRow>
+ </div>
+ <div style={{padding:"0 20px 12px"}}>
+   <div style={{fontSize:11,fontWeight:800,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>Offre</div>
+   <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,fontWeight:700,color:C.text}}>
+     <input type="checkbox" checked={editC.plan==="dashboard"} onChange={e=>setEditC({...editC,plan:e.target.checked?"dashboard":(editC.plan==="dashboard"?null:editC.plan)})}/>
+     Tableau de bord gratuit (analyses et outils floutés pour le client)
+   </label>
+   <div style={{fontSize:11,color:C.textLight,marginTop:4}}>Décochez quand le client passe au pilotage mensuel : tout se débloque. Pensez aussi à activer ses outils de gestion ci-dessous.</div>
  </div>
  <div style={{padding:"0 20px 12px"}}>
    <div style={{fontSize:11,fontWeight:800,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>Outils de gestion</div>
@@ -1206,6 +1218,241 @@ function AdminSaisie({ clients, onUpdateClient }) {
  );
 }
 
+
+// OFFRE GRATUITE : tableau de bord « expert-comptable » (résultat, ventes, charges,
+// salaires, TVA, IS) en accès libre ; les analyses de pilotage et les outils de
+// gestion sont floutés avec un bouton qui prévient le conseiller sur WhatsApp.
+const FREE_LOCKED_VIEWS={
+ alertes:{title:"Alertes",desc:"Votre conseiller surveille vos chiffres et vous prévient avant qu'un problème n'arrive."},
+ tresorerie:{title:"Trésorerie prévisionnelle",desc:"Votre trésorerie sur les 90 prochains jours, ajustée avec votre conseiller."},
+ creances:{title:"Créances clients",desc:"Le suivi des factures clients et des retards de paiement, pour sécuriser votre trésorerie."},
+ dettes:{title:"Dettes fournisseurs",desc:"L'échéancier de vos fournisseurs, pour anticiper vos décaissements."},
+ emprunts:{title:"Emprunts",desc:"Vos financements intégrés à votre pilotage : mensualités, capital restant, impact sur la trésorerie."},
+ investissements:{title:"Investissements",desc:"Vos investissements et leurs amortissements, intégrés à votre résultat."},
+ catalogue:{title:"Rentabilité par produit",desc:"Ce qui rapporte le plus, ce qui coûte trop cher : la marge produit par produit."},
+ comparaison:{title:"Comparaison de périodes",desc:"Comparez deux périodes pour comprendre ce qui a changé et pourquoi."},
+ previsionnel:{title:"Prévisionnel",desc:"Votre prévisionnel sur 12 mois, construit et suivi avec votre conseiller."},
+ roi:{title:"Calculateur ROI",desc:"Mesurez la rentabilité d'un investissement avant de vous engager."},
+ embauche:{title:"Simulateur d'embauche",desc:"Le vrai coût d'un recrutement et le chiffre d'affaires nécessaire pour le financer."},
+ planning:{title:"Planning d'équipe",desc:"Un planning d'équipe simple, généré en quelques clics.",tool:true},
+ conges:{title:"Congés & absences",desc:"Les demandes de congés et absences de votre équipe, au même endroit.",tool:true},
+ pointage:{title:"Pointage",desc:"Le suivi des heures de votre équipe, sans papier.",tool:true},
+ notesfrais:{title:"Notes de frais",desc:"Les notes de frais déposées et validées en ligne.",tool:true},
+ taches:{title:"Tâches",desc:"Les tâches de l'équipe organisées en tableau.",tool:true},
+ equipetaches:{title:"Gestion d'équipe & tâches",desc:"Tâches récurrentes par site et par personne, avec suivi.",tool:true},
+ stock:{title:"Stock",desc:"Votre stock suivi en temps réel, avec alertes de réapprovisionnement.",tool:true},
+};
+
+function ToolPlaceholder() {
+ return (
+ <div style={{padding:24,display:"flex",flexDirection:"column",gap:14}}>
+ {[0,1,2].map(i=>(
+ <Card key={i}><div style={{padding:20,display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
+ {[0,1,2,3].map(j=><div key={j} style={{height:70,borderRadius:10,background:j%2?C.bg:"#e3f4f1"}}/>)}
+ </div></Card>
+ ))}
+ </div>
+ );
+}
+
+function LockedFeature({ viewId, isAdminPreview, children }) {
+ const info=FREE_LOCKED_VIEWS[viewId]||{title:"Cette fonctionnalité",desc:""};
+ const [status,setStatus]=useState("idle");
+ const [err,setErr]=useState("");
+ useEffect(()=>{ setStatus("idle"); setErr(""); },[viewId]);
+ const ask=async()=>{
+ setStatus("sending"); setErr("");
+ try{
+ const {data:{session}}=await supabase.auth.getSession();
+ const res=await fetch("/api/advisor-request",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},body:JSON.stringify({topic:info.title})});
+ const d=await res.json().catch(()=>({}));
+ if(res.ok) setStatus("sent"); else { setErr(d.error||"La demande n'a pas pu être envoyée, réessayez."); setStatus("idle"); }
+ }catch{ setErr("La demande n'a pas pu être envoyée, réessayez."); setStatus("idle"); }
+ };
+ return (
+ <div style={{position:"relative",minHeight:"calc(100vh - 60px)",overflow:"hidden"}}>
+ <div aria-hidden="true" style={{filter:"blur(7px)",pointerEvents:"none",userSelect:"none",opacity:.55,maxHeight:"calc(100vh - 60px)",overflow:"hidden"}}>{children}</div>
+ <div style={{position:"absolute",inset:0,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"72px 20px 20px"}}>
+ <div className="fade-up" style={{background:C.white,border:`1.5px solid ${C.primary}`,borderRadius:20,padding:"28px 28px 24px",maxWidth:440,width:"100%",textAlign:"center",boxShadow:"0 24px 60px rgba(0,86,83,.18)"}}>
+ <div style={{width:48,height:48,borderRadius:"50%",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}>
+ <svg width="22" height="22" viewBox="0 0 16 16" fill="none"><rect x="3" y="7" width="10" height="7" rx="1.5" stroke={C.primary} strokeWidth="1.4"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2" stroke={C.primary} strokeWidth="1.4"/></svg>
+ </div>
+ <div style={{fontSize:18,fontWeight:900,color:C.text,marginBottom:8}}>{info.title}</div>
+ <div style={{fontSize:13.5,fontWeight:600,color:C.textMid,lineHeight:1.6,marginBottom:6}}>{info.desc}</div>
+ <div style={{fontSize:12.5,fontWeight:700,color:C.primary,marginBottom:20}}>{info.tool?"Disponible avec l'accompagnement de votre conseiller.":"Une analyse réalisée avec votre conseiller."}</div>
+ {status==="sent"?(
+ <div style={{background:C.bg,borderRadius:12,padding:"12px 14px",fontSize:13.5,fontWeight:800,color:C.primary}}>Demande envoyée ! Votre conseiller vous recontacte rapidement.</div>
+ ):(
+ <Btn onClick={ask} disabled={isAdminPreview||status==="sending"} style={{width:"100%",justifyContent:"center"}}>{status==="sending"?"Envoi…":"Demander à mon conseiller"}</Btn>
+ )}
+ {err&&<div style={{fontSize:12,fontWeight:700,color:C.red,marginTop:10}}>{err}</div>}
+ {isAdminPreview&&<div style={{fontSize:11,color:C.textLight,marginTop:10}}>Aperçu admin : le bouton est désactivé.</div>}
+ </div>
+ </div>
+ </div>
+ );
+}
+
+// CLIENT · IMPORT EN LIBRE-SERVICE
+// Modèles volontairement simples pour un dirigeant qui remplit lui-même son fichier.
+// Les colonnes restent celles lues par calcMonthKpis (ca_ht, marge_ht, montant_ht,
+// salaire_brut, cotisations_patronales).
+const CLIENT_IMPORT_MODULES=[
+ {id:"ventes_produits",label:"Mes ventes",hint:"Une ligne par vente ou par jour de ventes. Le coût d'achat ne concerne que la revente de marchandises : laissez 0 sinon.",
+  template:"date;libelle;ca_ht;cout_achat_ht\n2026-09-05;Ventes de la semaine;3250,00;1100,00\n2026-09-12;Prestation client Martin;800,00;0",
+  numeric:["ca_ht","cout_achat_ht"]},
+ {id:"charges",label:"Mes charges",hint:"Loyer, fournisseurs, abonnements, assurances… Type : fixe ou variable.",
+  template:"date;fournisseur;libelle;montant_ht;taux_tva;type\n2026-09-01;Bailleur;Loyer;1200,00;0;fixe\n2026-09-03;Fournisseur A;Achats matières;650,00;20;variable",
+  numeric:["montant_ht","taux_tva"]},
+ {id:"salaires",label:"Mes salaires",hint:"Une ligne par salarié, avec les montants du bulletin de paie du mois.",
+  template:"nom_prenom;salaire_brut;cotisations_patronales;salaire_net\nSalarié 1;2200,00;950,00;1720,00",
+  numeric:["salaire_brut","cotisations_patronales","salaire_net"]},
+];
+// "1 250,50 €" → "1250.50" : le format Excel français, sinon parseFloat tronque à 1.
+function normNum(v){ return String(v??"").replace(/[\s €]/g,"").replace(",","."); }
+function prevMonthKey(){ const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; }
+
+function ClientImportWelcome({ onStart }) {
+ return (
+ <div style={{margin:"24px 24px 0",background:C.white,border:`1.5px solid ${C.primary}`,borderRadius:18,padding:"22px 24px",display:"flex",alignItems:"center",gap:20,flexWrap:"wrap",boxShadow:"0 16px 36px rgba(0,86,83,.08)"}}>
+ <div style={{flex:"1 1 320px"}}>
+ <div style={{fontSize:17,fontWeight:900,color:C.text,marginBottom:6}}>Bienvenue ! Votre tableau de bord est prêt.</div>
+ <div style={{fontSize:13,fontWeight:600,color:C.textMid,lineHeight:1.6}}>Il ne manque que vos chiffres. En 3 étapes : téléchargez le modèle, remplissez-le dans Excel, importez-le. Vos indicateurs s&apos;affichent tout de suite.</div>
+ </div>
+ <Btn onClick={onStart}>Importer mes données →</Btn>
+ </div>
+ );
+}
+
+function ClientImport({ client, onSaveImport, onDeleteImport }) {
+ const [mod,setMod]=useState("ventes_produits");
+ const [moisImport,setMoisImport]=useState(prevMonthKey());
+ const [csvPreview,setCsvPreview]=useState(null);
+ const [msg,setMsg]=useState(null);
+ const [saving,setSaving]=useState(false);
+ const mdl=CLIENT_IMPORT_MODULES.find(m=>m.id===mod);
+ const imports=(client.imports||[]).filter(i=>i.type===mod).sort((a,b)=>a.mois>b.mois?-1:1);
+
+ const flash=(text,ok=true)=>{ setMsg({text,ok}); setTimeout(()=>setMsg(null),6000); };
+
+ const handleFile=(e)=>{
+ const file=e.target.files?.[0]; if(!file) return;
+ const reader=new FileReader();
+ reader.onload=(ev)=>{
+ const {headers,rows}=parseCSV(ev.target.result);
+ if(!rows.length){ flash("Le fichier est vide ou n'est pas au format CSV. Dans Excel : Fichier > Enregistrer sous > CSV (séparateur point-virgule).",false); return; }
+ if(rows.length>5000){ flash("Fichier trop volumineux : 5 000 lignes maximum par import. Découpez-le par mois.",false); return; }
+ const clean=rows.map(r=>{
+ const out={...r};
+ mdl.numeric.forEach(k=>{ if(out[k]!==undefined&&out[k]!=="") out[k]=normNum(out[k]); });
+ // L'onglet TVA ne déduit que les charges marquées tva_recuperable="oui" : absente
+ // du modèle simplifié, on la déduit du taux (TVA > 0 → récupérable).
+ if(mod==="charges"&&!out.tva_recuperable) out.tva_recuperable=parseFloat(out.taux_tva||0)>0?"oui":"non";
+ if(mod==="ventes_produits"){
+ const ca=parseFloat(out.ca_ht||0)||0, cout=parseFloat(out.cout_achat_ht||0)||0;
+ out.marge_ht=String(Math.round((ca-cout)*100)/100);
+ }
+ return out;
+ });
+ const added=mod==="ventes_produits"?["marge_ht"]:mod==="charges"?["tva_recuperable"]:[];
+ const outHeaders=[...headers,...added.filter(h=>!headers.includes(h))];
+ setCsvPreview({file,headers:outHeaders,rows:clean,errors:validateRows(clean,mod),mois:moisImport});
+ };
+ reader.readAsText(file,"utf-8");
+ e.target.value="";
+ };
+
+ const handleConfirm=async(rows,mois)=>{
+ setSaving(true);
+ const ok=await onSaveImport({type:mod,label:mdl.label,mois,rows,count:rows.length,importedAt:new Date().toLocaleDateString("fr-FR")});
+ setSaving(false);
+ setCsvPreview(null);
+ if(ok) flash(`${rows.length} ligne${rows.length>1?"s":""} importée${rows.length>1?"s":""} dans « ${mdl.label} » · ${mois}`);
+ else flash("L'import a échoué, réessayez. Si le problème continue, contactez votre conseiller.",false);
+ };
+
+ const step=(n,title,children)=>(
+ <div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
+ <div style={{width:30,height:30,borderRadius:"50%",background:C.primary,color:"white",fontSize:13,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{n}</div>
+ <div style={{flex:1}}>
+ <div style={{fontSize:14,fontWeight:900,color:C.text,marginBottom:6}}>{title}</div>
+ {children}
+ </div>
+ </div>
+ );
+
+ if(!onSaveImport) return (
+ <div style={{padding:24}}><Card><div style={{padding:20,fontSize:13,color:C.textMid}}>Aperçu admin : utilisez la saisie admin pour importer les données de ce client.</div></Card></div>
+ );
+
+ return (
+ <div style={{padding:24,display:"flex",flexDirection:"column",gap:20}} className="fade-up">
+ {csvPreview&&<CSVPreviewModal file={csvPreview.file} rows={csvPreview.rows} headers={csvPreview.headers} errors={csvPreview.errors} mois={csvPreview.mois} onConfirm={saving?()=>{}:handleConfirm} onCancel={()=>setCsvPreview(null)}/>}
+
+ <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+ {CLIENT_IMPORT_MODULES.map(m=>(
+ <button key={m.id} onClick={()=>setMod(m.id)}
+ style={{padding:"8px 16px",borderRadius:100,border:`1.5px solid ${mod===m.id?C.primary:C.border}`,background:mod===m.id?C.primary:"white",color:mod===m.id?"white":C.textMid,fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
+ {m.label}
+ </button>
+ ))}
+ </div>
+
+ <Card>
+ <div style={{padding:"22px 24px",display:"flex",flexDirection:"column",gap:22}}>
+ {step(1,"Téléchargez le modèle",(
+ <>
+ <div style={{fontSize:12.5,color:C.textMid,lineHeight:1.6,marginBottom:10}}>{mdl.hint}</div>
+ <Btn small variant="ghost" onClick={()=>downloadCSV(mdl.template,`nvm_modele_${mod}.csv`)}>Télécharger le modèle « {mdl.label} »</Btn>
+ </>
+ ))}
+ {step(2,"Remplissez-le dans Excel",(
+ <div style={{fontSize:12.5,color:C.textMid,lineHeight:1.6}}>Remplacez les lignes d&apos;exemple par vos chiffres, sans changer la première ligne (les titres des colonnes). Montants hors taxes. Enregistrez ensuite au format <strong>CSV (point-virgule)</strong> : Fichier &gt; Enregistrer sous &gt; CSV.</div>
+ ))}
+ {step(3,"Importez-le",(
+ <div style={{display:"flex",flexDirection:"column",gap:12}}>
+ <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+ <span style={{fontSize:12.5,fontWeight:800,color:C.text}}>Mois concerné :</span>
+ <input type="month" value={moisImport} onChange={e=>setMoisImport(e.target.value)}
+ style={{padding:"7px 12px",border:`1.5px solid ${C.border}`,borderRadius:8,fontSize:13,fontWeight:700,color:C.text,fontFamily:"inherit",background:"white"}}/>
+ </div>
+ <label style={{border:`2px dashed ${C.border}`,borderRadius:12,padding:"24px 20px",textAlign:"center",background:C.bg,cursor:"pointer",display:"block"}}>
+ <div style={{fontSize:14,fontWeight:800,color:C.primary,marginBottom:4}}>Choisir mon fichier CSV</div>
+ <div style={{fontSize:11.5,color:C.textLight}}>Vous pourrez vérifier les lignes avant de valider</div>
+ <input type="file" accept=".csv,.txt" onChange={handleFile} style={{display:"none"}}/>
+ </label>
+ <div style={{fontSize:11.5,color:C.textLight}}>Réimporter le même mois remplace les données de ce mois.</div>
+ </div>
+ ))}
+ {msg&&<div style={{fontSize:13,fontWeight:800,color:msg.ok?C.green:C.red}}>{msg.text}</div>}
+ </div>
+
+ {imports.length>0&&(
+ <div style={{borderTop:`1px solid ${C.borderLight}`,padding:"16px 24px"}}>
+ <div style={{fontSize:12,fontWeight:800,color:C.textMid,marginBottom:10}}>Déjà importé · {mdl.label}</div>
+ {imports.map(imp=>(
+ <div key={imp.id} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 12px",background:C.bg,borderRadius:8,marginBottom:6}}>
+ <Pill color={C.green}>{imp.mois}</Pill>
+ <span style={{fontSize:12,fontWeight:700,color:C.text}}>{imp.count} ligne{imp.count>1?"s":""}</span>
+ <span style={{fontSize:11,color:C.textLight}}>le {imp.importedAt}</span>
+ <div style={{marginLeft:"auto"}}>
+ <Btn small variant="ghost" style={{color:C.red,borderColor:C.red+"44",fontSize:11,padding:"2px 8px"}}
+ onClick={async()=>{
+ if(!window.confirm(`Supprimer l'import ${imp.mois} ?`)) return;
+ const ok=await onDeleteImport(imp.id);
+ if(!ok) flash("La suppression a échoué, réessayez.",false);
+ }}>
+ Supprimer
+ </Btn>
+ </div>
+ </div>
+ ))}
+ </div>
+ )}
+ </Card>
+ </div>
+ );
+}
 
 // ADMIN · DONNÉES FINANCIÈRES
 function AdminFinancier({ clients, onUpdateClient }) {
@@ -3041,7 +3288,19 @@ function getPrevKpis(client, moisIdx, moisYear) {
  return calcMonthKpis(client, pm, py);
 }
 
-function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPreview=false, setView }) {
+function ClientSpace(props) {
+ const { client, view, isAdminPreview } = props;
+ if (client.plan==="dashboard" && FREE_LOCKED_VIEWS[view]) {
+ return (
+ <LockedFeature viewId={view} isAdminPreview={isAdminPreview}>
+ {FREE_LOCKED_VIEWS[view].tool ? <ToolPlaceholder/> : <ClientSpaceContent {...props}/>}
+ </LockedFeature>
+ );
+ }
+ return <ClientSpaceContent {...props}/>;
+}
+
+function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPreview=false, setView, onSaveImport, onDeleteImport }) {
  // Tous les hooks doivent être déclarés inconditionnellement (règle React)
  const [moisPrev,  setMoisPrev]  = useState(CUR_M);
  const [adjPrev,   setAdjPrev]   = useState(() => client.previsionnel?.adjustments || {});
@@ -3120,8 +3379,14 @@ function ClientSpace({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPrevi
 
  // DASHBOARD 
  if (view==="dashboard") return (
+ <>
+ {imports.length===0&&!isAdminPreview&&onSaveImport&&<ClientImportWelcome onStart={()=>setView("import")}/>}
  <ClientDashboard client={client} isAdminPreview={false} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear} setView={setView}/>
+ </>
  );
+
+ // IMPORT
+ if (view==="import") return <ClientImport client={client} onSaveImport={onSaveImport} onDeleteImport={onDeleteImport}/>;
 
  // VENTES 
  if (view==="ventes") {
@@ -8406,9 +8671,11 @@ export default function App() {
         if(ce) throw ce;
         const {data:id2}=await supabase.from("imports_csv").select("*");
         const {data:ud}=await supabase.from("client_users").select("id,client_id,email,first_login,created_at");
-        if(!cd||cd.length===0) return;
+        // Vider aussi quand rien n'est visible : sinon, après un changement de compte
+        // dans le même onglet, la liste du compte précédent resterait affichée.
+        if(!cd||cd.length===0){ setClients([]); return; }
         const extras=cd.map(c=>({
-          id:c.id,name:c.name,sector:c.sector,color:c.color,manager:c.manager,cabinet_id:c.cabinet_id,planningEnabled:c.planning_enabled!==false,
+          id:c.id,name:c.name,sector:c.sector,color:c.color,manager:c.manager,cabinet_id:c.cabinet_id,plan:c.plan||null,planningEnabled:c.planning_enabled!==false,
           congesEnabled:c.conges_enabled!==false,pointageEnabled:c.pointage_enabled!==false,notesFraisEnabled:c.notes_frais_enabled!==false,tachesEnabled:c.taches_enabled!==false,equipeTachesEnabled:c.equipe_taches_enabled!==false,stockEnabled:c.stock_enabled!==false,
           since:c.since,status:c.status,email:c.email||(ud||[]).find(u=>u.client_id===c.id)?.email||"",
           kpis:c.kpis||{ca:0,marge:0,charges:0,salaires:0,ebe:0,result:0,tresorerie:0},
@@ -8433,7 +8700,9 @@ export default function App() {
         setClients(extras);
       } catch(e){console.error("Supabase load error:",e);}
     })();
-  },[]);
+  // Rechargé à chaque changement d'utilisateur : se connecter depuis l'écran de connexion
+  // interne laissait sinon la liste vide (chargée avant la connexion, donc filtrée à rien par la RLS).
+  },[user?.id]);
 
   // Cabinets partenaires (visible admin uniquement · la RLS renvoie [] pour les autres rôles)
   const [cabinets,setCabinets]=useState([]);
@@ -8524,6 +8793,24 @@ export default function App() {
   };
 
   const totalAlerts=clients.reduce((s,c)=>s+calcAlertes(c,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length,0);
+  // Import fait par le client lui-même (RLS migration 031) : écriture directe dans
+  // imports_csv, pas via updateClient qui réécrit aussi la ligne clients (lecture seule pour un CLIENT).
+  const saveClientImport=async(clientId,imp)=>{
+    const {data,error}=await supabase.from("imports_csv").upsert({
+      client_id:clientId,type:imp.type,label:imp.label,mois:imp.mois,
+      rows:imp.rows,count:imp.count,imported_at:imp.importedAt,
+    },{onConflict:"client_id,type,mois"}).select().single();
+    if(error||!data){ console.error("Import client échoué:",error); return false; }
+    const saved={id:data.id,type:data.type,label:data.label,mois:data.mois,rows:data.rows||[],count:data.count,importedAt:data.imported_at};
+    setClients(prev=>prev.map(c=>c.id!==clientId?c:{...c,imports:[...(c.imports||[]).filter(i=>!(i.type===saved.type&&i.mois===saved.mois)),saved]}));
+    return true;
+  };
+  const deleteClientImport=async(clientId,importId)=>{
+    const {error}=await supabase.from("imports_csv").delete().eq("id",importId).eq("client_id",clientId);
+    if(error){ console.error("Suppression import client échouée:",error); return false; }
+    setClients(prev=>prev.map(c=>c.id!==clientId?c:{...c,imports:(c.imports||[]).filter(i=>i.id!==importId)}));
+    return true;
+  };
   const updateClient=useCallback(async(id,patch)=>{
     const prevClient = clients.find(c=>c.id===id);
     setClients(prev=>prev.map(c=>c.id===id?{...c,...patch}:c));
@@ -8555,6 +8842,7 @@ export default function App() {
         taches_enabled:updated.tachesEnabled!==false,
         equipe_taches_enabled:updated.equipeTachesEnabled!==false,
         stock_enabled:updated.stockEnabled!==false,
+        ...(updated.plan!==undefined?{plan:updated.plan}:{}),
       }).eq("id",id).eq("updated_at",client.updated_at).select();
       if(upsertError) throw upsertError;
       if(!updateResult||updateResult.length===0){
@@ -8640,7 +8928,7 @@ export default function App() {
 
   const visibleClients = previewCabinet ? clients.filter(c=>c.cabinet_id===previewCabinet.id) : clients;
   const ADMIN_TITLES={clients:`Portefeuille clients (${visibleClients.length})`,acces:"Accès & mots de passe clients",saisie:"Saisie & Import CSV",financier:"Donnees financieres",alertes:"Centre d'alertes",rapports:"Rapports IA",blog:"Blog",cabinets:"Cabinets partenaires"};
-  const CLIENT_TITLES={dashboard:"Tableau de bord",alertes:"Mes alertes",ventes:"Mes ventes",achats:"Mes coûts d'achat",charges:"Mes charges",salaires:"Ma masse salariale",creances:"Mes créances clients",dettes:"Mes dettes fournisseurs",resultat:"Mon resultat financier",tva:"Ma TVA",tresorerie:"Ma tresorerie",emprunts:"Mes emprunts",investissements:"Mes investissements",roi:"Calculateur ROI",embauche:"Simulateur d'embauche",is:"Mon impot (IS)",catalogue:"Mon catalogue produits", comparaison:"Comparaison de périodes", previsionnel:"Prévisionnel", planning:"Planning & équipe", conges:"Congés & absences", notesfrais:"Notes de frais", taches:"Tâches", equipetaches:"Gestion d'équipe & Tâches", pointage:"Pointage", stock:"Mon stock"};
+  const CLIENT_TITLES={dashboard:"Tableau de bord",import:"Importer mes données",alertes:"Mes alertes",ventes:"Mes ventes",achats:"Mes coûts d'achat",charges:"Mes charges",salaires:"Ma masse salariale",creances:"Mes créances clients",dettes:"Mes dettes fournisseurs",resultat:"Mon resultat financier",tva:"Ma TVA",tresorerie:"Ma tresorerie",emprunts:"Mes emprunts",investissements:"Mes investissements",roi:"Calculateur ROI",embauche:"Simulateur d'embauche",is:"Mon impot (IS)",catalogue:"Mon catalogue produits", comparaison:"Comparaison de périodes", previsionnel:"Prévisionnel", planning:"Planning & équipe", conges:"Congés & absences", notesfrais:"Notes de frais", taches:"Tâches", equipetaches:"Gestion d'équipe & Tâches", pointage:"Pointage", stock:"Mon stock"};
 
   // Modal credentials nouveau client (admin)
   const CredentialsModal = newClientCredentials ? (
@@ -8672,7 +8960,7 @@ export default function App() {
     return (
       <div style={{display:"flex",height:"100vh",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif"}}>
         <GlobalCSS/>
-        <ClientSidebar view={view} setView={setView} onLogout={()=>setPreviewClient(null)} clientName={live.name} alertCount={calcAlertes(live,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length} planningEnabled={live.planningEnabled} congesEnabled={live.congesEnabled} pointageEnabled={live.pointageEnabled} notesFraisEnabled={live.notesFraisEnabled} tachesEnabled={live.tachesEnabled} equipeTachesEnabled={live.equipeTachesEnabled} stockEnabled={live.stockEnabled} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
+        <ClientSidebar view={view} setView={setView} onLogout={()=>setPreviewClient(null)} clientName={live.name} alertCount={calcAlertes(live,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length} planningEnabled={live.planningEnabled} congesEnabled={live.congesEnabled} pointageEnabled={live.pointageEnabled} notesFraisEnabled={live.notesFraisEnabled} tachesEnabled={live.tachesEnabled} equipeTachesEnabled={live.equipeTachesEnabled} stockEnabled={live.stockEnabled} freePlan={live?.plan==="dashboard"} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <TopBar
             title={`Aperçu client · ${live.name}`}
@@ -8764,11 +9052,11 @@ export default function App() {
         <GlobalCSS/>
         {/* Popup première connexion · priorité absolue */}
         {user.firstLogin&&<FirstLoginModal user={user} onComplete={(u)=>setUser(u)}/>}
-        <ClientSidebar view={view} setView={setView} onLogout={handleLogout} clientName={client?.name||user.name} alertCount={client?calcAlertes(client,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length:0} planningEnabled={client?.planningEnabled} congesEnabled={client?.congesEnabled} pointageEnabled={client?.pointageEnabled} notesFraisEnabled={client?.notesFraisEnabled} tachesEnabled={client?.tachesEnabled} equipeTachesEnabled={client?.equipeTachesEnabled} stockEnabled={client?.stockEnabled} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
+        <ClientSidebar view={view} setView={setView} onLogout={handleLogout} clientName={client?.name||user.name} alertCount={client?calcAlertes(client,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length:0} planningEnabled={client?.planningEnabled} congesEnabled={client?.congesEnabled} pointageEnabled={client?.pointageEnabled} notesFraisEnabled={client?.notesFraisEnabled} tachesEnabled={client?.tachesEnabled} equipeTachesEnabled={client?.equipeTachesEnabled} stockEnabled={client?.stockEnabled} freePlan={client?.plan==="dashboard"} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <TopBar title={CLIENT_TITLES[view]||"Dashboard"} user={user} onMenuToggle={()=>setMenuOpen(o=>!o)}/>
           <div style={{flex:1,overflowY:"auto",background:"linear-gradient(155deg,#f0faf8 0%,#ffffff 45%,#ecfdf5 100%)"}}>
-            {client&&<ClientSpace client={{...client,advisorLabel:client.cabinet_id?(cabinets.find(cab=>cab.id===client.cabinet_id)?.name||"votre cabinet comptable"):"NVM Finance"}} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear} setView={setView}/>}
+            {client&&<ClientSpace client={{...client,advisorLabel:client.cabinet_id?(cabinets.find(cab=>cab.id===client.cabinet_id)?.name||"votre cabinet comptable"):"NVM Finance"}} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear} setView={setView} onSaveImport={imp=>saveClientImport(client.id,imp)} onDeleteImport={id=>deleteClientImport(client.id,id)}/>}
           </div>
         </div>
       </div>

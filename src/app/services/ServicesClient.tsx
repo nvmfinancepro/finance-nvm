@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
+import { createClient as createPlainClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/client";
 import WhatsAppWidget from "@/components/WhatsAppWidget";
 
 const C = { primary:"#005653", green:"#21C45D", bg:"#ecfdf5", text:"#002e2c", mid:"#2d6b68", light:"#a7d4d0", border:"#c8e8e5" };
@@ -55,7 +57,7 @@ export default function ServicesPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string|null>(null);
   const [signupOpen, setSignupOpen] = useState(false);
-  const [signup, setSignup] = useState({ company:"", email:"", phone:"", website:"" });
+  const [signup, setSignup] = useState({ company:"", email:"", phone:"", password:"", website:"" });
   const [signupStatus, setSignupStatus] = useState<"idle"|"sending"|"done">("idle");
   const [signupError, setSignupError] = useState<string|null>(null);
 
@@ -70,8 +72,15 @@ export default function ServicesPage() {
         body: JSON.stringify(signup),
       });
       const data = await res.json().catch(() => ({}));
-      if (res.ok) setSignupStatus("done");
-      else { setSignupError(data.error || "Une erreur est survenue, réessayez."); setSignupStatus("idle"); }
+      if (!res.ok) { setSignupError(data.error || "Une erreur est survenue, réessayez."); setSignupStatus("idle"); return; }
+      // Deux sessions indépendantes : le cookie (exigé par le middleware de /dashboard,
+      // comme /auth/login) et le localStorage du client Supabase « simple » que
+      // NVMFinance.jsx utilise pour savoir qui est connecté.
+      const creds = { email: signup.email.trim().toLowerCase(), password: signup.password };
+      const { error: cookieError } = await createClient().auth.signInWithPassword(creds);
+      const { error: appError } = await createPlainClient(process.env.NEXT_PUBLIC_SUPABASE_URL as string, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string).auth.signInWithPassword(creds);
+      if (cookieError || appError) { setSignupStatus("done"); return; }
+      window.location.href = "/dashboard";
     } catch {
       setSignupError("Une erreur est survenue, réessayez.");
       setSignupStatus("idle");
@@ -274,8 +283,8 @@ export default function ServicesPage() {
                 {o.signup ? (
                   signupStatus==="done" ? (
                     <div style={{marginTop:14,background:C.bg,border:`1px solid ${C.border}`,borderRadius:14,padding:"14px 16px"}}>
-                      <div style={{fontSize:14,fontWeight:900,color:C.primary,marginBottom:4}}>C&apos;est fait !</div>
-                      <div style={{fontSize:12.5,fontWeight:600,color:C.mid,lineHeight:1.55}}>Vérifiez votre boîte mail pour choisir votre mot de passe. Un conseiller vous appelle rapidement pour importer vos premières données.</div>
+                      <div style={{fontSize:14,fontWeight:900,color:C.primary,marginBottom:4}}>Votre compte est créé !</div>
+                      <div style={{fontSize:12.5,fontWeight:600,color:C.mid,lineHeight:1.55}}>Connectez-vous depuis l&apos;<a href="/auth/login" style={{color:C.primary,fontWeight:800}}>espace client</a> avec votre email et votre mot de passe.</div>
                     </div>
                   ) : signupOpen ? (
                     <form onSubmit={submitSignup} style={{marginTop:14,display:"flex",flexDirection:"column",gap:8}}>
@@ -283,9 +292,10 @@ export default function ServicesPage() {
                         {k:"company",ph:"Nom de votre entreprise",type:"text",ac:"organization"},
                         {k:"email",ph:"Email",type:"email",ac:"email"},
                         {k:"phone",ph:"Téléphone",type:"tel",ac:"tel"},
+                        {k:"password",ph:"Mot de passe (8 caractères min.)",type:"password",ac:"new-password"},
                       ].map(f=>(
-                        <input key={f.k} required type={f.type} autoComplete={f.ac} placeholder={f.ph}
-                          value={signup[f.k as "company"|"email"|"phone"]}
+                        <input key={f.k} required type={f.type} autoComplete={f.ac} placeholder={f.ph} minLength={f.k==="password"?8:undefined}
+                          value={signup[f.k as "company"|"email"|"phone"|"password"]}
                           onChange={e=>setSignup(prev=>({...prev,[f.k]:e.target.value}))}
                           style={{width:"100%",boxSizing:"border-box",padding:"11px 14px",borderRadius:10,border:`1.5px solid ${C.border}`,fontSize:13.5,fontWeight:600,color:C.text,fontFamily:"inherit",outline:"none"}}/>
                       ))}
@@ -294,8 +304,11 @@ export default function ServicesPage() {
                         style={{position:"absolute",left:"-9999px",width:1,height:1,opacity:0}}/>
                       {signupError && <div style={{fontSize:12,fontWeight:700,color:"#dc2626"}}>{signupError}</div>}
                       <button type="submit" disabled={signupStatus==="sending"} style={{background:C.primary,color:"#fff",padding:"11px",borderRadius:100,fontSize:13,fontWeight:800,border:`2px solid ${C.primary}`,cursor:signupStatus==="sending"?"default":"pointer",opacity:signupStatus==="sending"?0.7:1,fontFamily:"inherit"}}>
-                        {signupStatus==="sending"?"Création…":"Créer mon accès gratuit"}
+                        {signupStatus==="sending"?"Création…":"Créer mon compte et accéder"}
                       </button>
+                      <div style={{fontSize:10.5,fontWeight:600,color:"#6aaca8",lineHeight:1.5}}>
+                        En créant votre compte, vous acceptez les <a href="/cgv" style={{color:"#6aaca8"}}>CGV</a> et la <a href="/confidentialite" style={{color:"#6aaca8"}}>politique de confidentialité</a>. Un conseiller pourra vous appeler pour vous aider à démarrer.
+                      </div>
                     </form>
                   ) : (
                     <button onClick={()=>setSignupOpen(true)} style={{display:"block",width:"100%",marginTop:14,background:"white",color:C.primary,padding:"11px",borderRadius:100,fontSize:13,fontWeight:800,textAlign:"center",border:`2px solid ${C.primary}`,cursor:"pointer",fontFamily:"inherit"}}>

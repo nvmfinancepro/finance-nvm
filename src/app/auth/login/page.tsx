@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { createClient as createPlainClient } from "@supabase/supabase-js";
 import { LogoSVG } from "@/components/ui/Logo";
 
 export default function LoginPage() {
@@ -26,6 +27,10 @@ export default function LoginPage() {
     setLoading(true); setErr("");
     const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
     if (error) { setErr("Identifiants incorrects. Vérifiez votre e-mail et mot de passe."); setLoading(false); return; }
+    // NVMFinance.jsx lit sa session dans le localStorage (client Supabase « simple »),
+    // pas dans le cookie : sans cette seconde connexion, /dashboard redemandait les identifiants.
+    await createPlainClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+      .auth.signInWithPassword({ email, password: pass });
 
     const { data: { user } } = await supabase.auth.getUser();
     const { data: adminData } = await supabase

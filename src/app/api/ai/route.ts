@@ -13,6 +13,19 @@ export async function POST(req: NextRequest) {
   const { data: { user: caller } } = await supabaseAuth.auth.getUser(token);
   if (!caller) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+    process.env.SUPABASE_SERVICE_ROLE_KEY as string
+  );
+  // Seul RapportIA (espace admin/cabinet) appelle cette route. Depuis l'inscription
+  // libre au tableau de bord gratuit, « être connecté » ne suffit plus : n'importe
+  // qui peut créer un compte CLIENT, et chaque appel est facturé par Groq.
+  const { data: isAdmin } = await supabaseAdmin.from("admin_users").select("email").eq("email", caller.email).maybeSingle();
+  const { data: profile } = await supabaseAdmin.from("profiles").select("role").eq("id", caller.id).maybeSingle();
+  if (!isAdmin && profile?.role !== "ADMIN" && profile?.role !== "CABINET") {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  }
+
   if (!process.env.GROQ_API_KEY) {
     return NextResponse.json({ error: "GROQ_API_KEY manquante" }, { status: 500 });
   }

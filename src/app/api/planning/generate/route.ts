@@ -15,6 +15,21 @@ export async function POST(req: NextRequest) {
     const { data: { user: caller } } = await supabaseAuth.auth.getUser(token);
     if (!caller) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+      process.env.SUPABASE_SERVICE_ROLE_KEY as string
+    );
+    // Appel facturé par Groq : réservé à l'admin, aux cabinets, et aux clients dont
+    // le module Planning est activé (désactivé par défaut sur le tableau de bord gratuit).
+    const { data: isAdmin } = await supabaseAdmin.from("admin_users").select("email").eq("email", caller.email).maybeSingle();
+    const { data: profile } = await supabaseAdmin.from("profiles").select("role, client_id").eq("id", caller.id).maybeSingle();
+    let allowed = !!isAdmin || profile?.role === "ADMIN" || profile?.role === "CABINET";
+    if (!allowed && profile?.role === "CLIENT" && profile.client_id) {
+      const { data: cl } = await supabaseAdmin.from("clients").select("planning_enabled").eq("id", profile.client_id).maybeSingle();
+      allowed = cl?.planning_enabled !== false;
+    }
+    if (!allowed) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+
     if (!process.env.GROQ_API_KEY) {
       return NextResponse.json({ error: "GROQ_API_KEY manquante" }, { status: 500 });
     }
