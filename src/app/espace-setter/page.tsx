@@ -325,7 +325,13 @@ export default function Page() {
 
           {/* ── CIBLAGE ── */}
           <p style={eyebrowStyle}>Qui appeler</p>
-          <h2 style={h2Style}>Les secteurs ciblés</h2>
+          <h2 style={h2Style}>Toutes les entreprises, quel que soit leur secteur</h2>
+          <p style={pStyle}>
+            NVM Finance accompagne tout type d&apos;activité : chaque dirigeant a besoin de voir clair dans ses chiffres.
+            Les secteurs ci-dessous sont des exemples où le besoin est souvent fort (marges serrées, stock, équipe,
+            trésorerie tendue), pas une liste limitative.
+          </p>
+          <p style={{ fontSize: 12.5, fontWeight: 800, color: C.mid, marginBottom: 4 }}>Quelques exemples :</p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
             {secteurs.map((s, i) => (
               <span key={i} style={{ fontSize: 13.5, fontWeight: 700, color: C.text, background: C.bg, border: `1px solid ${C.border}`, padding: "7px 14px", borderRadius: 100 }}>{s}</span>
