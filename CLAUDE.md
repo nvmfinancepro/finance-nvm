@@ -76,6 +76,8 @@ A client's dashboard should never hardcode "NVM Finance" in user-facing text, si
 
 `NVMFinance.jsx` has its own local `parseCSV`/CSV handling — `src/lib/csv.ts` (`parseCSV`, `validateRows`, `getTemplate`) is unused dead code, not the live implementation. Module types: `ventes_produits`, `autres_ventes`, `charges`, `salaires`, `catalogue`, `creances_clients`, `dettes_fournisseurs`.
 
+Clients can also import a raw bank statement (CSV or OFX) from "Importer mes données" → "Mon relevé bancaire" (`BankImport` in `NVMFinance.jsx`, parsing/categorisation in `src/lib/bank-statement.js`, all client-side). Transactions are auto-categorised (keyword rules + categories the client already validated on earlier statements), converted TTC→HT with the client's VAT rate, and saved as `ventes_produits` / `charges` / `salaires` rows tagged `source:"banque"`. "Achat de marchandises" is stored as a `ventes_produits` row with `ca_ht=0` and a negative `marge_ht` so it lowers the margin without touching revenue. A new statement only replaces bank rows inside the date range it covers (`mergeWithExisting`), so overlapping statements never double-count.
+
 ### Environment variables
 
 ```

@@ -3,6 +3,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { DndContext, useDraggable, useDroppable, useSensor, useSensors, PointerSensor } from "@dnd-kit/core";
 import { calcMonthForecast, calcAnnualForecast } from "@/lib/previsionnel";
+import { decodeBankFile, isOfx, parseOfx, parseBankCsv, csvToTransactions, categorize as bankCategorize, similarKey as bankSimilarKey, toImportGroups, mergeWithExisting as bankMerge, BANK_CATEGORIES } from "@/lib/bank-statement";
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -651,13 +652,13 @@ function AdminSidebar({ view, setView, onLogout, clientCount, alertCount, open, 
  if(role!=="CABINET") nav.push({id:"blog",icon:"",label:"Blog"},{id:"cabinets",icon:"",label:"Cabinets partenaires"});
  return <SidebarBase role={role==="CABINET"?"Espace Cabinet":"Espace Administrateur"} onLogout={onLogout} open={open} onClose={onClose}><nav style={{flex:1,padding:"10px 8px",overflowY:"auto"}}>{nav.map(item=><NavItem key={item.id} {...item} active={view===item.id} onClick={()=>{setView(item.id);onClose&&onClose();}}/>)}</nav></SidebarBase>;
 }
-function ClientSidebar({ view, setView, onLogout, clientName, alertCount, planningEnabled, congesEnabled, pointageEnabled, notesFraisEnabled, tachesEnabled, equipeTachesEnabled, stockEnabled, open, onClose, freePlan }) {
+function ClientSidebar({ view, setView, onLogout, clientName, alertCount, planningEnabled, congesEnabled, pointageEnabled, notesFraisEnabled, tachesEnabled, equipeTachesEnabled, stockEnabled, open, onClose, freePlan, canImport }) {
  // Offre gratuite : les outils de gestion restent visibles (floutés, cadenas) pour donner envie.
  if(freePlan){ planningEnabled=congesEnabled=pointageEnabled=notesFraisEnabled=tachesEnabled=equipeTachesEnabled=stockEnabled=true; }
  const sections = [
  { label:"VUE D'ENSEMBLE", items:[
  {id:"dashboard", icon:"", label:"Tableau de bord"},
- {id:"import", icon:"↑", label:"Importer mes données"},
+ ...(canImport ? [{id:"import", icon:"↑", label:"Importer mes données"}] : []),
  {id:"alertes", icon:"", label:"Mes alertes", badge:alertCount, badgeColor:C.red},
  ]},
  { label:"MON ACTIVITÉ", items:[
@@ -1373,20 +1374,263 @@ function ClientImportWelcome({ onStart }) {
  <div style={{margin:"24px 24px 0",background:C.white,border:`1.5px solid ${C.primary}`,borderRadius:18,padding:"22px 24px",display:"flex",alignItems:"center",gap:20,flexWrap:"wrap",boxShadow:"0 16px 36px rgba(0,86,83,.08)"}}>
  <div style={{flex:"1 1 320px"}}>
  <div style={{fontSize:17,fontWeight:900,color:C.text,marginBottom:6}}>Bienvenue ! Votre tableau de bord est prêt.</div>
- <div style={{fontSize:13,fontWeight:600,color:C.textMid,lineHeight:1.6}}>Il ne manque que vos chiffres. En 3 étapes : téléchargez le modèle, remplissez-le dans Excel, importez-le. Vos indicateurs s&apos;affichent tout de suite.</div>
+ <div style={{fontSize:13,fontWeight:600,color:C.textMid,lineHeight:1.6}}>Il ne manque que vos chiffres. Le plus simple : exportez votre relevé bancaire (CSV ou OFX) depuis le site de votre banque et déposez-le. Vos indicateurs s&apos;affichent tout de suite.</div>
  </div>
  <Btn onClick={onStart}>Importer mes données →</Btn>
  </div>
  );
 }
 
+// CLIENT · IMPORT DU RELEVÉ BANCAIRE (CSV / OFX)
+// Le fichier est lu dans le navigateur (src/lib/bank-statement.js) ; seules les
+// opérations retenues sont enregistrées, réparties en ventes / charges / salaires.
+const BANK_TYPE_LABELS={ventes_produits:"Mes ventes",charges:"Mes charges",salaires:"Mes salaires"};
+const fmtDateFr=(iso)=>iso?`${iso.slice(8,10)}/${iso.slice(5,7)}/${iso.slice(0,4)}`:"";
+const fmtEur=(n)=>new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(n);
+
+function BankImport({ client, onSaveImport, onDeleteImport }) {
+ const [step,setStep]=useState("upload"); // upload | map | review
+ const [fileName,setFileName]=useState("");
+ const [raw,setRaw]=useState(null); // { headers, rows, cols } pour le choix manuel des colonnes
+ const [txs,setTxs]=useState([]);
+ const [tvaVentes,setTvaVentes]=useState(20);
+ const [filter,setFilter]=useState(null);
+ const [search,setSearch]=useState("");
+ const [applySimilar,setApplySimilar]=useState(true);
+ const [shown,setShown]=useState(150);
+ const [saving,setSaving]=useState(false);
+ const [msg,setMsg]=useState(null);
+ const flash=(text,ok=true)=>{ setMsg({text,ok}); setTimeout(()=>setMsg(null),7000); };
+
+ const startReview=(list)=>{
+ if(!list.length){ flash("Aucune opération lisible dans ce fichier. Vérifiez qu'il s'agit bien d'un export CSV ou OFX de votre banque.",false); setStep("upload"); return; }
+ if(list.length>10000){ flash("Fichier trop volumineux : 10 000 opérations maximum. Exportez une période plus courte.",false); setStep("upload"); return; }
+ setTxs(list.map((t,i)=>({...t,id:i,...categorizeTx(t)})));
+ setFilter(null); setSearch(""); setShown(150); setStep("review");
+ };
+ // Classements déjà validés par le client lors des relevés précédents (retrouvés dans
+ // les opérations bancaires enregistrées) : ils priment sur les règles automatiques.
+ const learned=(()=>{
+ const m={};
+ (client.imports||[]).forEach(imp=>(imp.rows||[]).forEach(r=>{
+ if(r.source!=="banque"||!r.libelle) return;
+ let cat=null;
+ if(imp.type==="ventes_produits") cat=parseFloat(r.ca_ht||0)!==0?"vente":"achat";
+ else if(imp.type==="charges") cat=r.type==="fixe"?"charge_fixe":"charge_variable";
+ else if(imp.type==="salaires") cat=parseFloat(r.salaire_brut||0)>0?"salaire":"cotisation";
+ const key=bankSimilarKey(r.libelle);
+ if(cat&&key) m[key]=cat;
+ }));
+ return m;
+ })();
+ const categorizeTx=(t)=>{
+ const r=bankCategorize(t);
+ const prev=learned[bankSimilarKey(t.libelle)];
+ // Un ancien classement n'est repris que s'il va dans le même sens (encaissement / dépense).
+ const sameSide=prev&&((prev==="vente")===(t.montant>0));
+ return {cat:sameSide?prev:r.cat,tva:r.tva};
+ };
+
+ const handleFile=(e)=>{
+ const file=e.target.files?.[0]; if(!file) return;
+ e.target.value="";
+ setFileName(file.name);
+ const reader=new FileReader();
+ reader.onload=(ev)=>{
+ const text=decodeBankFile(ev.target.result);
+ if(isOfx(text)) return startReview(parseOfx(text));
+ const parsed=parseBankCsv(text);
+ if(parsed.cols) return startReview(csvToTransactions(parsed.rows,parsed.cols));
+ if(!parsed.headers.length){ flash("Fichier illisible. Exportez votre relevé au format CSV ou OFX depuis le site de votre banque.",false); return; }
+ setRaw({...parsed,cols:{date:-1,label:-1,amount:-1,debit:-1,credit:-1}});
+ setStep("map");
+ };
+ reader.readAsArrayBuffer(file);
+ };
+
+ const changeCat=(tx,cat)=>{
+ const key=bankSimilarKey(tx.libelle);
+ const ids=new Set([tx.id]);
+ if(applySimilar&&key) txs.forEach(t=>{ if(Math.sign(t.montant)===Math.sign(tx.montant)&&bankSimilarKey(t.libelle)===key) ids.add(t.id); });
+ setTxs(prev=>prev.map(t=>ids.has(t.id)?{...t,cat}:t));
+ const n=ids.size-1;
+ if(n>0) flash(`Appliqué aussi à ${n} opération${n>1?"s":""} similaire${n>1?"s":""}.`);
+ };
+
+ // ── Récapitulatif
+ const dates=txs.map(t=>t.date).sort();
+ const rangeStart=dates[0], rangeEnd=dates[dates.length-1];
+ const counts=Object.fromEntries(BANK_CATEGORIES.map(c=>[c.id,txs.filter(t=>t.cat===c.id).length]));
+ const months=[...new Set(txs.map(t=>t.date.slice(0,7)))].sort();
+ const sumBy=(mois,cats)=>txs.filter(t=>t.date.startsWith(mois)&&cats.includes(t.cat)).reduce((s,t)=>s+Math.abs(t.montant),0);
+ const lastDay=(mois)=>{ const [y,m]=mois.split("-").map(Number); return new Date(y,m,0).getDate(); };
+ const partial=months.filter(m=>(m===months[0]&&rangeStart&&+rangeStart.slice(8)>3)||(m===months[months.length-1]&&rangeEnd&&+rangeEnd.slice(8)<lastDay(m)-3));
+ const groups=step==="review"?toImportGroups(txs,tvaVentes):[];
+ const replacedManual=groups.filter(g=>(client.imports||[]).some(i=>i.type===g.type&&i.mois===g.mois&&(i.rows||[]).some(r=>r.source!=="banque")));
+ const visible=txs.filter(t=>(!filter||t.cat===filter)&&(!search||t.libelle.toLowerCase().includes(search.toLowerCase())));
+
+ const handleSave=async()=>{
+ setSaving(true);
+ const failed=[];
+ const touched=new Set();
+ for(const g of groups){
+ touched.add(`${g.type}|${g.mois}`);
+ const existing=(client.imports||[]).find(i=>i.type===g.type&&i.mois===g.mois);
+ const rows=bankMerge(existing?.rows,g.rows,rangeStart,rangeEnd);
+ const ok=await onSaveImport({type:g.type,label:BANK_TYPE_LABELS[g.type],mois:g.mois,rows,count:rows.length,importedAt:new Date().toLocaleDateString("fr-FR")});
+ if(!ok) failed.push(g.mois);
+ }
+ // Opérations d'un ancien relevé, dans la période couverte, désormais exclues ou reclassées.
+ for(const imp of (client.imports||[])){
+ if(touched.has(`${imp.type}|${imp.mois}`)||!BANK_TYPE_LABELS[imp.type]) continue;
+ if(imp.mois<rangeStart.slice(0,7)||imp.mois>rangeEnd.slice(0,7)) continue;
+ if(!(imp.rows||[]).some(r=>r.source==="banque")) continue;
+ const rows=bankMerge(imp.rows,[],rangeStart,rangeEnd);
+ if(rows.length) { const ok=await onSaveImport({type:imp.type,label:imp.label,mois:imp.mois,rows,count:rows.length,importedAt:imp.importedAt}); if(!ok) failed.push(imp.mois); }
+ else if(!(await onDeleteImport(imp.id))) failed.push(imp.mois);
+ }
+ setSaving(false);
+ if(failed.length){ flash(`L'import a échoué pour : ${[...new Set(failed)].join(", ")}. Réessayez, ou contactez votre conseiller si le problème continue.`,false); return; }
+ const kept=txs.filter(t=>t.cat!=="exclu").length;
+ flash(`Relevé importé : ${kept} opération${kept>1?"s":""} sur ${months.length} mois. Vos indicateurs sont à jour.`);
+ setStep("upload"); setTxs([]); setRaw(null);
+ };
+
+ const sel={padding:"7px 10px",border:`1.5px solid ${C.border}`,borderRadius:8,fontSize:12.5,fontWeight:700,color:C.text,fontFamily:"inherit",background:"white"};
+
+ // ── Étape : choix manuel des colonnes
+ if(step==="map"&&raw){
+ const c=raw.cols, set=(k,v)=>setRaw(r=>({...r,cols:{...r.cols,[k]:Number(v)}}));
+ const ready=c.date>-1&&c.label>-1&&(c.amount>-1||(c.debit>-1&&c.credit>-1));
+ const colSelect=(k,label,optional)=>(
+ <label style={{display:"flex",flexDirection:"column",gap:4,fontSize:12,fontWeight:800,color:C.textMid}}>{label}
+ <select value={c[k]} onChange={e=>set(k,e.target.value)} style={sel}>
+ <option value={-1}>{optional?"— aucune —":"Choisir…"}</option>
+ {raw.headers.map((h,i)=><option key={i} value={i}>{h||`Colonne ${i+1}`}</option>)}
+ </select>
+ </label>
+ );
+ return (
+ <Card><div style={{padding:"22px 24px",display:"flex",flexDirection:"column",gap:16}}>
+ <div style={{fontSize:15,fontWeight:900,color:C.text}}>Indiquez les colonnes de votre relevé</div>
+ <div style={{fontSize:12.5,color:C.textMid}}>Nous n&apos;avons pas reconnu automatiquement le format de « {fileName} ». Choisissez la colonne correspondant à chaque information.</div>
+ <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:12}}>
+ {colSelect("date","Date")}{colSelect("label","Libellé")}{colSelect("amount","Montant (si une seule colonne)",true)}{colSelect("debit","Débit",true)}{colSelect("credit","Crédit",true)}
+ </div>
+ <div style={{overflowX:"auto",border:`1px solid ${C.borderLight}`,borderRadius:10}}>
+ <table style={{borderCollapse:"collapse",width:"100%"}}><tbody>
+ {[raw.headers,...raw.rows.slice(0,4)].map((r,i)=><tr key={i} style={{background:i===0?C.bg:"white"}}>{r.map((v,j)=><td key={j} style={{padding:"6px 10px",fontSize:11.5,fontWeight:i===0?800:500,color:C.text,whiteSpace:"nowrap",borderBottom:`1px solid ${C.borderLight}`}}>{v}</td>)}</tr>)}
+ </tbody></table>
+ </div>
+ <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+ <Btn variant="ghost" onClick={()=>{setStep("upload");setRaw(null);}}>Annuler</Btn>
+ <Btn disabled={!ready} onClick={()=>startReview(csvToTransactions(raw.rows,raw.cols))}>Continuer</Btn>
+ </div>
+ </div></Card>
+ );
+ }
+
+ // ── Étape : vérification et classement
+ if(step==="review") return (
+ <div style={{display:"flex",flexDirection:"column",gap:16}}>
+ <Card><div style={{padding:"20px 22px",display:"flex",flexDirection:"column",gap:14}}>
+ <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
+ <div>
+ <div style={{fontSize:15,fontWeight:900,color:C.text}}>{txs.length} opérations lues · du {fmtDateFr(rangeStart)} au {fmtDateFr(rangeEnd)}</div>
+ <div style={{fontSize:12.5,color:C.textMid,marginTop:3}}>Vérifiez le classement proposé, corrigez si besoin, puis importez. Les montants sont convertis en hors taxes.</div>
+ </div>
+ <label style={{display:"flex",alignItems:"center",gap:8,fontSize:12.5,fontWeight:800,color:C.text}}>TVA sur vos ventes :
+ <select value={tvaVentes} onChange={e=>setTvaVentes(Number(e.target.value))} style={sel}>
+ <option value={20}>20 %</option><option value={10}>10 %</option><option value={5.5}>5,5 %</option><option value={0}>Pas de TVA (franchise)</option>
+ </select>
+ </label>
+ </div>
+ <div style={{overflowX:"auto"}}>
+ <table style={{borderCollapse:"collapse",width:"100%",minWidth:560}}>
+ <thead><tr>{["Mois","Ventes","Achats","Charges","Salaires","Non comptées"].map(h=><th key={h} style={{textAlign:h==="Mois"?"left":"right",padding:"7px 10px",fontSize:10.5,fontWeight:800,color:C.textMid,textTransform:"uppercase",letterSpacing:"0.05em",background:C.bg}}>{h}</th>)}</tr></thead>
+ <tbody>{months.map(m=>(
+ <tr key={m} style={{borderBottom:`1px solid ${C.borderLight}`}}>
+ <td style={{padding:"7px 10px",fontSize:12.5,fontWeight:800,color:C.text}}>{MONTHS[+m.slice(5)-1]} {m.slice(0,4)}{partial.includes(m)&&<span style={{fontSize:10.5,fontWeight:700,color:C.orange}}> · incomplet</span>}</td>
+ {[["vente"],["achat"],["charge_fixe","charge_variable"],["salaire","cotisation"],["exclu"]].map((cs,i)=><td key={i} style={{padding:"7px 10px",fontSize:12.5,textAlign:"right",color:i===0?C.green:i===4?C.textLight:C.text,fontWeight:600}}>{fmtEur(sumBy(m,cs))}</td>)}
+ </tr>
+ ))}</tbody>
+ </table>
+ </div>
+ {partial.length>0&&<div style={{fontSize:11.5,color:C.orange,fontWeight:700}}>Les mois incomplets seront complétés lors de votre prochain import de relevé, sans doublon.</div>}
+ {replacedManual.length>0&&<div style={{fontSize:11.5,color:C.orange,fontWeight:700}}>Ce relevé remplacera vos imports manuels de : {replacedManual.map(g=>`${BANK_TYPE_LABELS[g.type].replace("Mes ","")} ${g.mois}`).join(", ")}.</div>}
+ </div></Card>
+
+ <Card><div style={{padding:"16px 18px",display:"flex",flexDirection:"column",gap:12}}>
+ <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+ <button onClick={()=>{setFilter(null);setShown(150);}} style={{padding:"6px 12px",borderRadius:100,border:`1.5px solid ${!filter?C.primary:C.border}`,background:!filter?C.primary:"white",color:!filter?"white":C.textMid,fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>Toutes · {txs.length}</button>
+ {BANK_CATEGORIES.filter(c=>counts[c.id]>0).map(c=>(
+ <button key={c.id} onClick={()=>{setFilter(c.id);setShown(150);}} style={{padding:"6px 12px",borderRadius:100,border:`1.5px solid ${filter===c.id?C.primary:C.border}`,background:filter===c.id?C.primary:"white",color:filter===c.id?"white":C.textMid,fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>{c.short} · {counts[c.id]}</button>
+ ))}
+ <input value={search} onChange={e=>{setSearch(e.target.value);setShown(150);}} placeholder="Rechercher un libellé…" style={{...sel,marginLeft:"auto",minWidth:180,fontWeight:600}}/>
+ </div>
+ <label style={{display:"flex",alignItems:"center",gap:7,fontSize:12,fontWeight:700,color:C.textMid,cursor:"pointer"}}>
+ <input type="checkbox" checked={applySimilar} onChange={e=>setApplySimilar(e.target.checked)}/> Appliquer une correction aux opérations similaires (même fournisseur, même client)
+ </label>
+ <div style={{overflowX:"auto"}}>
+ <table style={{borderCollapse:"collapse",width:"100%",minWidth:560}}>
+ <tbody>{visible.slice(0,shown).map(t=>(
+ <tr key={t.id} style={{borderBottom:`1px solid ${C.borderLight}`}}>
+ <td style={{padding:"7px 8px",fontSize:12,color:C.textLight,whiteSpace:"nowrap"}}>{fmtDateFr(t.date)}</td>
+ <td style={{padding:"7px 8px",fontSize:12.5,color:C.text,fontWeight:600}}>{t.libelle}</td>
+ <td style={{padding:"7px 8px",fontSize:12.5,fontWeight:800,textAlign:"right",whiteSpace:"nowrap",color:t.montant>0?C.green:C.text}}>{t.montant>0?"+":""}{new Intl.NumberFormat("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2}).format(t.montant)} €</td>
+ <td style={{padding:"5px 8px",textAlign:"right"}}>
+ <select value={t.cat} onChange={e=>changeCat(t,e.target.value)} style={{...sel,fontSize:12,padding:"5px 8px",color:t.cat==="exclu"?C.textLight:C.text}}>
+ {BANK_CATEGORIES.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}
+ </select>
+ </td>
+ </tr>
+ ))}</tbody>
+ </table>
+ </div>
+ {visible.length>shown&&<Btn small variant="ghost" onClick={()=>setShown(s=>s+300)} style={{alignSelf:"center"}}>Afficher plus ({visible.length-shown} restantes)</Btn>}
+ {visible.length===0&&<div style={{fontSize:12.5,color:C.textLight,textAlign:"center",padding:12}}>Aucune opération ne correspond.</div>}
+ </div></Card>
+
+ {msg&&<div style={{fontSize:13,fontWeight:800,color:msg.ok?C.green:C.red}}>{msg.text}</div>}
+ <div style={{display:"flex",gap:10,justifyContent:"flex-end",flexWrap:"wrap"}}>
+ <Btn variant="ghost" onClick={()=>{setStep("upload");setTxs([]);}}>Annuler</Btn>
+ <Btn variant="success" disabled={saving} onClick={handleSave}>{saving?"Import en cours…":`Importer ${txs.filter(t=>t.cat!=="exclu").length} opérations sur ${months.length} mois`}</Btn>
+ </div>
+ </div>
+ );
+
+ // ── Étape : dépôt du fichier
+ return (
+ <Card><div style={{padding:"22px 24px",display:"flex",flexDirection:"column",gap:18}}>
+ <div>
+ <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:6}}>
+ <div style={{fontSize:15,fontWeight:900,color:C.text}}>Votre relevé bancaire, en 2 minutes</div>
+ <span style={{fontSize:10,fontWeight:900,color:C.green,background:C.greenBg,borderRadius:100,padding:"3px 9px"}}>LE PLUS RAPIDE</span>
+ </div>
+ <div style={{fontSize:12.5,color:C.textMid,lineHeight:1.65}}>Sur le site de votre banque, exportez les opérations de votre compte professionnel au format <strong>CSV</strong> (ou <strong>OFX</strong>), sur la période souhaitée, jusqu&apos;à 12 mois. Déposez le fichier ici : vos opérations sont classées automatiquement en ventes, charges et salaires, et vous vérifiez avant de valider.</div>
+ </div>
+ <label style={{border:`2px dashed ${C.border}`,borderRadius:12,padding:"28px 20px",textAlign:"center",background:C.bg,cursor:"pointer",display:"block"}}>
+ <div style={{fontSize:14,fontWeight:800,color:C.primary,marginBottom:4}}>Choisir mon relevé (CSV ou OFX)</div>
+ <div style={{fontSize:11.5,color:C.textLight}}>Le fichier est lu sur votre ordinateur : seules les opérations retenues sont enregistrées dans votre espace.</div>
+ <input type="file" accept=".csv,.txt,.ofx,.qfx" onChange={handleFile} style={{display:"none"}}/>
+ </label>
+ <div style={{display:"flex",gap:10,alignItems:"flex-start",background:C.bg,borderRadius:10,padding:"10px 12px"}}>
+ <span style={{fontSize:14,lineHeight:1.2}}>ℹ︎</span>
+ <span style={{fontSize:12,fontWeight:600,color:C.textMid,lineHeight:1.6}}>Chiffres <strong>estimés</strong> à partir de vos opérations bancaires : le hors taxes est calculé avec votre taux de TVA, et les salaires sont approchés. <strong>Votre conseiller peut les affiner</strong> (montants HT exacts, détail des salaires, intérêts d&apos;emprunt).</span>
+ </div>
+ <div style={{fontSize:11.5,color:C.textLight,lineHeight:1.6}}>TVA, impôts, remboursements d&apos;emprunt et virements entre vos comptes ne sont pas comptés comme des charges. Importer un nouveau relevé met à jour la période qu&apos;il couvre, sans créer de doublon.</div>
+ {msg&&<div style={{fontSize:13,fontWeight:800,color:msg.ok?C.green:C.red}}>{msg.text}</div>}
+ </div></Card>
+ );
+}
+
 function ClientImport({ client, onSaveImport, onDeleteImport }) {
- const [mod,setMod]=useState("ventes_produits");
+ const [mod,setMod]=useState("banque");
  const [moisImport,setMoisImport]=useState(prevMonthKey());
  const [csvPreview,setCsvPreview]=useState(null);
  const [msg,setMsg]=useState(null);
  const [saving,setSaving]=useState(false);
- const mdl=CLIENT_IMPORT_MODULES.find(m=>m.id===mod);
+ const mdl=CLIENT_IMPORT_MODULES.find(m=>m.id===mod)||CLIENT_IMPORT_MODULES[0];
  const imports=(client.imports||[]).filter(i=>i.type===mod).sort((a,b)=>a.mois>b.mois?-1:1);
 
  const flash=(text,ok=true)=>{ setMsg({text,ok}); setTimeout(()=>setMsg(null),6000); };
@@ -1449,21 +1693,40 @@ function ClientImport({ client, onSaveImport, onDeleteImport }) {
  );
 
  if(!onSaveImport) return (
- <div style={{padding:24}}><Card><div style={{padding:20,fontSize:13,color:C.textMid}}>Aperçu admin : utilisez la saisie admin pour importer les données de ce client.</div></Card></div>
+ <div style={{padding:24}}><Card><div style={{padding:20,fontSize:13,color:C.textMid,lineHeight:1.6}}>Vos données sont importées et suivies par votre conseiller. Pour lui transmettre un relevé ou un document, contactez-le directement.</div></Card></div>
+ );
+
+ const tabs=(
+ <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+ {[{id:"banque",label:"Mon relevé bancaire"},...CLIENT_IMPORT_MODULES].map(m=>(
+ <button key={m.id} onClick={()=>setMod(m.id)}
+ style={{padding:"8px 16px",borderRadius:100,border:`1.5px solid ${mod===m.id?C.primary:C.border}`,background:mod===m.id?C.primary:"white",color:mod===m.id?"white":C.textMid,fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
+ {m.label}{m.id==="banque"&&<span style={{marginLeft:6,fontSize:10,fontWeight:900,color:mod===m.id?"#bbf7d0":C.green}}>LE PLUS RAPIDE</span>}
+ </button>
+ ))}
+ </div>
+ );
+ // Les modèles : présentés comme l'option précise, en complément du relevé.
+ const preciseNote=(
+ <div style={{display:"flex",alignItems:"center",gap:10,background:C.bg,border:`1px solid ${C.border}`,borderRadius:12,padding:"10px 14px"}}>
+ <span style={{fontSize:10,fontWeight:900,color:C.primary,background:"white",border:`1px solid ${C.border}`,borderRadius:100,padding:"3px 9px",whiteSpace:"nowrap"}}>LE PLUS PRÉCIS</span>
+ <span style={{fontSize:12.5,fontWeight:600,color:C.textMid}}>Nos modèles Excel donnent des montants HT exacts et le détail de vos salaires. Plus long à remplir que le relevé bancaire.</span>
+ </div>
+ );
+
+ if(mod==="banque") return (
+ <div style={{padding:24,display:"flex",flexDirection:"column",gap:20}} className="fade-up">
+ {tabs}
+ <BankImport client={client} onSaveImport={onSaveImport} onDeleteImport={onDeleteImport}/>
+ </div>
  );
 
  return (
  <div style={{padding:24,display:"flex",flexDirection:"column",gap:20}} className="fade-up">
  {csvPreview&&<CSVPreviewModal file={csvPreview.file} rows={csvPreview.rows} headers={csvPreview.headers} errors={csvPreview.errors} mois={csvPreview.mois} groups={csvPreview.groups} undated={csvPreview.undated} onConfirm={saving?()=>{}:handleConfirm} onCancel={()=>setCsvPreview(null)}/>}
 
- <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
- {CLIENT_IMPORT_MODULES.map(m=>(
- <button key={m.id} onClick={()=>setMod(m.id)}
- style={{padding:"8px 16px",borderRadius:100,border:`1.5px solid ${mod===m.id?C.primary:C.border}`,background:mod===m.id?C.primary:"white",color:mod===m.id?"white":C.textMid,fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
- {m.label}
- </button>
- ))}
- </div>
+ {tabs}
+ {preciseNote}
 
  <Card>
  <div style={{padding:"22px 24px",display:"flex",flexDirection:"column",gap:22}}>
@@ -9042,7 +9305,7 @@ export default function App() {
     return (
       <div style={{display:"flex",height:"100vh",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif"}}>
         <GlobalCSS/>
-        <ClientSidebar view={view} setView={setView} onLogout={()=>setPreviewClient(null)} clientName={live.name} alertCount={calcAlertes(live,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length} planningEnabled={live.planningEnabled} congesEnabled={live.congesEnabled} pointageEnabled={live.pointageEnabled} notesFraisEnabled={live.notesFraisEnabled} tachesEnabled={live.tachesEnabled} equipeTachesEnabled={live.equipeTachesEnabled} stockEnabled={live.stockEnabled} freePlan={live?.plan==="dashboard"} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
+        <ClientSidebar view={view} setView={setView} onLogout={()=>setPreviewClient(null)} clientName={live.name} alertCount={calcAlertes(live,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length} planningEnabled={live.planningEnabled} congesEnabled={live.congesEnabled} pointageEnabled={live.pointageEnabled} notesFraisEnabled={live.notesFraisEnabled} tachesEnabled={live.tachesEnabled} equipeTachesEnabled={live.equipeTachesEnabled} stockEnabled={live.stockEnabled} freePlan={live?.plan==="dashboard"} canImport={true} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <TopBar
             title={`Aperçu client · ${live.name}`}
@@ -9056,7 +9319,7 @@ export default function App() {
             }
           />
           <div style={{flex:1,overflowY:"auto",background:"linear-gradient(155deg,#f0faf8 0%,#ffffff 45%,#ecfdf5 100%)"}}>
-            <ClientSpace client={{...live,advisorLabel:live.cabinet_id?(cabinets.find(cab=>cab.id===live.cabinet_id)?.name||"votre cabinet comptable"):"NVM Finance"}} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear} isAdminPreview={true} setView={setView}/>
+            <ClientSpace client={{...live,advisorLabel:live.cabinet_id?(cabinets.find(cab=>cab.id===live.cabinet_id)?.name||"votre cabinet comptable"):"NVM Finance"}} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear} isAdminPreview={true} onSaveImport={imp=>saveClientImport(live.id,imp)} onDeleteImport={id=>deleteClientImport(live.id,id)} setView={setView}/>
           </div>
         </div>
       </div>
@@ -9134,11 +9397,11 @@ export default function App() {
         <GlobalCSS/>
         {/* Popup première connexion · priorité absolue */}
         {user.firstLogin&&<FirstLoginModal user={user} onComplete={(u)=>setUser(u)}/>}
-        <ClientSidebar view={view} setView={setView} onLogout={handleLogout} clientName={client?.name||user.name} alertCount={client?calcAlertes(client,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length:0} planningEnabled={client?.planningEnabled} congesEnabled={client?.congesEnabled} pointageEnabled={client?.pointageEnabled} notesFraisEnabled={client?.notesFraisEnabled} tachesEnabled={client?.tachesEnabled} equipeTachesEnabled={client?.equipeTachesEnabled} stockEnabled={client?.stockEnabled} freePlan={client?.plan==="dashboard"} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
+        <ClientSidebar view={view} setView={setView} onLogout={handleLogout} clientName={client?.name||user.name} alertCount={client?calcAlertes(client,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length:0} planningEnabled={client?.planningEnabled} congesEnabled={client?.congesEnabled} pointageEnabled={client?.pointageEnabled} notesFraisEnabled={client?.notesFraisEnabled} tachesEnabled={client?.tachesEnabled} equipeTachesEnabled={client?.equipeTachesEnabled} stockEnabled={client?.stockEnabled} freePlan={client?.plan==="dashboard"} canImport={client?.plan==="dashboard"} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <TopBar title={CLIENT_TITLES[view]||"Dashboard"} user={user} onMenuToggle={()=>setMenuOpen(o=>!o)}/>
           <div style={{flex:1,overflowY:"auto",background:"linear-gradient(155deg,#f0faf8 0%,#ffffff 45%,#ecfdf5 100%)"}}>
-            {client&&<ClientSpace client={{...client,advisorLabel:client.cabinet_id?(cabinets.find(cab=>cab.id===client.cabinet_id)?.name||"votre cabinet comptable"):"NVM Finance"}} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear} setView={setView} onSaveImport={imp=>saveClientImport(client.id,imp)} onDeleteImport={id=>deleteClientImport(client.id,id)}/>}
+            {client&&<ClientSpace client={{...client,advisorLabel:client.cabinet_id?(cabinets.find(cab=>cab.id===client.cabinet_id)?.name||"votre cabinet comptable"):"NVM Finance"}} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear} setView={setView} {...(client.plan==="dashboard"?{onSaveImport:imp=>saveClientImport(client.id,imp),onDeleteImport:id=>deleteClientImport(client.id,id)}:{})}/>}
           </div>
         </div>
       </div>

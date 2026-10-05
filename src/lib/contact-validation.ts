@@ -45,6 +45,40 @@ const DISPOSABLE = new Set([
 export type EmailCheck = { ok: true } | { ok: false; error: string; suggestion?: string };
 
 export async function checkEmail(email: string): Promise<EmailCheck> {
+  const first = await checkEmailOnce(email);
+  // Une erreur réseau passagère laisse passer (on ne bloque jamais un vrai client) :
+  // on retente une fois avant, pour ne pas laisser passer un domaine inexistant par malchance.
+  if (first.ok && first.uncertain) return checkEmailOnce(email);
+  return first;
+}
+
+// Interrogation DNS via HTTPS (Cloudflare) : fiable sur tous les hébergeurs, alors
+// que le résolveur système peut ne jamais répondre pour un domaine inexistant.
+// Seul le nom de domaine est envoyé. "unknown" = pas de réponse exploitable.
+async function domainMailStatus(domain: string): Promise<"mail" | "none" | "nxdomain" | "unknown"> {
+  const query = async (type: string) => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 3000);
+    try {
+      const res = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=${type}`, {
+        headers: { accept: "application/dns-json" }, signal: ctrl.signal, cache: "no-store",
+      });
+      if (!res.ok) return null;
+      return (await res.json()) as { Status: number; Answer?: { type: number; data: string }[] };
+    } catch { return null; } finally { clearTimeout(timer); }
+  };
+  const mx = await query("MX");
+  if (!mx) return "unknown";
+  if (mx.Status === 3) return "nxdomain";
+  if (mx.Status !== 0) return "unknown";
+  const records = (mx.Answer || []).filter(r => r.type === 15);
+  if (records.length) return records.every(r => /^\d+\s+\.?$/.test(r.data.trim())) ? "none" : "mail";
+  const a = await query("A");
+  if (!a || a.Status !== 0) return a?.Status === 3 ? "nxdomain" : "unknown";
+  return (a.Answer || []).some(r => r.type === 1) ? "mail" : "none";
+}
+
+async function checkEmailOnce(email: string): Promise<EmailCheck & { uncertain?: boolean }> {
   const domain = email.split("@")[1] || "";
   const fix = DOMAIN_TYPOS[domain];
   if (fix) {
@@ -55,10 +89,15 @@ export async function checkEmail(email: string): Promise<EmailCheck> {
     return { ok: false, error: "Les adresses email temporaires ne sont pas acceptées. Utilisez votre email professionnel ou personnel." };
   }
   // Le domaine doit pouvoir recevoir des emails (MX, ou à défaut une adresse A).
+  const status = await domainMailStatus(domain);
+  if (status === "mail") return { ok: true };
+  if (status === "nxdomain") return { ok: false, error: "Cette adresse email ne semble pas exister. Vérifiez le nom de domaine (après le @)." };
+  if (status === "none") return { ok: false, error: "Cette adresse email ne peut pas recevoir de messages. Vérifiez le nom de domaine (après le @)." };
+  // Pas de réponse : repli sur le résolveur du système.
   const timeout = new Promise<"timeout">(resolve => setTimeout(() => resolve("timeout"), 3000));
   try {
     const mx = await Promise.race([dns.resolveMx(domain), timeout]);
-    if (mx === "timeout") return { ok: true };
+    if (mx === "timeout") return { ok: true, uncertain: true };
     // « MX nul » (RFC 7505) : le domaine déclare explicitement ne recevoir aucun email.
     if (mx.length && mx.every(r => !r.exchange || r.exchange === ".")) {
       return { ok: false, error: "Cette adresse email ne peut pas recevoir de messages. Vérifiez le nom de domaine (après le @)." };
@@ -66,14 +105,15 @@ export async function checkEmail(email: string): Promise<EmailCheck> {
     if (mx.length) return { ok: true };
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
-    if (code !== "ENOTFOUND" && code !== "ENODATA") return { ok: true }; // panne DNS : on ne bloque pas
+    if (code !== "ENOTFOUND" && code !== "ENODATA") return { ok: true, uncertain: true }; // panne DNS : on ne bloque pas
   }
   try {
     const a = await Promise.race([dns.resolve4(domain), timeout]);
-    if (a === "timeout" || a.length) return { ok: true };
+    if (a === "timeout") return { ok: true, uncertain: true };
+    if (a.length) return { ok: true };
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
-    if (code !== "ENOTFOUND" && code !== "ENODATA") return { ok: true };
+    if (code !== "ENOTFOUND" && code !== "ENODATA") return { ok: true, uncertain: true };
   }
   return { ok: false, error: "Cette adresse email ne semble pas exister. Vérifiez le nom de domaine (après le @)." };
 }
