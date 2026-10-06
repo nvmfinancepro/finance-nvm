@@ -145,7 +145,10 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  await notifyWhatsApp(`Nouveau tableau de bord gratuit\nEntreprise : ${company}\nTél : ${phone}\nEmail : ${email}\nÀ appeler pour l'aider à démarrer.`);
+  // Seule la page d'atterrissage des pubs Meta envoie source="meta" : valeur fixe,
+  // jamais recopiée telle quelle dans le message.
+  const via = body.source === "meta" ? " (pub Meta)" : "";
+  await notifyWhatsApp(`Nouveau tableau de bord gratuit${via}\nEntreprise : ${company}\nTél : ${phone}\nEmail : ${email}\nÀ appeler pour l'aider à démarrer.`);
 
   return NextResponse.json({ ok: true });
 }
