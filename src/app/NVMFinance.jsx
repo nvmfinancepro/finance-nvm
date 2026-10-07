@@ -7,6 +7,8 @@ import { fecIndex, tresoAt, fecAlertes, hasFec, estimateIS, keyLabel, ytdKeys, s
 import Synthese, { latestDataKey } from "@/app/pilotage/synthese";
 import { CompteResultat, BilanView, TresorerieFec, TiersView, PosteView, TvaFec, ImpotFec } from "@/app/pilotage/vues";
 import { BudgetView, Comparaison, Simulations, RentabiliteProduits, EmpruntsView, InvestissementsView, TresorerieEstimee, PointsAttention } from "@/app/pilotage/vues-plus";
+import { PlanActions, PrevisionTresorerie } from "@/app/pilotage/decisions";
+import SuiviPortefeuille from "@/app/pilotage/portefeuille";
 import ImportFec from "@/app/pilotage/import-fec";
 import { monthKpis } from "@/lib/donnees";
 import { mensualiteEmprunt, mensualiteHorsAssurance, chargeEmprunts, capitalRestant, echeancesPayees, capitalRembourse, amortissements, moisAmortis, amortMensuel as amortMensuelInv, vnc as vncInv } from "@/lib/estimations";
@@ -157,6 +159,16 @@ const GlobalCSS = () => (
  .row-hover:hover{background:${C.bg}!important;}
  .inp{width:100%;padding:9px 12px;border:1.5px solid ${C.border};border-radius:7px;font-size:13px;color:${C.text};background:${C.white};transition:border .15s;}
  .inp:focus{border-color:${C.primary};}
+ @media print{
+   .saas-sidebar,.saas-topbar,.saas-backdrop,.no-print{display:none!important;}
+   .cadre-app,.cadre-colonne{display:block!important;height:auto!important;overflow:visible!important;}
+   .zone-contenu{overflow:visible!important;height:auto!important;background:white!important;}
+   .fade-up{animation:none!important;}
+   *{box-shadow:none!important;}
+   .zone-contenu>div{max-width:none!important;}
+   body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+   @page{margin:10mm;}
+ }
  `}</style>
 );
 
@@ -560,7 +572,7 @@ const ICONES = {
  bilan:"M12 3v17M5 7h14M5 7l-3 7a3 3 0 006 0L5 7zM19 7l-3 7a3 3 0 006 0l-3-7M8 20h8", creances:"M20 12H8M13 7l-5 5 5 5M4 4v16", dettes:"M4 12h12M11 7l5 5-5 5M20 4v16",
  emprunts:"M3 10l9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18", investissements:"M3 21h18M5 21V9l7-5 7 5v12M10 21v-5h4v5",
  tva:"M19 5L5 19M6.5 9a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM17.5 20a2.5 2.5 0 100-5 2.5 2.5 0 000 5z", is:"M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6",
- comparaison:"M7 7h13M16 3l4 4-4 4M17 17H4M8 13l-4 4 4 4", previsionnel:"M3 3v18h18M7 15l4-5 3 3 4-6", roi:"M6 3h12v18H6zM9 7h6M9 11h.01M12 11h.01M15 11h.01M9 15h.01M12 15h.01M15 15h.01",
+ comparaison:"M7 7h13M16 3l4 4-4 4M17 17H4M8 13l-4 4 4 4", actions:"M10 6h10M10 12h10M10 18h10M3.5 6l1.2 1.2L7 5M3.5 12l1.2 1.2L7 11M3.5 18l1.2 1.2L7 17", prevision:"M3 3v18h18M7 14l3-3 3 2 5-6M15 7h3v3", previsionnel:"M3 3v18h18M7 15l4-5 3 3 4-6", roi:"M6 3h12v18H6zM9 7h6M9 11h.01M12 11h.01M15 11h.01M9 15h.01M12 15h.01M15 15h.01",
  embauche:"M14 19v-1a4 4 0 00-8 0v1M10 11a3 3 0 100-6 3 3 0 000 6zM19 8v6M16 11h6", planning:"M4 5h16v15H4zM4 10h16M9 3v4M15 3v4",
  conges:"M12 4V2M12 22v-2M4 12H2M22 12h-2M12 17a5 5 0 100-10 5 5 0 000 10z", pointage:"M12 21a9 9 0 100-18 9 9 0 000 18zM12 7v5l3 3",
  notesfrais:"M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6", taches:"M4 4h16v16H4zM8 12l3 3 5-6", equipetaches:"M4 6h10M4 12h10M4 18h10M17 6l1.5 1.5L22 4", stock:"M3 7l9-4 9 4v10l-9 4-9-4V7zM3 7l9 4 9-4M12 11v10",
@@ -588,6 +600,7 @@ function ClientSidebar({ view, setView, onLogout, clientName, alertCount, planni
  { label:"L'ESSENTIEL", items:[
  {id:"dashboard", icon:"synthese", label:"Synthèse du mois"},
  {id:"alertes", icon:"alerte", label:"Points d'attention", badge:alertCount, badgeColor:C.red},
+ {id:"actions", icon:"actions", label:"Plan d'actions"},
  // Import : le client gratuit importe lui-même ; pour un client accompagné, seul le conseiller (aperçu) importe.
  ...(canImport ? [{id:"import", icon:"import", label:modeConseiller?"Imports (conseiller)":"Importer mes données"}] : []),
  ]},
@@ -601,6 +614,7 @@ function ClientSidebar({ view, setView, onLogout, clientName, alertCount, planni
  ]},
  { label:"TRÉSORERIE ET BILAN", items:[
  {id:"tresorerie", icon:"tresorerie", label:"Trésorerie"},
+ {id:"prevision", icon:"prevision", label:"Prévision de trésorerie"},
  {id:"bilan", icon:"bilan", label:"Bilan et BFR"},
  {id:"creances", icon:"creances", label:"Créances clients"},
  {id:"dettes", icon:"dettes", label:"Dettes fournisseurs"},
@@ -656,7 +670,7 @@ function ClientSidebar({ view, setView, onLogout, clientName, alertCount, planni
 // TOPBAR
 function TopBar({ title, user, extra, onMenuToggle }) {
  return (
- <div style={{background:C.white,borderBottom:`1px solid ${C.border}`,padding:"0 24px",height:54,display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0,position:"sticky",top:0,zIndex:10}}>
+ <div className="saas-topbar" style={{background:C.white,borderBottom:`1px solid ${C.border}`,padding:"0 24px",height:54,display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0,position:"sticky",top:0,zIndex:10}}>
  <div style={{display:"flex",alignItems:"center",gap:12}}>
    <button className="saas-topbar-hamburger" onClick={onMenuToggle} style={{display:"none",flexDirection:"column",gap:4,background:"none",border:"none",cursor:"pointer",padding:4}}>
      <span style={{display:"block",width:20,height:2,background:C.primary,borderRadius:2}}/>
@@ -803,6 +817,7 @@ function AdminClients({ clients, cabinets, onViewAsClient, onAddClient, onUpdate
    </div>
  )}
 
+ {clients.length>0&&<SuiviPortefeuille clients={clients} onOpen={onViewAsClient} kpisOf={calcMonthKpis} tresoOf={calcTresoEstimee} alertesOf={calcAlertes}/>}
  <div style={{display:"flex",justifyContent:"flex-end"}}>
  <Btn variant="success" onClick={()=>setShowAdd(!showAdd)}>+ Nouveau dossier client</Btn>
  </div>
@@ -1206,6 +1221,8 @@ const FREE_LOCKED_VIEWS={
  investissements:{title:"Investissements",desc:"Vos investissements et leurs amortissements, intégrés à votre résultat."},
  catalogue:{title:"Rentabilité par produit",desc:"Ce qui rapporte le plus, ce qui coûte trop cher : la marge produit par produit."},
  comparaison:{title:"Comparaison de périodes",desc:"Comparez deux périodes pour comprendre ce qui a changé et pourquoi."},
+ actions:{title:"Plan d'actions",desc:"Les décisions prises avec votre conseiller, suivies jusqu'au résultat, et la valeur déjà créée par l'accompagnement."},
+ prevision:{title:"Prévision de trésorerie",desc:"Votre trésorerie des 3, 6 ou 12 prochains mois, avec un scénario prudent pour anticiper un besoin de financement."},
  budget:{title:"Budget",desc:"Votre budget mois par mois, le réel comparé aux objectifs et la projection de fin d'année, construits avec votre conseiller."},
  simulations:{title:"Simulations",desc:"Mesurez l'effet d'une hausse de prix, d'une embauche ou d'un investissement avant de vous décider."},
  previsionnel:{title:"Prévisionnel",desc:"Votre prévisionnel sur 12 mois, construit et suivi avec votre conseiller."},
@@ -2146,7 +2163,7 @@ function ClientSpace(props) {
  return <ClientSpaceContent {...props}/>;
 }
 
-function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, setMoisKey, moisYear, isAdminPreview=false, setView, onSaveImport, onDeleteImport, onSaveBudget }) {
+function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, setMoisKey, moisYear, isAdminPreview=false, setView, onSaveImport, onDeleteImport, onSaveDonnees }) {
  // Toutes les vues financières lisent la même source : la comptabilité (FEC) quand elle
  // couvre le mois, sinon les imports simplifiés traduits en comptes (src/lib/donnees.js).
  const pv = { client, moisIdx, moisYear, setMoisIdx, setMoisKey };
@@ -2155,7 +2172,9 @@ function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, setMoisKey, moi
   kpisOf={(mi,yr)=>calcMonthKpis(client,mi,yr)} tresoOf={(mi,yr)=>calcTresoEstimee(client,mi,yr)} alertes={calcAlertes(client,moisIdx,moisYear)}/>;
  if (view==="dashboard") return synthese;
  if (view==="import") return <ClientImport client={client} onSaveImport={onSaveImport} onDeleteImport={onDeleteImport} conseiller={isAdminPreview&&client.plan!=="dashboard"}/>;
- if (view==="alertes") return <PointsAttention {...pv} alertes={calcAlertes(client,moisIdx,moisYear)}/>;
+ if (view==="alertes") return <PointsAttention {...pv} alertes={calcAlertes(client,moisIdx,moisYear)} onSaveDonnees={onSaveDonnees} setView={setView}/>;
+ if (view==="actions") return <PlanActions client={client} onSaveDonnees={onSaveDonnees}/>;
+ if (view==="prevision") return <PrevisionTresorerie {...pv} isAdminPreview={isAdminPreview} onSaveDonnees={onSaveDonnees} tresoOf={(mi,yr)=>calcTresoEstimee(client,mi,yr)}/>;
  if (view==="resultat") return <CompteResultat {...pv}/>;
  if (view==="ventes"||view==="achats"||view==="charges"||view==="salaires") return <PosteView {...pv} vue={view}/>;
  if (view==="catalogue") return <RentabiliteProduits {...pv}/>;
@@ -2177,7 +2196,7 @@ function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, setMoisKey, moi
  if (view==="tva") return <TvaFec {...pv}/>;
  if (view==="is") return <ImpotFec {...pv}/>;
  if (view==="comparaison") return <Comparaison {...pv}/>;
- if (view==="budget"||view==="previsionnel") return <BudgetView {...pv} onSaveBudget={onSaveBudget}/>;
+ if (view==="budget"||view==="previsionnel") return <BudgetView {...pv} onSaveDonnees={onSaveDonnees}/>;
  if (view==="simulations"||view==="roi"||view==="embauche") {
   const km = calcMonthKpis(client,moisIdx,moisYear);
   return <Simulations {...pv} roi={<ROICalculator/>} embauche={<SimulateurEmbauche tauxMargeDefaut={km.ca>0?Math.round(km.marge/km.ca*100):""}/>}/>;
@@ -5376,7 +5395,7 @@ export default function App() {
 
   const visibleClients = previewCabinet ? clients.filter(c=>c.cabinet_id===previewCabinet.id) : clients;
   const ADMIN_TITLES={clients:`Portefeuille clients (${visibleClients.length})`,acces:"Accès & mots de passe clients",saisie:"Imports : comptabilité (FEC) et fichiers CSV",financier:"Donnees financieres",alertes:"Centre d'alertes",rapports:"Rapports IA",blog:"Blog",cabinets:"Cabinets partenaires"};
-  const CLIENT_TITLES={dashboard:"Synthèse du mois",import:"Importer mes données",alertes:"Points d'attention",ventes:"Ventes",achats:"Achats et marge",charges:"Charges",salaires:"Masse salariale",creances:"Créances clients",dettes:"Dettes fournisseurs",resultat:"Compte de résultat",bilan:"Bilan et BFR",tva:"TVA",tresorerie:"Trésorerie",emprunts:"Emprunts",investissements:"Investissements",roi:"Simulations",embauche:"Simulations",simulations:"Simulations",budget:"Budget",is:"Impôt sur les sociétés",catalogue:"Rentabilité par produit", comparaison:"Comparer deux périodes", previsionnel:"Budget", planning:"Planning & équipe", conges:"Congés & absences", notesfrais:"Notes de frais", taches:"Tâches", equipetaches:"Gestion d'équipe & Tâches", pointage:"Pointage", stock:"Mon stock"};
+  const CLIENT_TITLES={dashboard:"Synthèse du mois",import:"Importer mes données",alertes:"Points d'attention",ventes:"Ventes",achats:"Achats et marge",charges:"Charges",salaires:"Masse salariale",creances:"Créances clients",dettes:"Dettes fournisseurs",resultat:"Compte de résultat",bilan:"Bilan et BFR",tva:"TVA",tresorerie:"Trésorerie",emprunts:"Emprunts",investissements:"Investissements",roi:"Simulations",embauche:"Simulations",simulations:"Simulations",budget:"Budget",actions:"Plan d'actions",prevision:"Prévision de trésorerie",is:"Impôt sur les sociétés",catalogue:"Rentabilité par produit", comparaison:"Comparer deux périodes", previsionnel:"Budget", planning:"Planning & équipe", conges:"Congés & absences", notesfrais:"Notes de frais", taches:"Tâches", equipetaches:"Gestion d'équipe & Tâches", pointage:"Pointage", stock:"Mon stock"};
 
   // Modal credentials nouveau client (admin)
   const CredentialsModal = newClientCredentials ? (
@@ -5406,10 +5425,10 @@ export default function App() {
   if (previewClient) {
     const live=clients.find(c=>c.id===previewClient.id)||previewClient;
     return (
-      <div style={{display:"flex",height:"100vh",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif"}}>
+      <div className="cadre-app" style={{display:"flex",height:"100vh",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif"}}>
         <GlobalCSS/>
         <ClientSidebar view={view} setView={setView} onLogout={()=>setPreviewClient(null)} clientName={live.name} alertCount={calcAlertes(live,moisIdx,moisYear).filter(a=>(a.level==="red"||a.level==="orange")&&!a.isFiscal).length} planningEnabled={live.planningEnabled} congesEnabled={live.congesEnabled} pointageEnabled={live.pointageEnabled} notesFraisEnabled={live.notesFraisEnabled} tachesEnabled={live.tachesEnabled} equipeTachesEnabled={live.equipeTachesEnabled} stockEnabled={live.stockEnabled} freePlan={live?.plan==="dashboard"} canImport={true} modeConseiller={live.plan!=="dashboard"} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
-        <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        <div className="cadre-colonne" style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <TopBar
             title={`Aperçu client · ${live.name}`}
             user={{name:"Admin",role:"ADMIN"}}
@@ -5421,8 +5440,8 @@ export default function App() {
               </div>
             }
           />
-          <div style={{flex:1,overflowY:"auto",background:"linear-gradient(155deg,#f0faf8 0%,#ffffff 45%,#ecfdf5 100%)"}}>
-            <ClientSpace client={{...live,advisorLabel:live.cabinet_id?(cabinets.find(cab=>cab.id===live.cabinet_id)?.name||"votre cabinet comptable"):"NVM Finance"}} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear} isAdminPreview={true} setMoisKey={setMoisKey} onSaveBudget={imp=>saveClientImport(live.id,imp)} onSaveImport={imp=>saveClientImport(live.id,imp)} onDeleteImport={id=>deleteClientImport(live.id,id)} setView={setView}/>
+          <div className="zone-contenu" style={{flex:1,overflowY:"auto",background:"linear-gradient(155deg,#f0faf8 0%,#ffffff 45%,#ecfdf5 100%)"}}>
+            <ClientSpace client={{...live,advisorLabel:live.cabinet_id?(cabinets.find(cab=>cab.id===live.cabinet_id)?.name||"votre cabinet comptable"):"NVM Finance"}} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear} isAdminPreview={true} setMoisKey={setMoisKey} onSaveDonnees={imp=>saveClientImport(live.id,imp)} onSaveImport={imp=>saveClientImport(live.id,imp)} onDeleteImport={id=>deleteClientImport(live.id,id)} setView={setView}/>
           </div>
         </div>
       </div>
@@ -5498,15 +5517,15 @@ export default function App() {
   if (user.role==="CLIENT") {
     const client=clients.find(c=>c.id===user.clientId);
     return (
-      <div style={{display:"flex",height:"100vh",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif"}}>
+      <div className="cadre-app" style={{display:"flex",height:"100vh",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif"}}>
         <GlobalCSS/>
         {/* Popup première connexion · priorité absolue */}
         {user.firstLogin&&<FirstLoginModal user={user} onComplete={(u)=>setUser(u)}/>}
         <ClientSidebar view={view} setView={setView} onLogout={handleLogout} clientName={client?.name||user.name} alertCount={client?calcAlertes(client,moisIdx,moisYear).filter(a=>(a.level==="red"||a.level==="orange")&&!a.isFiscal).length:0} planningEnabled={client?.planningEnabled} congesEnabled={client?.congesEnabled} pointageEnabled={client?.pointageEnabled} notesFraisEnabled={client?.notesFraisEnabled} tachesEnabled={client?.tachesEnabled} equipeTachesEnabled={client?.equipeTachesEnabled} stockEnabled={client?.stockEnabled} freePlan={client?.plan==="dashboard"} canImport={client?.plan==="dashboard"} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
-        <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        <div className="cadre-colonne" style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <TopBar title={CLIENT_TITLES[view]||"Dashboard"} user={user} onMenuToggle={()=>setMenuOpen(o=>!o)}/>
-          <div style={{flex:1,overflowY:"auto",background:"linear-gradient(155deg,#f0faf8 0%,#ffffff 45%,#ecfdf5 100%)"}}>
-            {client&&<ClientSpace client={{...client,advisorLabel:client.cabinet_id?(cabinets.find(cab=>cab.id===client.cabinet_id)?.name||"votre cabinet comptable"):"NVM Finance"}} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear} setMoisKey={setMoisKey} setView={setView} onSaveBudget={imp=>saveClientImport(client.id,imp)} {...(client.plan==="dashboard"?{onSaveImport:imp=>saveClientImport(client.id,imp),onDeleteImport:id=>deleteClientImport(client.id,id)}:{})}/>}
+          <div className="zone-contenu" style={{flex:1,overflowY:"auto",background:"linear-gradient(155deg,#f0faf8 0%,#ffffff 45%,#ecfdf5 100%)"}}>
+            {client&&<ClientSpace client={{...client,advisorLabel:client.cabinet_id?(cabinets.find(cab=>cab.id===client.cabinet_id)?.name||"votre cabinet comptable"):"NVM Finance"}} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear} setMoisKey={setMoisKey} setView={setView} onSaveDonnees={imp=>saveClientImport(client.id,imp)} {...(client.plan==="dashboard"?{onSaveImport:imp=>saveClientImport(client.id,imp),onDeleteImport:id=>deleteClientImport(client.id,id)}:{})}/>}
           </div>
         </div>
       </div>
@@ -5514,12 +5533,12 @@ export default function App() {
   }
 
   return (
-    <div style={{display:"flex",height:"100vh",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif"}}>
+    <div className="cadre-app" style={{display:"flex",height:"100vh",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif"}}>
       <GlobalCSS/>
       {CredentialsModal}
       {FirstLoginPopup}
       <AdminSidebar view={view} setView={setView} onLogout={previewCabinet?()=>{setPreviewCabinet(null);setView("cabinets");}:handleLogout} clientCount={visibleClients.length} alertCount={totalAlerts} open={menuOpen} onClose={()=>setMenuOpen(false)} role={previewCabinet?"CABINET":user.role}/>
-      <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+      <div className="cadre-colonne" style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
         <TopBar title={ADMIN_TITLES[view]||"Admin"} user={user} onMenuToggle={()=>setMenuOpen(o=>!o)}
           extra={previewCabinet?(
             <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -5528,7 +5547,7 @@ export default function App() {
             </div>
           ):undefined}
         />
-        <div style={{flex:1,overflowY:"auto",background:"linear-gradient(155deg,#f0faf8 0%,#ffffff 45%,#ecfdf5 100%)"}}>
+        <div className="zone-contenu" style={{flex:1,overflowY:"auto",background:"linear-gradient(155deg,#f0faf8 0%,#ffffff 45%,#ecfdf5 100%)"}}>
           {view==="clients"&&<AdminClients clients={visibleClients} cabinets={previewCabinet?[]:cabinets} onViewAsClient={setPreviewClient} onAddClient={handleAddClient} onUpdateClient={updateClient} onDeleteClient={(id)=>{(async()=>{
           // Récupérer l'email du client avant suppression
           const clientToDelete = clients.find(c=>c.id===id);

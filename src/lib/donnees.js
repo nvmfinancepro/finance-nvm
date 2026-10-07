@@ -5,7 +5,7 @@
 //   (compte de résultat, ventes, charges, TVA, IS, budget, comparaison…).
 // Les vues de bilan et de trésorerie réelle restent réservées au FEC (fecIndex).
 
-import { fecIndex, monthPL, sigOf, plOver, ytdKeys, estimateIS, monthEnd, monthKey } from "./pilotage.js";
+import { fecIndex, monthPL, sigOf, plOver, ytdKeys, estimateIS, monthEnd, monthKey, shiftKey } from "./pilotage.js";
 import { amortissements, capitalRestant, echeancesPayees, mensualiteEmprunt } from "./estimations.js";
 
 const num = (v) => {
@@ -237,7 +237,8 @@ export function salariesSur(client, key) {
 export function tiersPour(client, key, side) {
   const idx = dataIndex(client);
   const snap = [...idx.tiers].reverse().find((t) => t.key <= key && t.rows.some((r) => r.s === side));
-  if (!snap) return null;
+  // Une situation de plus de 2 mois ne décrit plus les factures en cours : on ne l'affiche pas.
+  if (!snap || snap.key < shiftKey(key, -2)) return null;
   const list = snap.rows.filter((t) => t.s === side);
   const buckets = [
     { id: "b30", label: "Moins de 30 jours", max: 30, v: 0 },

@@ -8,6 +8,7 @@ import { C, Card, Btn } from "@/app/charte";
 import * as P from "@/lib/pilotage";
 import { dataIndex, produitsSur } from "@/lib/donnees";
 import { LIGNES_BUDGET, ebeDe, lireBudget, budgetMois, realiseMois, proposerBudget, repartir } from "@/lib/budget";
+import { lireActions, sauverActions, nouvelleAction } from "@/lib/actions";
 import { mensualiteEmprunt, mensualiteHorsAssurance, capitalRestant, echeancesPayees, amortMensuel, moisAmortis, vnc } from "@/lib/estimations";
 import { VIZ, eur, pctFr, Courbe, Lignes, Variation, PastilleStatut, STATUT } from "@/app/pilotage/graphiques";
 import { NavMois, Titre } from "@/app/pilotage/synthese";
@@ -34,7 +35,7 @@ function Encart({ children, ton = "info" }) {
 // ══════════════════════════════════════════════════════════════════════
 // BUDGET : objectifs, réel vs budget, atterrissage
 // ══════════════════════════════════════════════════════════════════════
-export function BudgetView({ client, moisIdx, moisYear, onSaveBudget }) {
+export function BudgetView({ client, moisIdx, moisYear, onSaveDonnees }) {
   const [annee, setAnnee] = useState(moisYear);
   const [mode, setMode] = useState(null);
   const [brouillon, setBrouillon] = useState(null);
@@ -42,7 +43,7 @@ export function BudgetView({ client, moisIdx, moisYear, onSaveBudget }) {
   const [msg, setMsg] = useState("");
   const budget = lireBudget(client, annee);
   const vue = mode || (budget ? "suivi" : "saisie");
-  const peutModifier = !!onSaveBudget;
+  const peutModifier = !!onSaveDonnees;
   const moisKeys = Array.from({ length: 12 }, (_, i) => P.monthKey(i, annee));
   const reel = moisKeys.map((k) => realiseMois(client, k));
   const nbReels = reel.reduce((n, r, i) => (r ? i + 1 : n), 0);
@@ -57,7 +58,7 @@ export function BudgetView({ client, moisIdx, moisYear, onSaveBudget }) {
 
   const enregistrer = async () => {
     const rows = [{ ...Object.fromEntries(LIGNES_BUDGET.map((l) => [l.id, brouillon[l.id]])), majLe: new Date().toLocaleDateString("fr-FR") }];
-    const ok = await onSaveBudget({ type: "budget", label: `Budget ${annee}`, mois: String(annee), rows, count: 1, importedAt: new Date().toLocaleDateString("fr-FR") });
+    const ok = await onSaveDonnees({ type: "budget", label: `Budget ${annee}`, mois: String(annee), rows, count: 1, importedAt: new Date().toLocaleDateString("fr-FR") });
     setMsg(ok ? "Budget enregistré." : "L'enregistrement a échoué, réessayez.");
     if (ok) { setMode("suivi"); setBrouillon(null); }
     setTimeout(() => setMsg(""), 5000);
@@ -433,7 +434,9 @@ export function RentabiliteProduits({ client, moisIdx, moisYear }) {
       <Vide titre="Pas encore de détail par produit" texte={`Il apparaît avec le catalogue (prix de vente et coût de chaque produit) ou les ventes détaillées par produit. ${client.advisorLabel || "Votre conseiller"} peut les importer pour vous.`} />
     </Page>
   );
-  let cumul = 0; const n80 = lignes.findIndex((x) => (cumul += Math.max(0, x.marge)) >= totalMarge * 0.8) + 1;
+  // Nombre de produits qui font 80 % de la marge (lignes déjà triées par marge décroissante)
+  const cumuls = lignes.reduce((acc, x) => [...acc, (acc[acc.length - 1] || 0) + Math.max(0, x.marge)], []);
+  const n80 = cumuls.findIndex((v) => v >= totalMarge * 0.8) + 1;
   return (
     <Page>
       <EnTete title="Rentabilité par produit" sub={`Ce que rapporte chaque produit ou prestation${ytd.length ? ` sur l'exercice (${court(ytd[0])} → ${court(fin)})` : ""}, une fois son coût déduit.`} />
@@ -645,8 +648,16 @@ export function TresorerieEstimee({ client, moisIdx, moisYear, setMoisIdx, treso
 // ══════════════════════════════════════════════════════════════════════
 // POINTS D'ATTENTION
 // ══════════════════════════════════════════════════════════════════════
-export function PointsAttention({ client, moisIdx, moisYear, setMoisIdx, alertes }) {
+export function PointsAttention({ client, moisIdx, moisYear, setMoisIdx, alertes, onSaveDonnees, setView }) {
+  const [ajoutes, setAjoutes] = useState([]);
   const nav = <NavMois moisIdx={moisIdx} moisYear={moisYear} setMoisIdx={setMoisIdx} />;
+  const actions = lireActions(client);
+  const dansLePlan = (a) => ajoutes.includes(a.kpi) || actions.some((x) => x.titre === a.kpi && x.statut !== "fait");
+  // Un point d'attention devient une action suivie dans le plan d'actions.
+  const ajouter = async (a) => {
+    const ok = await sauverActions(onSaveDonnees, [...actions, nouvelleAction({ titre: a.kpi, detail: a.action || a.msg })]);
+    if (ok) setAjoutes((x) => [...x, a.kpi]);
+  };
   const rouges = alertes.filter((a) => a.level === "red" && !a.isFiscal), oranges = alertes.filter((a) => a.level === "orange" && !a.isFiscal);
   const echeances = alertes.filter((a) => a.isFiscal);
   const bloc = (titre, list, statut) => list.length > 0 && (
@@ -664,6 +675,13 @@ export function PointsAttention({ client, moisIdx, moisYear, setMoisIdx, alertes
                 </div>
                 <div style={{ fontSize: 13, color: C.textMid, lineHeight: 1.6, marginTop: 4 }}>{a.msg}</div>
                 {a.action && <div style={{ fontSize: 13, color: C.text, fontWeight: 700, lineHeight: 1.55, marginTop: 6, background: C.bgLight, borderRadius: 10, padding: "8px 12px" }}>Piste : {a.action}</div>}
+                {onSaveDonnees && (
+                  <div style={{ marginTop: 8 }}>
+                    {dansLePlan(a)
+                      ? <button onClick={() => setView && setView("actions")} style={{ background: "none", border: "none", padding: 0, fontSize: 12.5, fontWeight: 800, color: C.green, cursor: "pointer", fontFamily: "inherit" }}>✓ Dans le plan d'actions →</button>
+                      : <Btn small variant="ghost" onClick={() => ajouter(a)}>+ Ajouter au plan d'actions</Btn>}
+                  </div>
+                )}
               </div>
             </div>
           </Card>

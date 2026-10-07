@@ -546,3 +546,16 @@ export function fluxTresorerie(client, keys, debut, fin) {
   if (Math.abs(ecart) >= 1) lignes.push({ id: "autres", label: "Autres mouvements", v: ecart, aide: "" });
   return { lignes, variation, debut: debut.tresoNette, fin: fin.tresoNette };
 }
+
+// Point mort annuel sur des mois (ramenés à 12) : charges variables = achats consommés
+// et sous-traitance ; tout le reste est considéré comme fixe.
+export function pointMort(idx, keys) {
+  if (!keys.length) return null;
+  const pl = plOver(idx, keys), s = sigOf(pl), f = 12 / keys.length;
+  const sousTraitance = [...pl.accounts.values()].filter((a) => a.c.startsWith("604") || a.c.startsWith("611")).reduce((t, a) => t + a.v, 0);
+  const variables = s.consommations + sousTraitance;
+  const taux = s.ca > 0 ? (s.ca - variables) / s.ca : 0;
+  if (taux <= 0) return null;
+  const seuil = ((s.ca - variables - s.rcai) / taux) * f;
+  return { seuil, ca: s.ca * f, marge: s.ca * f - seuil, mois: keys.length };
+}

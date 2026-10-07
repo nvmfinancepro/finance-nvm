@@ -240,7 +240,8 @@ export function summarizeFec(parsed, { fileName = "" } = {}) {
   }
 
   // 2. Exercice couvert : du jour des à-nouveaux (ou de la 1re écriture) à la dernière
-  const exStart = anDate || minDate;
+  // Sans à-nouveaux (premier exercice), l'exercice commence le 1er du mois de la première écriture.
+  const exStart = anDate || `${minDate.slice(0, 7)}-01`;
   const info = fecFileInfo(fileName);
   const exKeyStart = exStart.slice(0, 7), lastKey = maxDate.slice(0, 7);
   const monthKeys = [];

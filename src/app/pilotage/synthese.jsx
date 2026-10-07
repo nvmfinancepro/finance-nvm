@@ -8,6 +8,8 @@ import { C, Card, Btn } from "@/app/charte";
 import { fecIndex, ytdKeys, plOver, sigOf, bilanAt, ratiosAt, tiersAt, topTiers, shiftKey, monthKey, keyLabel, monthEnd } from "@/lib/pilotage";
 import { VIZ, eur, pctFr, Colonnes, Courbe, Repartition, Variation, Legende, STATUT, PastilleStatut } from "@/app/pilotage/graphiques";
 import { lireBudget, ebeDe, budgetMois } from "@/lib/budget";
+import { lireActions, enRetard } from "@/lib/actions";
+import { ValeurCreee } from "@/app/pilotage/decisions";
 
 const split = (key) => { const [y, m] = key.split("-").map(Number); return [m - 1, y]; };
 const DATA_TYPES = new Set(["fec", "ventes_produits", "autres_ventes", "charges", "salaires"]);
@@ -23,7 +25,7 @@ export function NavMois({ moisIdx, moisYear, setMoisIdx, onDark = false }) {
   const label = keyLabel(monthKey(moisIdx, moisYear));
   const btn = { width: 30, height: 30, borderRadius: "50%", border: "none", background: onDark ? "rgba(255,255,255,.14)" : C.bg, color: onDark ? "white" : C.primary, fontSize: 16, fontWeight: 900, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" };
   return (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: onDark ? "rgba(255,255,255,.08)" : C.white, border: `1px solid ${onDark ? "rgba(255,255,255,.18)" : C.border}`, borderRadius: 100, padding: 4 }}>
+    <div className="no-print" style={{ display: "inline-flex", alignItems: "center", gap: 6, background: onDark ? "rgba(255,255,255,.08)" : C.white, border: `1px solid ${onDark ? "rgba(255,255,255,.18)" : C.border}`, borderRadius: 100, padding: 4 }}>
       <button aria-label="Mois précédent" style={btn} onClick={() => setMoisIdx((m) => m - 1)}>‹</button>
       <span style={{ fontSize: 14, fontWeight: 900, color: onDark ? "white" : C.text, minWidth: 128, textAlign: "center", textTransform: "capitalize" }}>{label}</span>
       <button aria-label="Mois suivant" style={btn} onClick={() => setMoisIdx((m) => m + 1)}>›</button>
@@ -272,6 +274,28 @@ function Verrou({ titre, texte, viewId, setView, hauteur = 150 }) {
   );
 }
 
+// Résumé du plan d'actions : ce qui est en cours, en retard, et la prochaine échéance.
+function ResumeActions({ client, setView }) {
+  const actions = lireActions(client);
+  if (!actions.length) return null;
+  const ouvertes = actions.filter((a) => a.statut !== "fait").sort((a, b) => ((a.echeance || "9999") < (b.echeance || "9999") ? -1 : 1));
+  const retard = ouvertes.filter((a) => enRetard(a));
+  return (
+    <Card>
+      <CarteTitre title="Plan d'actions" sub={`${ouvertes.length} action${ouvertes.length > 1 ? "s" : ""} en cours${retard.length ? `, dont ${retard.length} en retard` : ""} · ${actions.length - ouvertes.length} terminée${actions.length - ouvertes.length > 1 ? "s" : ""}.`} action={<Lien onClick={() => setView("actions")}>Tout voir</Lien>} />
+      <div style={{ padding: "10px 22px 18px" }}>
+        {ouvertes.slice(0, 4).map((a) => (
+          <div key={a.id} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "7px 0", borderBottom: `1px solid ${C.borderLight}` }}>
+            <span style={{ fontSize: 13, fontWeight: 800, color: C.text }}>{a.titre}<span style={{ fontSize: 11.5, color: C.textLight, fontWeight: 700 }}> · {a.responsable}</span></span>
+            <span style={{ fontSize: 12, fontWeight: 800, color: enRetard(a) ? C.orange : C.textMid, whiteSpace: "nowrap" }}>{a.echeance ? `${enRetard(a) ? "En retard · " : ""}${fmtDate(a.echeance)}` : "Sans échéance"}</span>
+          </div>
+        ))}
+        {!ouvertes.length && <div style={{ fontSize: 13, fontWeight: 700, color: C.green }}>Toutes les actions sont terminées.</div>}
+      </div>
+    </Card>
+  );
+}
+
 const grid = (min) => ({ display: "grid", gridTemplateColumns: `repeat(auto-fit,minmax(min(100%,${min}px),1fr))`, gap: 16 });
 
 export default function Synthese(props) {
@@ -322,7 +346,10 @@ export default function Synthese(props) {
   const source = isFec
     ? `Comptabilité à jour au ${fmtDate(meta.fin)}${(meta.fin || "") < monthEnd(key) ? " (mois en cours de saisie)" : ""}`
     : "Chiffres issus de vos imports (relevé bancaire ou modèles) · estimations";
-  const exLabel = d.ytdList.length > 1 ? `${keyLabel(d.ytdList[0], false)} → ${keyLabel(key, false)}` : keyLabel(key, false);
+  // Période réellement couverte par des chiffres (l'exercice peut commencer avant le premier import).
+  const moisAvecDonnees = d.ytdList.filter((k) => kpisOf(...split(k)).hasData);
+  const debutDonnees = moisAvecDonnees[0] || key;
+  const exLabel = debutDonnees < key ? `${keyLabel(debutDonnees, false)} → ${keyLabel(key, false)}${moisAvecDonnees.length < d.ytdList.length ? ` (${moisAvecDonnees.length} mois de données)` : ""}` : keyLabel(key, false);
   const repSegs = [
     { id: "achats", label: "Achats consommés", v: rep.achats, color: VIZ.achats },
     { id: "externes", label: "Charges externes", v: rep.externes, color: VIZ.externes },
@@ -345,7 +372,10 @@ export default function Synthese(props) {
               <span style={{ width: 7, height: 7, borderRadius: "50%", background: isFec ? "#4ade80" : "#fbbf24" }} />{source}
             </div>
           </div>
-          <NavMois moisIdx={moisIdx} moisYear={moisYear} setMoisIdx={setMoisIdx} onDark />
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button className="no-print" onClick={() => window.print()} title="Imprimer ou enregistrer en PDF" style={{ background: "rgba(255,255,255,.1)", border: "1px solid rgba(255,255,255,.25)", color: "white", borderRadius: 100, padding: "8px 14px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>Imprimer / PDF</button>
+            <NavMois moisIdx={moisIdx} moisYear={moisYear} setMoisIdx={setMoisIdx} onDark />
+          </div>
         </div>
         {gratuit ? (
           // Offre gratuite : pas de conseiller dédié, lecture automatique du mois.
@@ -395,7 +425,7 @@ export default function Synthese(props) {
             aide="EBE : ce que l'activité dégage après achats, charges et salaires, avant impôts, emprunts et amortissements." />
           <Indicateur label="Résultat" value={eur(d.k.result)} sub={d.k.result >= 0 ? "Bénéfice du mois" : "Perte du mois"} onClick={() => setView("resultat")}
             deltas={[vs(d.k.result, kn.result, kn.hasData, { label: `vs ${moisN1}` })]}
-            aide={isFec ? "Bénéfice comptable du mois. Les écritures annuelles (amortissements, stock, impôt) arrivent souvent en fin d'exercice." : "Estimation : excédent d'exploitation moins amortissements."} />
+            aide={isFec ? "Bénéfice comptable du mois. Les écritures annuelles (amortissements, stock, impôt) arrivent souvent en fin d'exercice." : "Estimation : excédent d'exploitation moins amortissements et intérêts d'emprunt."} />
           {gratuit ? (
             <Indicateur label="Trésorerie" value="Avec votre conseiller" muted onClick={() => setView("tresorerie")} aide="Votre trésorerie, vos encaissements clients et vos échéances, suivis chaque mois avec votre conseiller." />
           ) : <Indicateur label="Trésorerie" value={treso == null ? "Non renseignée" : eur(treso)} muted={treso == null} onClick={() => setView(isFec ? "tresorerie" : "tresorerie")}
@@ -474,6 +504,9 @@ export default function Synthese(props) {
           </div>
         </Card>}
       </div>
+
+      {!gratuit && client.impactJournalEnabled && client.impactJournal?.items?.length > 0 && <ValeurCreee client={client} compact />}
+      {!gratuit && <ResumeActions client={client} setView={setView} />}
 
       {/* Tendances 12 mois */}
       <div style={grid(420)}>

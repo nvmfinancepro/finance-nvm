@@ -142,6 +142,7 @@ export function CompteResultat({ client, moisIdx, moisYear, setMoisIdx, setMoisK
   const pl = P.plOver(idx, keys), s = P.sigOf(pl);
   const pl1 = hasN1 ? P.plOver(idx, keys1) : null, s1 = hasN1 ? P.sigOf(pl1) : null;
   const libPeriode = periode === "mois" ? P.keyLabel(key) : `${P.keyLabel(keys[0], false)} → ${P.keyLabel(key, false)}`;
+  const pm = P.pointMort(idx, P.ttmKeys(idx, key));
   const lignes = LIGNES_SIG.filter((l) => l.total || Math.abs(l.f(pl, s)) >= 1 || (s1 && Math.abs(l.f(pl1, s1)) >= 1));
   const comptes = (l) => [...pl.accounts.values()].filter((a) => l.postes.includes(a.poste))
     .map((a) => ({ ...a, d: PRODUITS.has(a.poste) ? a.v : -a.v, d1: pl1 ? (PRODUITS.has(a.poste) ? 1 : -1) * (pl1.accounts.get(a.c)?.v || 0) : null }))
@@ -167,6 +168,7 @@ export function CompteResultat({ client, moisIdx, moisYear, setMoisIdx, setMoisK
         <Chiffre label="Marge brute" value={pctFr(s.ca ? (s.margeBrute / s.ca) * 100 : null, 1)} sub={`${eur(s.margeBrute)} sur la période`} delta={s1 && s1.ca > 0 && s.ca > 0 && <Variation cur={(s.margeBrute / s.ca) * 100} prev={(s1.margeBrute / s1.ca) * 100} points label="sur un an" />} />
         <Chiffre label="EBE" value={eur(s.ebe)} sub={s.ca ? `${pctFr((s.ebe / s.ca) * 100, 1)} du chiffre d'affaires` : null} delta={s1 && <Variation cur={s.ebe} prev={s1.ebe} label="sur un an" />} />
         <Chiffre label="Résultat net" value={eur(s.rn)} sub={s.rn >= 0 ? "Bénéfice" : "Perte"} delta={s1 && <Variation cur={s.rn} prev={s1.rn} label="sur un an" />} />
+        {pm && <Chiffre label="Point mort annuel" value={eur(pm.seuil)} statut={pm.marge >= 0.1 * pm.ca ? "ok" : pm.marge >= 0 ? "warn" : "bad"} subTon sub={pm.marge >= 0 ? `Dépassé de ${eur(pm.marge)} sur 12 mois` : `Il manque ${eur(-pm.marge)} de CA sur 12 mois`} aide="Le chiffre d'affaires annuel à partir duquel l'entreprise ne perd plus d'argent." />}
       </div>
       <Card>
         <div style={{ overflowX: "auto" }}>
@@ -456,8 +458,15 @@ export function TresorerieFec({ client, moisIdx, moisYear, setMoisIdx, setMoisKe
 // ══════════════════════════════════════════════════════════════════════
 // CLIENTS (créances) ET FOURNISSEURS (dettes)
 // ══════════════════════════════════════════════════════════════════════
+// Message de relance prêt à envoyer pour les factures d'un client de plus de 30 jours.
+function messageRelance(x) {
+  const items = x.items.filter((it) => it.age > 30);
+  const lignes = items.map((it) => `- ${it.p ? `Facture ${it.p}` : "Facture"} du ${fmtDate(it.d)} : ${eur(it.m)}`).join("\n");
+  return `Bonjour,\n\nSauf erreur de notre part, ${items.length > 1 ? "les factures suivantes restent" : "la facture suivante reste"} à régler :\n${lignes}\n\nTotal : ${eur(items.reduce((s, it) => s + it.m, 0))}.\n\nPourriez-vous nous indiquer la date de règlement prévue ? Si le paiement a été fait entre-temps, merci de ne pas tenir compte de ce message.\n\nBien cordialement,`;
+}
 export function TiersView({ client, moisIdx, moisYear, setMoisIdx, setMoisKey, side }) {
   const [ouvert, setOuvert] = useState({});
+  const [copie, setCopie] = useState(null);
   const { idx, key, covered } = contexte(client, moisIdx, moisYear);
   const isC = side === "C";
   const title = isC ? "Créances clients" : "Dettes fournisseurs";
@@ -500,7 +509,7 @@ export function TiersView({ client, moisIdx, moisYear, setMoisIdx, setMoisKey, s
       <Card>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 560 }}>
-            <thead><tr><Th>{isC ? "Client" : "Fournisseur"}</Th><Th right>Solde dû</Th><Th right>Plus de 60 jours</Th><Th right>Plus ancienne facture</Th></tr></thead>
+            <thead><tr><Th>{isC ? "Client" : "Fournisseur"}</Th><Th right>Solde dû</Th><Th right>Plus de 60 jours</Th><Th right>Plus ancienne facture</Th>{isC && <Th right>Relance</Th>}</tr></thead>
             <tbody>
               {t.list.map((x) => {
                 const v60 = x.items.filter((it) => it.age > 60).reduce((s, it) => s + it.m, 0);
@@ -512,6 +521,11 @@ export function TiersView({ client, moisIdx, moisYear, setMoisIdx, setMoisKey, s
                     <td style={{ ...num, padding: "10px 12px", fontSize: 13.5, fontWeight: 900, color: C.text }}>{eur(x.solde)}</td>
                     <td style={{ ...num, padding: "10px 12px", fontSize: 13, fontWeight: 800, color: v60 > 0 && isC ? C.orange : C.textMid }}>{v60 > 0 ? eur(v60) : "—"}</td>
                     <td style={{ ...num, padding: "10px 12px", fontSize: 13, fontWeight: 700, color: oldest > 90 && isC ? C.red : C.textMid }}>{oldest} jours</td>
+                    {isC && (
+                      <td style={{ ...num, padding: "6px 12px" }} onClick={(e) => e.stopPropagation()}>
+                        {oldest > 30 ? <Btn small variant="ghost" onClick={() => { try { navigator.clipboard.writeText(messageRelance(x)); setCopie(x.n); setTimeout(() => setCopie(null), 2500); } catch { /* presse-papiers indisponible */ } }}>{copie === x.n ? "Message copié" : "Copier une relance"}</Btn> : <span style={{ fontSize: 12, color: C.textLight }}>—</span>}
+                      </td>
+                    )}
                   </tr>,
                   open && x.items.map((it, i) => (
                     <tr key={x.n + i} style={{ background: "#fbfefd" }}>
@@ -519,6 +533,7 @@ export function TiersView({ client, moisIdx, moisYear, setMoisIdx, setMoisKey, s
                       <td style={{ ...num, padding: "5px 12px", fontSize: 12.5, fontWeight: 700, color: C.text }}>{eur(it.m)}</td>
                       <td />
                       <td style={{ ...num, padding: "5px 12px", fontSize: 12.5, color: it.age > 60 && isC ? C.orange : C.textLight }}>{it.age} jours</td>
+                      {isC && <td />}
                     </tr>
                   )),
                 ];
