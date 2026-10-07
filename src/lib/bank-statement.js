@@ -215,10 +215,10 @@ export function toImportGroups(txs, tvaVentes) {
     const ht = ttc / (1 + taux / 100);
     if (t.cat === "vente") {
       const signed = t.montant > 0 ? ht : -ht;
-      push("ventes_produits", mois, { ...base, ca_ht: round(signed), cout_achat_ht: "0", marge_ht: round(signed) });
+      push("ventes_produits", mois, { ...base, ca_ht: round(signed), cout_achat_ht: "0", marge_ht: round(signed), taux_tva: String(taux) });
     } else if (t.cat === "achat") {
       // Achat de marchandises : réduit la marge sans toucher au CA (onglet Coûts d'achat).
-      push("ventes_produits", mois, { ...base, ca_ht: "0", cout_achat_ht: round(ht), marge_ht: round(-ht) });
+      push("ventes_produits", mois, { ...base, ca_ht: "0", cout_achat_ht: round(ht), marge_ht: round(-ht), taux_tva: String(taux) });
     } else if (t.cat === "charge_fixe" || t.cat === "charge_variable") {
       push("charges", mois, { ...base, fournisseur: t.libelle.slice(0, 60), montant_ht: round(ht), taux_tva: String(taux), tva_recuperable: taux > 0 ? "oui" : "non", type: t.cat === "charge_fixe" ? "fixe" : "variable" });
     } else if (t.cat === "salaire") {

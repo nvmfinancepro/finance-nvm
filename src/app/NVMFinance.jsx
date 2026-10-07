@@ -3,20 +3,18 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { DndContext, useDraggable, useDroppable, useSensor, useSensors, PointerSensor } from "@dnd-kit/core";
 import { calcMonthForecast, calcAnnualForecast } from "@/lib/previsionnel";
+import { C, fmt, pct, Btn, Pill, KpiCard, Card, SectionHead, Th, Td, Tr, FormRow } from "@/app/charte";
+import { fecMonthKpis, fecIndex, tresoAt, fecAlertes, hasFec, estimateIS, keyLabel, ytdKeys, sameKeysN1, sigOf, plOver, bilanAt, ratiosAt } from "@/lib/pilotage";
+import Synthese, { latestDataKey } from "@/app/pilotage/synthese";
+import { CompteResultat, BilanView, TresorerieFec, TiersView, PosteView, TvaFec, ImpotFec } from "@/app/pilotage/vues";
+import ImportFec from "@/app/pilotage/import-fec";
+import { PAIE, mensualiteEmprunt, mensualiteHorsAssurance, chargeEmprunts, capitalRestant, echeancesPayees, amortissements, moisAmortis, amortMensuel as amortMensuelInv, vnc as vncInv, tvaImports } from "@/lib/estimations";
 import { decodeBankFile, isOfx, parseOfx, parseBankCsv, csvToTransactions, categorize as bankCategorize, similarKey as bankSimilarKey, toImportGroups, mergeWithExisting as bankMerge, BANK_CATEGORIES } from "@/lib/bank-statement";
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
-const C = {
- primary:"#005653", primaryDark:"#003d3a", primaryLight:"#00706c",
- bg:"#ecfdf5", bgLight:"#f0faf8", white:"#ffffff",
- border:"#a7d4d0", borderLight:"#c8e8e5",
- text:"#002e2c", textMid:"#2d6b68", textLight:"#6aaca8",
- green:"#059669", orange:"#d97706", red:"#dc2626",
- greenBg:"#ecfdf5", orangeBg:"#fffbeb", redBg:"#fef2f2",
-};
 
 // LOGO · paths exacts du SVG original
 const LogoSVG = ({ width=160, showLabel=false, labelColor="#005653", fillColor="#005552", brightGreen="#21C45D" }) => (
@@ -46,8 +44,6 @@ const _NOW = new Date();
 const CUR_M = _NOW.getMonth(); // 0-11
 const CUR_Y = _NOW.getFullYear();
 const SECTORS = ["E-Commerce","Prestation de services","Fabrication & Vente","Restauration","Hôtellerie","Immobilier","Distribution","Conseil","BTP","Santé","Bar / Tabac / Presse"];
-const fmt = (n) => { if(n===null||n===undefined||isNaN(n)) return "—"; const abs=Math.abs(n); const s=abs>=1e6?(abs/1e6).toFixed(2).replace(".",",")+" M€":new Intl.NumberFormat("fr-FR").format(Math.round(abs))+" €"; return n<0?"–"+s:s; };
-const pct = (n) => (n==null||isNaN(n))?"—":`${Number(n).toFixed(1)} %`;
 
 // CSV TEMPLATES PAR SECTEUR
 const CSV_TEMPLATES = {
@@ -116,59 +112,6 @@ const getTemplate=(type,sector)=>{ const t=CSV_TEMPLATES[type]; if(!t) return ""
 // l'admin. L'authentification elle-même passe entièrement par Supabase Auth.
 let USERS_AUTH = [];
 
-const INIT_CLIENTS = [];
-const NEXUS_IMPORTS = [
- // VENTES PRODUITS 
- ...[
- {m:"2025-04",rows:[{reference:"PRD-001",nom_produit:"T-shirt coton bio",quantite_vendue:"98",ca_ht:"2940",cout_achat_ht:"1176",marge_ht:"1764",canal_vente:"Boutique en ligne"},{reference:"PRD-002",nom_produit:"Pantalon slim",quantite_vendue:"72",ca_ht:"4320",cout_achat_ht:"1728",marge_ht:"2592",canal_vente:"Marketplace"},{reference:"PRD-003",nom_produit:"Sneakers édition",quantite_vendue:"38",ca_ht:"4560",cout_achat_ht:"2052",marge_ht:"2508",canal_vente:"Site propre"}]},
- {m:"2025-05",rows:[{reference:"PRD-001",nom_produit:"T-shirt coton bio",quantite_vendue:"142",ca_ht:"4260",cout_achat_ht:"1704",marge_ht:"2556",canal_vente:"Boutique en ligne"},{reference:"PRD-002",nom_produit:"Pantalon slim",quantite_vendue:"88",ca_ht:"5280",cout_achat_ht:"2112",marge_ht:"3168",canal_vente:"Marketplace"},{reference:"PRD-004",nom_produit:"Short sport",quantite_vendue:"55",ca_ht:"2475",cout_achat_ht:"990",marge_ht:"1485",canal_vente:"Site propre"}]},
- {m:"2025-06",rows:[{reference:"PRD-001",nom_produit:"T-shirt coton bio",quantite_vendue:"185",ca_ht:"5550",cout_achat_ht:"2220",marge_ht:"3330",canal_vente:"Boutique en ligne"},{reference:"PRD-004",nom_produit:"Short sport",quantite_vendue:"120",ca_ht:"5400",cout_achat_ht:"2160",marge_ht:"3240",canal_vente:"Marketplace"},{reference:"PRD-005",nom_produit:"Maillot de bain",quantite_vendue:"95",ca_ht:"4275",cout_achat_ht:"1710",marge_ht:"2565",canal_vente:"Site propre"}]},
- {m:"2025-07",rows:[{reference:"PRD-001",nom_produit:"T-shirt coton bio",quantite_vendue:"210",ca_ht:"6300",cout_achat_ht:"2520",marge_ht:"3780",canal_vente:"Boutique en ligne"},{reference:"PRD-004",nom_produit:"Short sport",quantite_vendue:"150",ca_ht:"6750",cout_achat_ht:"2700",marge_ht:"4050",canal_vente:"Marketplace"},{reference:"PRD-005",nom_produit:"Maillot de bain",quantite_vendue:"130",ca_ht:"5850",cout_achat_ht:"2340",marge_ht:"3510",canal_vente:"Site propre"}]},
- {m:"2025-08",rows:[{reference:"PRD-001",nom_produit:"T-shirt coton bio",quantite_vendue:"195",ca_ht:"5850",cout_achat_ht:"2340",marge_ht:"3510",canal_vente:"Boutique en ligne"},{reference:"PRD-004",nom_produit:"Short sport",quantite_vendue:"135",ca_ht:"6075",cout_achat_ht:"2430",marge_ht:"3645",canal_vente:"Marketplace"},{reference:"PRD-006",nom_produit:"Veste légère",quantite_vendue:"45",ca_ht:"3600",cout_achat_ht:"1440",marge_ht:"2160",canal_vente:"Site propre"}]},
- {m:"2025-09",rows:[{reference:"PRD-002",nom_produit:"Pantalon slim",quantite_vendue:"95",ca_ht:"5700",cout_achat_ht:"2280",marge_ht:"3420",canal_vente:"Marketplace"},{reference:"PRD-006",nom_produit:"Veste légère",quantite_vendue:"88",ca_ht:"7040",cout_achat_ht:"2816",marge_ht:"4224",canal_vente:"Site propre"},{reference:"PRD-007",nom_produit:"Pull en laine",quantite_vendue:"62",ca_ht:"4960",cout_achat_ht:"1984",marge_ht:"2976",canal_vente:"Boutique en ligne"}]},
- {m:"2025-10",rows:[{reference:"PRD-002",nom_produit:"Pantalon slim",quantite_vendue:"110",ca_ht:"6600",cout_achat_ht:"2640",marge_ht:"3960",canal_vente:"Marketplace"},{reference:"PRD-007",nom_produit:"Pull en laine",quantite_vendue:"98",ca_ht:"7840",cout_achat_ht:"3136",marge_ht:"4704",canal_vente:"Site propre"},{reference:"PRD-008",nom_produit:"Manteau hiver",quantite_vendue:"42",ca_ht:"6300",cout_achat_ht:"2520",marge_ht:"3780",canal_vente:"Boutique en ligne"}]},
- {m:"2025-11",rows:[{reference:"PRD-007",nom_produit:"Pull en laine",quantite_vendue:"155",ca_ht:"12400",cout_achat_ht:"4960",marge_ht:"7440",canal_vente:"Marketplace"},{reference:"PRD-008",nom_produit:"Manteau hiver",quantite_vendue:"78",ca_ht:"11700",cout_achat_ht:"4680",marge_ht:"7020",canal_vente:"Site propre"},{reference:"PRD-009",nom_produit:"Doudoune",quantite_vendue:"65",ca_ht:"9750",cout_achat_ht:"3900",marge_ht:"5850",canal_vente:"Boutique en ligne"}]},
- {m:"2025-12",rows:[{reference:"PRD-007",nom_produit:"Pull en laine",quantite_vendue:"182",ca_ht:"14560",cout_achat_ht:"5824",marge_ht:"8736",canal_vente:"Marketplace"},{reference:"PRD-008",nom_produit:"Manteau hiver",quantite_vendue:"95",ca_ht:"14250",cout_achat_ht:"5700",marge_ht:"8550",canal_vente:"Site propre"},{reference:"PRD-009",nom_produit:"Doudoune",quantite_vendue:"88",ca_ht:"13200",cout_achat_ht:"5280",marge_ht:"7920",canal_vente:"Boutique en ligne"}]},
- {m:"2026-01",rows:[{reference:"PRD-010",nom_produit:"Soldes T-shirt",quantite_vendue:"220",ca_ht:"4400",cout_achat_ht:"1760",marge_ht:"2640",canal_vente:"Site propre"},{reference:"PRD-011",nom_produit:"Soldes Pantalon",quantite_vendue:"145",ca_ht:"5800",cout_achat_ht:"2320",marge_ht:"3480",canal_vente:"Marketplace"},{reference:"PRD-012",nom_produit:"Nouvelle coll. Printemps",quantite_vendue:"35",ca_ht:"3150",cout_achat_ht:"1260",marge_ht:"1890",canal_vente:"Boutique en ligne"}]},
- {m:"2026-02",rows:[{reference:"PRD-012",nom_produit:"Nouvelle coll. Printemps",quantite_vendue:"88",ca_ht:"7920",cout_achat_ht:"3168",marge_ht:"4752",canal_vente:"Site propre"},{reference:"PRD-013",nom_produit:"Veste mi-saison",quantite_vendue:"62",ca_ht:"4960",cout_achat_ht:"1984",marge_ht:"2976",canal_vente:"Marketplace"},{reference:"PRD-001",nom_produit:"T-shirt coton bio",quantite_vendue:"72",ca_ht:"2160",cout_achat_ht:"864",marge_ht:"1296",canal_vente:"Boutique en ligne"}]},
- {m:"2026-03",rows:[{reference:"PRD-012",nom_produit:"Nouvelle coll. Printemps",quantite_vendue:"135",ca_ht:"12150",cout_achat_ht:"4860",marge_ht:"7290",canal_vente:"Site propre"},{reference:"PRD-013",nom_produit:"Veste mi-saison",quantite_vendue:"98",ca_ht:"7840",cout_achat_ht:"3136",marge_ht:"4704",canal_vente:"Marketplace"},{reference:"PRD-001",nom_produit:"T-shirt coton bio",quantite_vendue:"110",ca_ht:"3300",cout_achat_ht:"1320",marge_ht:"1980",canal_vente:"Boutique en ligne"}]},
- {m:"2026-04",rows:[{reference:"PRD-012",nom_produit:"Nouvelle coll. Printemps",quantite_vendue:"155",ca_ht:"13950",cout_achat_ht:"5580",marge_ht:"8370",canal_vente:"Site propre"},{reference:"PRD-013",nom_produit:"Veste mi-saison",quantite_vendue:"112",ca_ht:"8960",cout_achat_ht:"3584",marge_ht:"5376",canal_vente:"Marketplace"},{reference:"PRD-001",nom_produit:"T-shirt coton bio",quantite_vendue:"88",ca_ht:"2640",cout_achat_ht:"1056",marge_ht:"1584",canal_vente:"Boutique en ligne"}]},
- ].map((d,i)=>({id:100+i,type:"ventes_produits",label:"Ventes produits",mois:d.m,rows:d.rows,count:d.rows.length,importedAt:"Simulation NVM"})),
-
- // CHARGES 
- ...[
- {m:"2025-04",rows:[{date:"2025-04-01",fournisseur:"Shopify",libelle:"Abonnement plateforme",montant_ht:"79",taux_tva:"20",tva_recuperable:"oui",type:"fixe"},{date:"2025-04-01",fournisseur:"Bail SCI",libelle:"Loyer entrepôt",montant_ht:"1800",taux_tva:"0",tva_recuperable:"non",type:"fixe"},{date:"2025-04-15",fournisseur:"Meta Ads",libelle:"Publicité réseaux",montant_ht:"1200",taux_tva:"20",tva_recuperable:"oui",type:"variable"},{date:"2025-04-30",fournisseur:"Chronopost",libelle:"Frais livraison",montant_ht:"980",taux_tva:"20",tva_recuperable:"oui",type:"variable"}]},
- {m:"2025-07",rows:[{date:"2025-07-01",fournisseur:"Shopify",libelle:"Abonnement plateforme",montant_ht:"79",taux_tva:"20",tva_recuperable:"oui",type:"fixe"},{date:"2025-07-01",fournisseur:"Bail SCI",libelle:"Loyer entrepôt",montant_ht:"1800",taux_tva:"0",tva_recuperable:"non",type:"fixe"},{date:"2025-07-15",fournisseur:"Google Ads",libelle:"Publicité été",montant_ht:"2800",taux_tva:"20",tva_recuperable:"oui",type:"variable"},{date:"2025-07-31",fournisseur:"Chronopost",libelle:"Frais livraison (pic été)",montant_ht:"2100",taux_tva:"20",tva_recuperable:"oui",type:"variable"}]},
- {m:"2025-11",rows:[{date:"2025-11-01",fournisseur:"Shopify",libelle:"Abonnement plateforme",montant_ht:"79",taux_tva:"20",tva_recuperable:"oui",type:"fixe"},{date:"2025-11-01",fournisseur:"Bail SCI",libelle:"Loyer entrepôt",montant_ht:"1800",taux_tva:"0",tva_recuperable:"non",type:"fixe"},{date:"2025-11-01",fournisseur:"Meta Ads",libelle:"Campagne Black Friday",montant_ht:"4500",taux_tva:"20",tva_recuperable:"oui",type:"variable"},{date:"2025-11-30",fournisseur:"Chronopost",libelle:"Frais livraison (Black Friday)",montant_ht:"3200",taux_tva:"20",tva_recuperable:"oui",type:"variable"}]},
- {m:"2026-04",rows:[{date:"2026-04-01",fournisseur:"Shopify",libelle:"Abonnement plateforme",montant_ht:"79",taux_tva:"20",tva_recuperable:"oui",type:"fixe"},{date:"2026-04-01",fournisseur:"Bail SCI",libelle:"Loyer entrepôt",montant_ht:"1900",taux_tva:"0",tva_recuperable:"non",type:"fixe"},{date:"2026-04-10",fournisseur:"Meta Ads",libelle:"Campagne Printemps",montant_ht:"2200",taux_tva:"20",tva_recuperable:"oui",type:"variable"},{date:"2026-04-30",fournisseur:"Chronopost",libelle:"Frais livraison",montant_ht:"1450",taux_tva:"20",tva_recuperable:"oui",type:"variable"}]},
- ].map((d,i)=>({id:200+i,type:"charges",label:"Charges",mois:d.m,rows:d.rows,count:d.rows.length,importedAt:"Simulation NVM"})),
-
- // SALAIRES 
- ...[
- {m:"2025-04",rows:[{nom_prenom:"Marie Dupont",statut:"CDI",poste:"Responsable e-commerce",salaire_brut:"3800",cotisations_salariales:"798",cotisations_patronales:"1748",salaire_net:"3002"},{nom_prenom:"Lucas Bernard",statut:"CDI",poste:"Chargé marketing",salaire_brut:"3200",cotisations_salariales:"672",cotisations_patronales:"1472",salaire_net:"2528"},{nom_prenom:"Emma Petit",statut:"CDI",poste:"Logistique",salaire_brut:"2600",cotisations_salariales:"546",cotisations_patronales:"1196",salaire_net:"2054"}]},
- {m:"2025-10",rows:[{nom_prenom:"Marie Dupont",statut:"CDI",poste:"Responsable e-commerce",salaire_brut:"3900",cotisations_salariales:"819",cotisations_patronales:"1794",salaire_net:"3081"},{nom_prenom:"Lucas Bernard",statut:"CDI",poste:"Chargé marketing",salaire_brut:"3200",cotisations_salariales:"672",cotisations_patronales:"1472",salaire_net:"2528"},{nom_prenom:"Emma Petit",statut:"CDI",poste:"Logistique",salaire_brut:"2600",cotisations_salariales:"546",cotisations_patronales:"1196",salaire_net:"2054"},{nom_prenom:"Thomas Roux",statut:"CDD",poste:"Renfort logistique",salaire_brut:"2100",cotisations_salariales:"441",cotisations_patronales:"966",salaire_net:"1659"}]},
- {m:"2026-04",rows:[{nom_prenom:"Marie Dupont",statut:"CDI",poste:"Responsable e-commerce",salaire_brut:"4000",cotisations_salariales:"840",cotisations_patronales:"1840",salaire_net:"3160"},{nom_prenom:"Lucas Bernard",statut:"CDI",poste:"Chargé marketing",salaire_brut:"3400",cotisations_salariales:"714",cotisations_patronales:"1564",salaire_net:"2686"},{nom_prenom:"Emma Petit",statut:"CDI",poste:"Logistique",salaire_brut:"2700",cotisations_salariales:"567",cotisations_patronales:"1242",salaire_net:"2133"},{nom_prenom:"Sofia Martin",statut:"CDI",poste:"Service client",salaire_brut:"2500",cotisations_salariales:"525",cotisations_patronales:"1150",salaire_net:"1975"}]},
- ].map((d,i)=>({id:300+i,type:"salaires",label:"Masse salariale",mois:d.m,rows:d.rows,count:d.rows.length,importedAt:"Simulation NVM"})),
-
- // CATALOGUE 
- {id:400,type:"catalogue",label:"Catalogue produits",mois:"2026-04",count:8,importedAt:"Simulation NVM",rows:[
- {reference:"PRD-001",nom_produit:"T-shirt coton bio",pvht:"30",taux_tva:"20",paht:"12",fournisseur:"EcoTex FR",stock_min:"50"},
- {reference:"PRD-002",nom_produit:"Pantalon slim",pvht:"60",taux_tva:"20",paht:"24",fournisseur:"FabEU",stock_min:"30"},
- {reference:"PRD-003",nom_produit:"Sneakers édition",pvht:"120",taux_tva:"20",paht:"52",fournisseur:"AsiaShoe",stock_min:"20"},
- {reference:"PRD-004",nom_produit:"Short sport",pvht:"45",taux_tva:"20",paht:"18",fournisseur:"EcoTex FR",stock_min:"40"},
- {reference:"PRD-007",nom_produit:"Pull en laine",pvht:"80",taux_tva:"20",paht:"32",fournisseur:"WoolEU",stock_min:"35"},
- {reference:"PRD-008",nom_produit:"Manteau hiver",pvht:"150",taux_tva:"20",paht:"60",fournisseur:"WoolEU",stock_min:"15"},
- {reference:"PRD-012",nom_produit:"Nouvelle coll. Printemps",pvht:"90",taux_tva:"20",paht:"36",fournisseur:"EcoTex FR",stock_min:"25"},
- {reference:"PRD-013",nom_produit:"Veste mi-saison",pvht:"80",taux_tva:"20",paht:"32",fournisseur:"FabEU",stock_min:"20"},
- ]},
-
- // AUTRES VENTES 
- {id:500,type:"autres_ventes",label:"Autres ventes",mois:"2026-04",count:3,importedAt:"Simulation NVM",rows:[
- {libelle:"Subvention ADEME éco-responsabilité",nature:"subvention",encaissement:"3500",ca_ht:"3500",taux_tva:"0",cout:"0",marge:"3500"},
- {libelle:"Vente stock dormant",nature:"cession",encaissement:"1200",ca_ht:"1200",taux_tva:"20",cout:"800",marge:"400"},
- {libelle:"Formation dropshipping partenaire",nature:"prestation",encaissement:"1800",ca_ht:"1800",taux_tva:"20",cout:"200",marge:"1600"},
- ]},
-];
 
 // GLOBAL CSS
 const GlobalCSS = () => (
@@ -216,35 +159,6 @@ const GlobalCSS = () => (
  `}</style>
 );
 
-// MICRO COMPONENTS
-const Btn = ({ children, onClick, variant="primary", small, style={}, disabled }) => {
- const s = { primary:{background:C.primary,color:C.white,border:"none",boxShadow:"0 4px 14px rgba(0,86,83,.22)"}, ghost:{background:C.white,color:C.primary,border:`1.5px solid ${C.border}`}, danger:{background:C.red,color:C.white,border:"none",boxShadow:"0 4px 14px rgba(220,38,38,.2)"}, success:{background:C.green,color:C.white,border:"none",boxShadow:"0 4px 14px rgba(5,150,105,.22)"}, orange:{background:C.orange,color:C.white,border:"none",boxShadow:"0 4px 14px rgba(217,119,6,.22)"} };
- return <button onClick={onClick} disabled={disabled} style={{...s[variant],padding:small?"6px 14px":"10px 20px",borderRadius:100,fontSize:small?12:13,fontWeight:800,cursor:disabled?"not-allowed":"pointer",opacity:disabled?.5:1,transition:"all .15s",display:"inline-flex",alignItems:"center",gap:6,...style}}>{children}</button>;
-};
-const Pill = ({ children, color=C.primary, bg }) => <span style={{background:bg||color+"18",color,border:`1px solid ${color}33`,borderRadius:100,padding:"3px 11px",fontSize:11,fontWeight:800,whiteSpace:"nowrap",display:"inline-block"}}>{children}</span>;
-const KpiCard = ({ label, value, sub, color=C.primary }) => (
- <div style={{background:C.white,border:`1.5px solid ${C.text}`,borderRadius:20,padding:"22px 24px",position:"relative",boxShadow:"0 16px 36px rgba(0,86,83,.06)"}}>
- <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:9}}>
- <div style={{width:7,height:7,borderRadius:"50%",background:color,flexShrink:0}}/>
- <div style={{fontSize:11,color:C.textLight,fontWeight:800,textTransform:"uppercase",letterSpacing:"0.08em"}}>{label}</div>
- </div>
- <div style={{fontSize:26,fontWeight:900,color:C.text,letterSpacing:"-0.01em"}}>{value}</div>
- {sub&&<div style={{fontSize:12,color,fontWeight:700,marginTop:6}}>{sub}</div>}
- </div>
-);
-const Card = ({ children, style={} }) => <div style={{background:C.white,border:`1.5px solid ${C.text}`,borderRadius:22,boxShadow:"0 16px 36px rgba(0,86,83,.06)",overflow:"hidden",...style}}>{children}</div>;
-const SectionHead = ({ title, sub, action }) => (
- <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 20px",borderBottom:`1px solid ${C.borderLight}`}}>
- <div><div style={{fontSize:14,fontWeight:800,color:C.text}}>{title}</div>{sub&&<div style={{fontSize:11,color:C.textLight,marginTop:2}}>{sub}</div>}</div>
- {action&&<div style={{display:"flex",gap:8,alignItems:"center"}}>{action}</div>}
- </div>
-);
-const Th = ({ children, right }) => <th style={{padding:"9px 12px",textAlign:right?"right":"left",fontSize:11,color:C.textMid,fontWeight:800,textTransform:"uppercase",letterSpacing:"0.07em",whiteSpace:"nowrap",background:C.bg}}>{children}</th>;
-const Td = ({ children, right, bold, color, mono }) => <td style={{padding:"10px 12px",textAlign:right?"right":"left",fontSize:13,fontWeight:bold?800:500,color:color||C.text,fontFamily:mono?"'Courier New',monospace":"inherit"}}>{children}</td>;
-const Tr = ({ children, style={} }) => <tr className="row-hover" style={{borderBottom:`1px solid ${C.borderLight}`,...style}}>{children}</tr>;
-const FormRow = ({ label, children }) => (
- <div><label style={{fontSize:11,fontWeight:800,color:C.textMid,display:"block",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.06em"}}>{label}</label>{children}</div>
-);
 
 // CSV DOWNLOAD
 function downloadCSV(content, filename) {
@@ -636,10 +550,24 @@ function SidebarBase({ children, role, onLogout, open, onClose }) {
  </>
  );
 }
+// Icônes du menu (trait 1.8, 24×24) : un repère visuel par rubrique.
+const ICONES = {
+ synthese:"M3 11l9-7 9 7M5 9.5V20h5v-6h4v6h5V9.5", alerte:"M12 3l9.5 17h-19L12 3zM12 10v4.5M12 17.5h.01", import:"M12 3v12M7 10l5 5 5-5M4 20h16",
+ resultat:"M4 20V11M10 20V5M16 20v-8M21 20H3", ventes:"M3 17l6-6 4 4 8-8M15 7h6v6", achats:"M3 4h2l2.4 11h11.2L21 7H7M9 20h.01M18 20h.01",
+ charges:"M4 6h16M4 12h16M4 18h10", salaires:"M15 19v-1a4 4 0 00-8 0v1M11 11a3 3 0 100-6 3 3 0 000 6zM20 19v-1a3 3 0 00-2-2.8M16 5.2a3 3 0 010 5.6",
+ catalogue:"M3 12V4h8l10 10-8 8L3 12zM7.5 7.5h.01", tresorerie:"M3 7h18v12H3zM3 7l2-3h14l2 3M16 13h2",
+ bilan:"M12 3v17M5 7h14M5 7l-3 7a3 3 0 006 0L5 7zM19 7l-3 7a3 3 0 006 0l-3-7M8 20h8", creances:"M20 12H8M13 7l-5 5 5 5M4 4v16", dettes:"M4 12h12M11 7l5 5-5 5M20 4v16",
+ emprunts:"M3 10l9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18", investissements:"M3 21h18M5 21V9l7-5 7 5v12M10 21v-5h4v5",
+ tva:"M19 5L5 19M6.5 9a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM17.5 20a2.5 2.5 0 100-5 2.5 2.5 0 000 5z", is:"M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6",
+ comparaison:"M7 7h13M16 3l4 4-4 4M17 17H4M8 13l-4 4 4 4", previsionnel:"M3 3v18h18M7 15l4-5 3 3 4-6", roi:"M6 3h12v18H6zM9 7h6M9 11h.01M12 11h.01M15 11h.01M9 15h.01M12 15h.01M15 15h.01",
+ embauche:"M14 19v-1a4 4 0 00-8 0v1M10 11a3 3 0 100-6 3 3 0 000 6zM19 8v6M16 11h6", planning:"M4 5h16v15H4zM4 10h16M9 3v4M15 3v4",
+ conges:"M12 4V2M12 22v-2M4 12H2M22 12h-2M12 17a5 5 0 100-10 5 5 0 000 10z", pointage:"M12 21a9 9 0 100-18 9 9 0 000 18zM12 7v5l3 3",
+ notesfrais:"M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6", taches:"M4 4h16v16H4zM8 12l3 3 5-6", equipetaches:"M4 6h10M4 12h10M4 18h10M17 6l1.5 1.5L22 4", stock:"M3 7l9-4 9 4v10l-9 4-9-4V7zM3 7l9 4 9-4M12 11v10",
+};
 function NavItem({ icon, label, badge, badgeColor, active, onClick, locked }) {
  return (
- <div onClick={onClick} style={{display:"flex",alignItems:"center",gap:9,padding:"9px 10px",borderRadius:8,marginBottom:2,cursor:"pointer",background:active?"rgba(255,255,255,0.15)":"transparent",color:active?"white":"rgba(255,255,255,0.55)",transition:"all .15s",fontSize:13,fontWeight:active?800:500}}>
- <span style={{fontSize:14,width:18,textAlign:"center",flexShrink:0}}>{icon}</span>
+ <div role="button" tabIndex={0} aria-current={active?"page":undefined} onClick={onClick} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();onClick();}}} style={{display:"flex",alignItems:"center",gap:9,padding:"9px 10px",borderRadius:8,marginBottom:2,cursor:"pointer",background:active?"rgba(255,255,255,0.15)":"transparent",color:active?"white":"rgba(255,255,255,0.55)",transition:"all .15s",fontSize:13,fontWeight:active?800:500}}>
+ <span style={{fontSize:14,width:18,textAlign:"center",flexShrink:0,display:"inline-flex",justifyContent:"center"}}>{ICONES[icon]?<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={ICONES[icon]}/></svg>:icon}</span>
  <span style={{flex:1}}>{label}</span>
  {badge>0&&<span style={{background:badgeColor||"rgba(255,255,255,0.2)",color:"white",borderRadius:12,padding:"1px 7px",fontSize:10,fontWeight:900}}>{badge}</span>}
  {locked&&<svg width="12" height="12" viewBox="0 0 16 16" fill="none" style={{flexShrink:0,opacity:.7}}><rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2" stroke="currentColor" strokeWidth="1.5"/></svg>}
@@ -647,7 +575,7 @@ function NavItem({ icon, label, badge, badgeColor, active, onClick, locked }) {
  );
 }
 function AdminSidebar({ view, setView, onLogout, clientCount, alertCount, open, onClose, role }) {
- const nav=[{id:"clients",icon:"",label:"Gestion clients",badge:clientCount},{id:"acces",icon:"",label:"Accès clients"},{id:"saisie",icon:"",label:"Saisie & Import CSV"},{id:"financier",icon:"",label:"Données financières"},{id:"alertes",icon:"",label:"Alertes",badge:alertCount,badgeColor:C.red},{id:"rapports",icon:"",label:"Rapports IA"}];
+ const nav=[{id:"clients",icon:"",label:"Gestion clients",badge:clientCount},{id:"acces",icon:"",label:"Accès clients"},{id:"saisie",icon:"",label:"Imports (FEC, CSV)"},{id:"financier",icon:"",label:"Données financières"},{id:"alertes",icon:"",label:"Alertes",badge:alertCount,badgeColor:C.red},{id:"rapports",icon:"",label:"Rapports IA"}];
  // Le blog du site public et la création de cabinets partenaires restent strictement réservés à l'admin de la plateforme
  if(role!=="CABINET") nav.push({id:"blog",icon:"",label:"Blog"},{id:"cabinets",icon:"",label:"Cabinets partenaires"});
  return <SidebarBase role={role==="CABINET"?"Espace Cabinet":"Espace Administrateur"} onLogout={onLogout} open={open} onClose={onClose}><nav style={{flex:1,padding:"10px 8px",overflowY:"auto"}}>{nav.map(item=><NavItem key={item.id} {...item} active={view===item.id} onClick={()=>{setView(item.id);onClose&&onClose();}}/>)}</nav></SidebarBase>;
@@ -656,46 +584,47 @@ function ClientSidebar({ view, setView, onLogout, clientName, alertCount, planni
  // Offre gratuite : les outils de gestion restent visibles (floutés, cadenas) pour donner envie.
  if(freePlan){ planningEnabled=congesEnabled=pointageEnabled=notesFraisEnabled=tachesEnabled=equipeTachesEnabled=stockEnabled=true; }
  const sections = [
- { label:"VUE D'ENSEMBLE", items:[
- {id:"dashboard", icon:"", label:"Tableau de bord"},
- ...(canImport ? [{id:"import", icon:"↑", label:"Importer mes données"}] : []),
- {id:"alertes", icon:"", label:"Mes alertes", badge:alertCount, badgeColor:C.red},
+ { label:"L'ESSENTIEL", items:[
+ {id:"dashboard", icon:"synthese", label:"Synthèse du mois"},
+ {id:"alertes", icon:"alerte", label:"Points d'attention", badge:alertCount, badgeColor:C.red},
+ ...(canImport ? [{id:"import", icon:"import", label:"Importer mes données"}] : []),
  ]},
- { label:"MON ACTIVITÉ", items:[
- {id:"ventes", icon:"+", label:"Mes ventes"},
- {id:"achats", icon:"−", label:"Mes coûts d'achat"},
- {id:"charges", icon:"≡", label:"Mes charges"},
- {id:"salaires", icon:"≡", label:"Ma masse salariale"},
- {id:"catalogue", icon:"≡", label:"Mon catalogue produits"},
- {id:"creances", icon:">", label:"Mes créances clients"},
- {id:"dettes", icon:"<", label:"Mes dettes fournisseurs"},
+ { label:"RENTABILITÉ", items:[
+ {id:"resultat", icon:"resultat", label:"Compte de résultat"},
+ {id:"ventes", icon:"ventes", label:"Ventes"},
+ {id:"achats", icon:"achats", label:"Achats et marge"},
+ {id:"charges", icon:"charges", label:"Charges"},
+ {id:"salaires", icon:"salaires", label:"Masse salariale"},
+ {id:"catalogue", icon:"catalogue", label:"Rentabilité par produit"},
  ]},
- { label:"MES FINANCES", items:[
- {id:"resultat", icon:"", label:"Mon résultat"},
- {id:"is", icon:"", label:"Mon impôt (IS)"},
- {id:"tva", icon:"", label:"Ma TVA"},
- {id:"tresorerie", icon:"", label:"Ma trésorerie"},
- {id:"emprunts", icon:"", label:"Mes emprunts"},
- {id:"investissements",icon:"", label:"Mes investissements"},
+ { label:"TRÉSORERIE ET BILAN", items:[
+ {id:"tresorerie", icon:"tresorerie", label:"Trésorerie"},
+ {id:"bilan", icon:"bilan", label:"Bilan et BFR"},
+ {id:"creances", icon:"creances", label:"Créances clients"},
+ {id:"dettes", icon:"dettes", label:"Dettes fournisseurs"},
+ {id:"emprunts", icon:"emprunts", label:"Emprunts"},
+ {id:"investissements",icon:"investissements", label:"Investissements"},
  ]},
- { label:"ANALYSE", items:[
- {id:"comparaison",   icon:"↔", label:"Comparaison périodes"},
- {id:"previsionnel",  icon:"→", label:"Prévisionnel"},
+ { label:"IMPÔTS", items:[
+ {id:"tva", icon:"tva", label:"TVA"},
+ {id:"is", icon:"is", label:"Impôt sur les sociétés"},
  ]},
- { label:"OUTILS FINANCIERS", items:[
- {id:"roi", icon:"", label:"Calculateur ROI"},
- {id:"embauche", icon:"", label:"Simulateur d'embauche"},
+ { label:"ANALYSE ET DÉCISIONS", items:[
+ {id:"comparaison", icon:"comparaison", label:"Comparer deux périodes"},
+ {id:"previsionnel", icon:"previsionnel", label:"Prévisionnel"},
+ {id:"roi", icon:"roi", label:"Calculateur d'investissement"},
+ {id:"embauche", icon:"embauche", label:"Simulateur d'embauche"},
  ]},
  { label:"MON ÉQUIPE", items:[
- ...(planningEnabled!==false ? [{id:"planning", icon:"", label:"Planning"}] : []),
- ...(congesEnabled!==false ? [{id:"conges", icon:"", label:"Congés & absences"}] : []),
- ...(pointageEnabled!==false ? [{id:"pointage", icon:"", label:"Pointage"}] : []),
- ...(notesFraisEnabled!==false ? [{id:"notesfrais", icon:"", label:"Notes de frais"}] : []),
- ...(tachesEnabled!==false ? [{id:"taches", icon:"", label:"Tâches"}] : []),
- ...(equipeTachesEnabled!==false ? [{id:"equipetaches", icon:"", label:"Gestion d'équipe & Tâches"}] : []),
- ...(stockEnabled!==false ? [{id:"stock", icon:"", label:"Mon stock"}] : []),
+ ...(planningEnabled!==false ? [{id:"planning", icon:"planning", label:"Planning"}] : []),
+ ...(congesEnabled!==false ? [{id:"conges", icon:"conges", label:"Congés & absences"}] : []),
+ ...(pointageEnabled!==false ? [{id:"pointage", icon:"pointage", label:"Pointage"}] : []),
+ ...(notesFraisEnabled!==false ? [{id:"notesfrais", icon:"notesfrais", label:"Notes de frais"}] : []),
+ ...(tachesEnabled!==false ? [{id:"taches", icon:"taches", label:"Tâches"}] : []),
+ ...(equipeTachesEnabled!==false ? [{id:"equipetaches", icon:"equipetaches", label:"Gestion d'équipe & Tâches"}] : []),
+ ...(stockEnabled!==false ? [{id:"stock", icon:"stock", label:"Mon stock"}] : []),
  ]},
- ];
+ ].filter(sec=>sec.items.length>0);
  // Repli/dépli par section · tout ouvert par défaut (comportement identique à avant tant qu'on ne clique pas),
  // état mémorisé par section pour ne pas perdre la préférence en changeant de vue.
  const [collapsed,setCollapsed]=useState({});
@@ -1041,9 +970,25 @@ function AdminClients({ clients, cabinets, onViewAsClient, onAddClient, onUpdate
      {c.email&&<a href={`mailto:${c.email}`} style={{fontSize:12,fontWeight:700,color:C.textMid,textDecoration:"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>✉ {c.email}</a>}
    </div>
  )}
+ {/* Suivi mensuel : fraîcheur des données et note du conseiller */}
+ {(()=>{
+   const lastKey=latestDataKey(c);
+   const prevKey=`${CUR_M===0?CUR_Y-1:CUR_Y}-${String(CUR_M===0?12:CUR_M).padStart(2,"0")}`;
+   const fecOk=lastKey&&fecIndex(c).months.has(lastKey);
+   const aJour=lastKey&&lastKey>=prevKey;
+   const note=lastKey&&(c.imports||[]).some(i=>i.type==="note"&&i.mois===lastKey);
+   return (
+   <div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:12,padding:"8px 10px",borderRadius:8,background:!lastKey?C.bg:aJour?C.greenBg:C.orangeBg,border:`1px solid ${!lastKey?C.borderLight:aJour?C.green+"33":C.orange+"44"}`}}>
+     <div style={{fontSize:12,fontWeight:800,color:!lastKey?C.textMid:aJour?C.green:C.orange}}>
+       {!lastKey?"Aucune donnée importée":aJour?`Données à jour · ${keyLabel(lastKey)}`:`Dernières données : ${keyLabel(lastKey)} · import de ${keyLabel(prevKey)} à faire`}
+     </div>
+     {lastKey&&<div style={{fontSize:11,fontWeight:700,color:C.textMid}}>{fecOk?"Comptabilité (FEC)":"Imports simplifiés (estimations)"}{c.plan!=="dashboard"?` · note du mois ${note?"publiée":"à rédiger"}`:""}</div>}
+   </div>
+   );
+ })()}
  <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
- {(()=>{const lk=calcMonthKpis(c,CUR_M,CUR_Y);const ca=lk.hasData?lk.ca:c.kpis.ca;const res=lk.hasData?lk.result:c.kpis.result;const treso=calcTresoEstimee(c,CUR_M,CUR_Y);
-          return[["CA mensuel",fmt(ca),C.text],["Résultat",fmt(res),res>=0?C.green:C.red],["Trésorerie",fmt(treso),treso>=0?C.green:C.red],["Responsable",c.manager,C.textMid]];})().map(([l,v,col])=>(
+ {(()=>{const lastKey=latestDataKey(c);const [ly,lm]=(lastKey||`${CUR_Y}-${String(CUR_M+1).padStart(2,"0")}`).split("-").map(Number);const lk=calcMonthKpis(c,lm-1,ly);const ca=lk.hasData?lk.ca:null;const res=lk.hasData?lk.result:null;const treso=lk.hasData&&(fecIndex(c).has||c.tresorerie?.dateSolde||(c.tresorerie?.soldeInitial||0)!==0)?calcTresoEstimee(c,lm-1,ly):null;const lib=lastKey?` (${keyLabel(lastKey,false)})`:"";
+          return[[`CA du mois${lib}`,fmt(ca),C.text],["Résultat",fmt(res),res==null?C.textLight:res>=0?C.green:C.red],["Trésorerie",fmt(treso),treso==null?C.textLight:treso>=0?C.green:C.red],["Responsable",c.manager,C.textMid]];})().map(([l,v,col])=>(
  <div key={l} style={{display:"flex",justifyContent:"space-between",fontSize:12}}><span style={{color:C.textLight}}>{l}</span><strong style={{color:col}}>{v}</strong></div>
  ))}
  </div>
@@ -1064,15 +1009,16 @@ function AdminClients({ clients, cabinets, onViewAsClient, onAddClient, onUpdate
 }
 
 // ADMIN · SAISIE CSV
-function AdminSaisie({ clients, onUpdateClient }) {
+function AdminSaisie({ clients, onSaveImport, onDeleteImport }) {
  const [selId,setSelId]=useState(clients[0]?.id||"");
- const [mod,setMod]=useState("ventes_produits");
+ const [mod,setMod]=useState("fec");
  const [moisImport,setMoisImport]=useState("2025-10");
  const [csvPreview,setCsvPreview]=useState(null);
  const [importMsg,setImportMsg]=useState("");
  const client=clients.find(c=>c.id===Number(selId));
 
  const CSV_MODULES=[
+ {id:"fec",label:"Comptabilité (FEC)"},
  {id:"ventes_produits",label:"Ventes produits"},
  {id:"autres_ventes",label:"Autres ventes"},
  {id:"charges",label:"Charges"},
@@ -1106,15 +1052,12 @@ function AdminSaisie({ clients, onUpdateClient }) {
 
  const handleConfirm=async(rows,mois)=>{
  const label=CSV_MODULES.find(m=>m.id===mod)?.label||mod;
- const existing=(client.imports||[]);
  const importedAt=new Date().toLocaleDateString("fr-FR");
- const newImport={id:Date.now(),type:mod,label,mois,rows,count:rows.length,importedAt};
- // onUpdateClient sauvegarde réellement l'import (branche patch.imports) et alerte
- // l'utilisateur + annule la mise à jour locale en cas d'échec · pas besoin de dupliquer
- // l'écriture ici.
- onUpdateClient(client.id,{imports:[...existing,newImport]});
+ // Écriture directe dans imports_csv : l'import reçoit son identifiant réel,
+ // il peut donc être supprimé tout de suite sans recharger la page.
+ const ok=await onSaveImport(client.id,{type:mod,label,mois,rows,count:rows.length,importedAt});
  setCsvPreview(null);
- setImportMsg(` ${rows.length} ligne${rows.length>1?"s":""} importée${rows.length>1?"s":""} dans "${label}" · ${mois}`);
+ setImportMsg(ok?` ${rows.length} ligne${rows.length>1?"s":""} importée${rows.length>1?"s":""} dans "${label}" · ${mois}`:"L'import a échoué, réessayez.");
  setTimeout(()=>setImportMsg(""),5000);
  };
 
@@ -1154,6 +1097,7 @@ function AdminSaisie({ clients, onUpdateClient }) {
  ))}
  </div>
 
+ {mod==="fec" ? (client && <ImportFec compact client={client} onSaveImport={imp=>onSaveImport(client.id,imp)} onDeleteImport={id=>onDeleteImport(client.id,id)}/>) : (
  <Card>
  <SectionHead
  title={`${CSV_MODULES.find(m=>m.id===mod)?.label} · Import CSV`}
@@ -1231,10 +1175,8 @@ function AdminSaisie({ clients, onUpdateClient }) {
    <Btn small variant="ghost" style={{color:C.red,borderColor:C.red+"44",fontSize:11,padding:"2px 8px"}}
      onClick={async()=>{
        if(!window.confirm(`Supprimer l'import ${imp.mois} ?`)) return;
-       const newImports = (client.imports||[]).filter(i=>i.id!==imp.id);
-       onUpdateClient(client.id,{imports:newImports});
-       try{ await supabase.from("imports_csv").delete().eq("id",imp.id); }
-       catch(e){console.error(e);}
+       const ok=await onDeleteImport(client.id,imp.id);
+       if(!ok){ setImportMsg("La suppression a échoué, réessayez."); setTimeout(()=>setImportMsg(""),4000); }
      }}>
      Supprimer
    </Btn>
@@ -1244,6 +1186,7 @@ function AdminSaisie({ clients, onUpdateClient }) {
  </div>
  )}
  </Card>
+ )}
  </div>
  );
 }
@@ -1254,6 +1197,7 @@ function AdminSaisie({ clients, onUpdateClient }) {
 // gestion sont floutés avec un bouton qui prévient le conseiller sur WhatsApp.
 const FREE_LOCKED_VIEWS={
  alertes:{title:"Alertes",desc:"Votre conseiller surveille vos chiffres et vous prévient avant qu'un problème n'arrive."},
+ bilan:{title:"Bilan et BFR",desc:"Votre bilan reconstitué chaque mois : fonds de roulement, besoin en fonds de roulement et ratios bancaires, expliqués simplement."},
  tresorerie:{title:"Trésorerie prévisionnelle",desc:"Votre trésorerie sur les 90 prochains jours, ajustée avec votre conseiller."},
  creances:{title:"Créances clients",desc:"Le suivi des factures clients et des retards de paiement, pour sécuriser votre trésorerie."},
  dettes:{title:"Dettes fournisseurs",desc:"L'échéancier de vos fournisseurs, pour anticiper vos décaissements."},
@@ -1272,20 +1216,6 @@ const FREE_LOCKED_VIEWS={
  equipetaches:{title:"Gestion d'équipe & tâches",desc:"Tâches récurrentes par site et par personne, avec suivi.",tool:true},
  stock:{title:"Stock",desc:"Votre stock suivi en temps réel, avec alertes de réapprovisionnement.",tool:true},
 };
-
-function LockedStrip({ viewId, label, isAdminPreview, setView }) {
- return (
- <div style={{position:"relative",borderRadius:16,overflow:"hidden",border:`1.5px dashed ${C.border}`}}>
- <div aria-hidden="true" style={{filter:"blur(6px)",opacity:.5,pointerEvents:"none",display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,padding:14}}>
- {["Trésorerie","CAF","Charge emprunts","Investissements"].map(l=><div key={l} style={{height:84,borderRadius:14,background:"#e3f4f1"}}/>)}
- </div>
- <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",gap:16,flexWrap:"wrap",padding:"10px 16px",textAlign:"center"}}>
- <span style={{fontSize:13,fontWeight:800,color:C.text}}>{label}</span>
- <Btn small onClick={()=>setView&&setView(viewId)} disabled={!setView}>Voir avec mon conseiller →</Btn>
- </div>
- </div>
- );
-}
 
 function ToolPlaceholder() {
  return (
@@ -1369,17 +1299,6 @@ function monthOfRow(row){
 }
 function prevMonthKey(){ const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; }
 
-function ClientImportWelcome({ onStart }) {
- return (
- <div style={{margin:"24px 24px 0",background:C.white,border:`1.5px solid ${C.primary}`,borderRadius:18,padding:"22px 24px",display:"flex",alignItems:"center",gap:20,flexWrap:"wrap",boxShadow:"0 16px 36px rgba(0,86,83,.08)"}}>
- <div style={{flex:"1 1 320px"}}>
- <div style={{fontSize:17,fontWeight:900,color:C.text,marginBottom:6}}>Bienvenue ! Votre tableau de bord est prêt.</div>
- <div style={{fontSize:13,fontWeight:600,color:C.textMid,lineHeight:1.6}}>Il ne manque que vos chiffres. Le plus simple : exportez votre relevé bancaire (CSV ou OFX) depuis le site de votre banque et déposez-le. Vos indicateurs s&apos;affichent tout de suite.</div>
- </div>
- <Btn onClick={onStart}>Importer mes données →</Btn>
- </div>
- );
-}
 
 // CLIENT · IMPORT DU RELEVÉ BANCAIRE (CSV / OFX)
 // Le fichier est lu dans le navigateur (src/lib/bank-statement.js) ; seules les
@@ -1625,7 +1544,7 @@ function BankImport({ client, onSaveImport, onDeleteImport }) {
 }
 
 function ClientImport({ client, onSaveImport, onDeleteImport }) {
- const [mod,setMod]=useState("banque");
+ const [mod,setMod]=useState("fec");
  const [moisImport,setMoisImport]=useState(prevMonthKey());
  const [csvPreview,setCsvPreview]=useState(null);
  const [msg,setMsg]=useState(null);
@@ -1698,10 +1617,10 @@ function ClientImport({ client, onSaveImport, onDeleteImport }) {
 
  const tabs=(
  <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
- {[{id:"banque",label:"Mon relevé bancaire"},...CLIENT_IMPORT_MODULES].map(m=>(
+ {[{id:"fec",label:"Ma comptabilité (FEC)"},{id:"banque",label:"Mon relevé bancaire"},...CLIENT_IMPORT_MODULES].map(m=>(
  <button key={m.id} onClick={()=>setMod(m.id)}
  style={{padding:"8px 16px",borderRadius:100,border:`1.5px solid ${mod===m.id?C.primary:C.border}`,background:mod===m.id?C.primary:"white",color:mod===m.id?"white":C.textMid,fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
- {m.label}{m.id==="banque"&&<span style={{marginLeft:6,fontSize:10,fontWeight:900,color:mod===m.id?"#bbf7d0":C.green}}>LE PLUS RAPIDE</span>}
+ {m.label}{m.id==="banque"&&<span style={{marginLeft:6,fontSize:10,fontWeight:900,color:mod===m.id?"#bbf7d0":C.green}}>LE PLUS RAPIDE</span>}{m.id==="fec"&&<span style={{marginLeft:6,fontSize:10,fontWeight:900,color:mod===m.id?"#bbf7d0":C.green}}>LE PLUS COMPLET</span>}
  </button>
  ))}
  </div>
@@ -1711,6 +1630,13 @@ function ClientImport({ client, onSaveImport, onDeleteImport }) {
  <div style={{display:"flex",alignItems:"center",gap:10,background:C.bg,border:`1px solid ${C.border}`,borderRadius:12,padding:"10px 14px"}}>
  <span style={{fontSize:10,fontWeight:900,color:C.primary,background:"white",border:`1px solid ${C.border}`,borderRadius:100,padding:"3px 9px",whiteSpace:"nowrap"}}>LE PLUS PRÉCIS</span>
  <span style={{fontSize:12.5,fontWeight:600,color:C.textMid}}>Nos modèles Excel donnent des montants HT exacts et le détail de vos salaires. Plus long à remplir que le relevé bancaire.</span>
+ </div>
+ );
+
+ if(mod==="fec") return (
+ <div style={{padding:24,display:"flex",flexDirection:"column",gap:20}} className="fade-up">
+ {tabs}
+ <ImportFec client={client} onSaveImport={onSaveImport} onDeleteImport={onDeleteImport}/>
  </div>
  );
 
@@ -1820,8 +1746,9 @@ function EmpruntsForm({ client, onUpdate }) {
  const [showAdd,setShowAdd]=useState(false);
  const [form,setForm]=useState({libelle:"",capital:"",taux:"",duree:"",dateDebut:"",assurance:""});
  const [saved,setSaved]=useState("");
- const calcAmort=(e)=>{ const rows=[]; let restant=e.capital; const mens=e.capital*(e.taux/100)/(1-Math.pow(1+e.taux/100,-e.duree)); for(let i=0;i<Math.min(e.duree,12);i++){const int=Math.round(restant*e.taux/100*100)/100;const cap=Math.round((mens-int)*100)/100;restant=Math.max(0,Math.round((restant-cap)*100)/100);rows.push({mois:MONTHS[i%12],interets:int,capitalRembourse:cap,capitalRestant:restant,assurance:e.assurance,sortie:Math.round((mens+e.assurance)*100)/100});} return rows; };
- const addEmprunt=()=>{ if(!form.libelle||!form.capital) return; const newE={id:Date.now(),libelle:form.libelle,capital:parseFloat(form.capital)||0,taux:parseFloat(form.taux)||0,duree:parseInt(form.duree)||60,dateDebut:form.dateDebut||"2025-01-01",assurance:parseFloat(form.assurance)||0}; onUpdate(client.id,{emprunts:[...(client.emprunts||[]),newE]}); setForm({libelle:"",capital:"",taux:"",duree:"",dateDebut:"",assurance:""}); setShowAdd(false); setSaved(" Emprunt ajouté · visible côté client"); setTimeout(()=>setSaved(""),4000); };
+ // Échéancier des 12 prochains mois (à partir du mois en cours), depuis la date de souscription.
+ const calcAmort=(e)=>{ const rows=[]; const t=(e.taux||0)/100; const mens=mensualiteHorsAssurance(e); const d=e.dateDebut?new Date(e.dateDebut):new Date(CUR_Y,CUR_M,1); const start=d.getFullYear()*12+d.getMonth(); const now=CUR_Y*12+CUR_M; let restant=e.capital; for(let i=0;i<(e.duree||0)&&rows.length<12;i++){const int=restant*t;const cap=Math.min(restant,mens-int);restant=Math.max(0,restant-cap);const m=start+i;if(m>=now)rows.push({mois:`${MONTHS[m%12]} ${Math.floor(m/12)}`,interets:Math.round(int*100)/100,capitalRembourse:Math.round(cap*100)/100,capitalRestant:Math.round(restant*100)/100,assurance:e.assurance||0,sortie:Math.round((mens+(e.assurance||0))*100)/100});} return rows; };
+ const addEmprunt=()=>{ if(!form.libelle||!form.capital) return; const tauxAnnuel=parseFloat(String(form.taux).replace(",","."))||0; const newE={id:Date.now(),libelle:form.libelle,capital:parseFloat(form.capital)||0,taux:tauxAnnuel/12,tauxAnnuel,duree:parseInt(form.duree)||60,dateDebut:form.dateDebut||"2025-01-01",assurance:parseFloat(form.assurance)||0}; onUpdate(client.id,{emprunts:[...(client.emprunts||[]),newE]}); setForm({libelle:"",capital:"",taux:"",duree:"",dateDebut:"",assurance:""}); setShowAdd(false); setSaved(" Emprunt ajouté · visible côté client"); setTimeout(()=>setSaved(""),4000); };
  return (
  <div style={{display:"flex",flexDirection:"column",gap:16}}>
  {saved&&<div style={{padding:"10px 16px",background:C.greenBg,border:`1px solid ${C.green}33`,borderRadius:8,fontSize:13,color:C.green,fontWeight:700}}>{saved}</div>}
@@ -1830,7 +1757,7 @@ function EmpruntsForm({ client, onUpdate }) {
  <Card style={{border:`2px solid ${C.primary}`}}>
  <SectionHead title="Nouvel emprunt bancaire" sub="Tableau d'amortissement généré automatiquement"/>
  <div style={{padding:20,display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14}}>
- {[{l:"Libellé",k:"libelle",ph:"Prêt BPI"},{l:"Capital (€)",k:"capital",ph:"45000",t:"number"},{l:"Taux mensuel (%)",k:"taux",ph:"0.35",t:"number"},{l:"Durée (mois)",k:"duree",ph:"60",t:"number"},{l:"Date souscription",k:"dateDebut",t:"date"},{l:"Assurance mensuelle (€)",k:"assurance",ph:"35",t:"number"}].map(f=>(
+ {[{l:"Libellé",k:"libelle",ph:"Prêt BPI"},{l:"Capital (€)",k:"capital",ph:"45000",t:"number"},{l:"Taux annuel (%)",k:"taux",ph:"4,2"},{l:"Durée (mois)",k:"duree",ph:"60",t:"number"},{l:"Date souscription",k:"dateDebut",t:"date"},{l:"Assurance mensuelle (€)",k:"assurance",ph:"35",t:"number"}].map(f=>(
  <FormRow key={f.k} label={f.l}><input type={f.t||"text"} value={form[f.k]} onChange={e=>setForm({...form,[f.k]:e.target.value})} placeholder={f.ph||""} className="inp"/></FormRow>
  ))}
  </div>
@@ -1839,12 +1766,12 @@ function EmpruntsForm({ client, onUpdate }) {
  )}
  {(client.emprunts||[]).length===0&&!showAdd&&<div style={{textAlign:"center",padding:"40px 0",color:C.textLight,fontSize:13}}>Aucun emprunt enregistré</div>}
  {(client.emprunts||[]).map(e=>{
- const rows=calcAmort(e); const restant=rows[rows.length-1]?.capitalRestant||0;
+ const rows=calcAmort(e); const restant=Math.round(capitalRestant(e,echeancesPayees(e,CUR_M,CUR_Y))); const tauxAn=e.tauxAnnuel??(e.taux||0)*12;
  return (
  <Card key={e.id}>
- <SectionHead title={e.libelle} sub={`Capital : ${fmt(e.capital)} · ${e.taux}%/mois · ${e.duree} mois · Assurance : ${fmt(e.assurance)}/mois`}/>
+ <SectionHead title={e.libelle} sub={`Capital : ${fmt(e.capital)} · ${tauxAn.toFixed(2).replace(".",",")} % par an · ${e.duree} mois · Assurance : ${fmt(e.assurance)}/mois`}/>
  <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,padding:16}}>
- <KpiCard label="Capital initial" value={fmt(e.capital)} color={C.primary}/><KpiCard label="Mensualité" value={fmt(rows[0]?.sortie||0)} color={C.orange}/><KpiCard label="Capital restant" value={fmt(restant)} color={C.red}/><KpiCard label="Intérêts payés" value={fmt(rows.reduce((s,r)=>s+r.interets,0))} color={C.orange}/>
+ <KpiCard label="Capital initial" value={fmt(e.capital)} color={C.primary}/><KpiCard label="Mensualité" value={fmt(Math.round(mensualiteEmprunt(e)))} color={C.orange}/><KpiCard label="Capital restant aujourd'hui" value={fmt(restant)} color={C.red}/><KpiCard label="Intérêts sur 12 mois" value={fmt(rows.reduce((s,r)=>s+r.interets,0))} color={C.orange}/>
  </div>
  <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr><Th>Mois</Th><Th right>Intérêts</Th><Th right>Capital remb.</Th><Th right>Capital restant</Th><Th right>Assurance</Th><Th right>Sortie tréso</Th></tr></thead><tbody>{rows.map((r,i)=><Tr key={i}><Td bold>{r.mois}</Td><Td right mono color={C.orange}>{fmt(r.interets)}</Td><Td right mono color={C.primary}>{fmt(r.capitalRembourse)}</Td><Td right mono bold>{fmt(r.capitalRestant)}</Td><Td right mono color={C.textMid}>{fmt(r.assurance)}</Td><Td right mono bold color={C.red}>{fmt(r.sortie)}</Td></Tr>)}</tbody></table></div>
  </Card>
@@ -1877,7 +1804,7 @@ function InvestissementsForm({ client, onUpdate }) {
  )}
  {(client.investissements||[]).length===0&&!showAdd&&<div style={{textAlign:"center",padding:"40px 0",color:C.textLight,fontSize:13}}>Aucun investissement enregistré</div>}
  {(client.investissements||[]).map(inv=>{
- const tvaE=Math.round(inv.montantHT*inv.tauxTVA/100);const ttc=inv.montantHT+tvaE;const amortM=Math.round(inv.montantHT/(inv.duree||36));const moisE=Math.min(inv.duree,CUR_M+1);const vnc=Math.max(0,inv.montantHT-amortM*moisE);const pctF=Math.round(moisE/inv.duree*100);
+ const tvaE=Math.round(inv.montantHT*inv.tauxTVA/100);const ttc=inv.montantHT+tvaE;const amortM=Math.round(amortMensuelInv(inv));const moisE=moisAmortis(inv,CUR_M,CUR_Y);const vnc=Math.round(vncInv(inv,CUR_M,CUR_Y));const pctF=Math.round(moisE/(inv.duree||36)*100);
  const gainM=inv.gainMensuel||0;const paybackM=gainM>0?Math.ceil(inv.montantHT/gainM):null;const rentable=paybackM!==null?paybackM<=inv.duree:null;
  return (
  <Card key={inv.id}>
@@ -2108,7 +2035,7 @@ function TresorerieForecast90j({ client, embedded=false }) {
  const startingBalance=calcTresoEstimee(client,CUR_M,CUR_Y) ?? (client.tresorerie?.soldeInitial||0);
  const emprunts=client.emprunts||[];
  const empruntEcheances=emprunts.flatMap(e=>{
- const mensualite=Math.round(e.capital*(e.taux/100)/(1-Math.pow(1+e.taux/100,-e.duree))+(e.assurance||0));
+ const mensualite=Math.round(mensualiteEmprunt(e));
  return empruntDatesEcheances(e).map(date=>({libelle:e.libelle,date,montant:mensualite}));
  });
  const imports=client.imports||[];
@@ -2299,9 +2226,9 @@ function TresorerieForm({ client, onUpdate }) {
 function ISForm({ client, onUpdate }) {
  const [isData,setIsData]=useState(client.is||{totalPrecedent:0,taux:15});
  const [saved,setSaved]=useState("");
- const amortMensuel=(client.investissements||[]).reduce((s,i)=>s+Math.round(i.montantHT/(i.duree||36)),0);
+ const amortMensuel=amortissements(client.investissements,CUR_M,CUR_Y);
  const resultatBrut=client.kpis.ebe-amortMensuel;
- const provisionIS=Math.max(0,Math.round(resultatBrut*isData.taux/100));
+ const provisionIS=Math.round(estimateIS(Math.max(0,resultatBrut)*12,isData.taux!==25)/12);
  const restantDu=Math.max(0,provisionIS-(isData.totalPrecedent||0));
  const save=()=>{ onUpdate(client.id,{is:isData}); setSaved(" IS enregistré"); setTimeout(()=>setSaved(""),3000); };
  return (
@@ -2335,10 +2262,15 @@ function ISForm({ client, onUpdate }) {
 // 
 // HELPERS · KPIs par mois depuis imports
 // 
+// Taux de TVA d'une ligne de vente importée (20 % si la ligne ne le précise pas).
+const tauxVente=(r)=>r.taux_tva!=null&&r.taux_tva!==""&&!isNaN(parseFloat(r.taux_tva))?parseFloat(r.taux_tva):20;
 function getMonthKey(moisIdx, year) {
  return `${year}-${String(moisIdx+1).padStart(2,"0")}`;
 }
 function calcMonthKpis(client, moisIdx, year) {
+ // Comptabilité importée (FEC) pour ce mois : chiffres exacts, prioritaires sur les imports simplifiés.
+ const fk = fecMonthKpis(client, moisIdx, year, { tauxReduit: (client.is?.taux ?? 15) !== 25 });
+ if (fk) return fk;
  const key = getMonthKey(moisIdx, year);
  const imports = client.imports||[];
 
@@ -2366,10 +2298,13 @@ function calcMonthKpis(client, moisIdx, year) {
  const fCharges = charges > 0 ? charges : base.charges;
  const fSalaires= salaires > 0 ? salaires : base.salaires;
  const fEbe = fMarge - fCharges - fSalaires;
- const amort = (client.investissements||[]).reduce((s,i)=>s+Math.round(i.montantHT/(i.duree||36)),0);
- const fResult = fEbe - amort;
+ // Amortissements des seuls investissements en service ce mois-ci ; intérêts d'emprunt estimés.
+ const amort = amortissements(client.investissements, moisIdx, year);
+ const interets = Math.round((client.emprunts||[]).reduce((s,e)=>{ const k=echeancesPayees(e,moisIdx,year); return s+(mensualiteEmprunt(e,moisIdx,year)>0?capitalRestant(e,Math.max(0,k-1))*(e.taux||0)/100:0); },0));
+ const fResult = fEbe - amort - interets;
  const isD = client.is||{taux:15};
- const provIS = Math.max(0,Math.round(fEbe*isD.taux/100));
+ // Provision d'impôt du mois : barème PME (15 % puis 25 %) appliqué au résultat annualisé.
+ const provIS = Math.round(estimateIS(Math.max(0,fResult)*12, isD.taux!==25)/12);
 
  return { ca:fCA, marge:fMarge, charges:fCharges, salaires:fSalaires,
  ebe:fEbe, result:fResult, amort, provIS, hasData };
@@ -2381,55 +2316,7 @@ function getAvailableMonths(client) {
  return Array.from(keys).sort();
 }
 
-// 
-// MINI GRAPHIQUES SVG (pas de lib externe)
-// 
-function BarChart({ data, color=C.primary, height=80 }) {
- if (!data||data.length===0) return null;
- const max = Math.max(...data.map(d=>Math.abs(d.v)),1);
- const W=300, H=height, pad=4, bw=Math.max(8,Math.floor((W-pad*(data.length+1))/data.length));
- return (
- <svg viewBox={`0 0 ${W} ${H+22}`} width="100%" style={{display:"block"}}>
- {data.map((d,i)=>{
- const h = Math.round((Math.abs(d.v)/max)*(H-4));
- const x = pad+(i*(bw+pad));
- const y = H-h;
- const col = d.v<0?C.red:color;
- return (
- <g key={i}>
- <rect x={x} y={y} width={bw} height={h} rx={3} fill={col} opacity={0.85}/>
- <text x={x+bw/2} y={H+14} textAnchor="middle" fontSize={9} fill={C.textLight} fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{d.l}</text>
- </g>
- );
- })}
- </svg>
- );
-}
 
-function LineChart({ data, color=C.primary, height=80 }) {
- if (!data||data.length<2) return null;
- const vals = data.map(d=>d.v);
- const max=Math.max(...vals,1), min=Math.min(...vals,0);
- const range=max-min||1;
- const W=300, H=height, padL=6, padR=6;
- const xs=data.map((_,i)=>padL+i*(W-padL-padR)/(data.length-1));
- const ys=data.map(d=>H-4-Math.round(((d.v-min)/range)*(H-8)));
- const path="M"+xs.map((x,i)=>`${x},${ys[i]}`).join(" L");
- const area="M"+xs[0]+","+H+" L"+xs.map((x,i)=>`${x},${ys[i]}`).join(" L")+` L${xs[xs.length-1]},${H} Z`;
- return (
- <svg viewBox={`0 0 ${W} ${H+20}`} width="100%" style={{display:"block"}}>
- <defs><linearGradient id="lg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity={0.2}/><stop offset="100%" stopColor={color} stopOpacity={0}/></linearGradient></defs>
- <path d={area} fill="url(#lg)"/>
- <path d={path} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round"/>
- {xs.map((x,i)=>(
- <g key={i}>
- <circle cx={x} cy={ys[i]} r={3} fill={color}/>
- <text x={x} y={H+14} textAnchor="middle" fontSize={9} fill={C.textLight} fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{data[i].l}</text>
- </g>
- ))}
- </svg>
- );
-}
 
 // 
 // CLIENT DASHBOARD · Pro avec graphiques
@@ -2480,1119 +2367,9 @@ function BarChart2({data, c1=C.primary, c2=C.green, h=90, W=500, label1="V1", la
 }
 
 
-// Résumé "Mon équipe" sur le tableau de bord · comptages légers sur les 3 nouveaux modules,
-// cliquables pour y accéder directement. Masqué si le client n'a déclaré aucun employé.
-function EquipeSnapshot({ client, setView, isAdminPreview }) {
- const congesOn=client.congesEnabled!==false, pointageOn=client.pointageEnabled!==false, notesFraisOn=client.notesFraisEnabled!==false, tachesOn=client.tachesEnabled!==false;
- const [counts,setCounts]=useState({loading:true, enAttente:0, congesMois:0, pointesAujourdhui:0, totalEmployes:0, tachesEnCours:0});
-
- useEffect(()=>{
-  (async()=>{
-   try {
-    const n=new Date();
-    const moisActuel=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}`;
-    const todayStr=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}-${String(n.getDate()).padStart(2,"0")}`;
-    const [empR,notesR,congesR,pointagesR,tachesR]=await Promise.all([
-     supabase.from("employes").select("id",{count:"exact",head:true}).eq("client_id",client.id),
-     notesFraisOn?supabase.from("notes_frais").select("id",{count:"exact",head:true}).eq("client_id",client.id).eq("statut","en_attente"):Promise.resolve({count:0}),
-     congesOn?supabase.from("planning_contraintes").select("id",{count:"exact",head:true}).eq("client_id",client.id).eq("type","conge").eq("statut","en_attente"):Promise.resolve({count:0}),
-     pointageOn?supabase.from("pointages").select("id",{count:"exact",head:true}).eq("client_id",client.id).eq("date",todayStr):Promise.resolve({count:0}),
-     tachesOn?supabase.from("taches").select("id",{count:"exact",head:true}).eq("client_id",client.id).neq("statut","termine"):Promise.resolve({count:0}),
-    ]);
-    setCounts({
-     loading:false,
-     enAttente:notesR.count||0,
-     congesMois:congesR.count||0,
-     pointesAujourdhui:pointagesR.count||0,
-     totalEmployes:empR.count||0,
-     tachesEnCours:tachesR.count||0,
-    });
-   } catch(e){ console.error("EquipeSnapshot load:",e); setCounts(c=>({...c,loading:false})); }
-  })();
- },[client.id]);
-
- if(counts.loading||counts.totalEmployes===0) return null;
- if(!congesOn&&!pointageOn&&!notesFraisOn&&!tachesOn) return null;
-
- return (
-  <div>
-   <div style={{fontSize:11,fontWeight:800,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10}}>Mon équipe</div>
-   <div style={{display:"grid",gridTemplateColumns:`repeat(${[notesFraisOn,congesOn,pointageOn,tachesOn].filter(Boolean).length},1fr)`,gap:14}}>
-    {notesFraisOn&&<div onClick={()=>!isAdminPreview&&setView&&setView("notesfrais")} style={{cursor:(!isAdminPreview&&setView)?"pointer":"default"}}>
-     <KpiCard label="Notes de frais" value={counts.enAttente} sub={counts.enAttente>0?"en attente de validation":"aucune en attente"} color={counts.enAttente>0?C.orange:C.green}/>
-    </div>}
-    {congesOn&&<div onClick={()=>!isAdminPreview&&setView&&setView("conges")} style={{cursor:(!isAdminPreview&&setView)?"pointer":"default"}}>
-     <KpiCard label="Congés" value={counts.congesMois} sub={counts.congesMois>0?"demande(s) en attente":"aucune en attente"} color={counts.congesMois>0?C.orange:C.green}/>
-    </div>}
-    {pointageOn&&<div onClick={()=>!isAdminPreview&&setView&&setView("pointage")} style={{cursor:(!isAdminPreview&&setView)?"pointer":"default"}}>
-     <KpiCard label="Pointés aujourd'hui" value={counts.pointesAujourdhui} sub={`sur ${counts.totalEmployes} employé(s)`} color={C.green}/>
-    </div>}
-    {tachesOn&&<div onClick={()=>!isAdminPreview&&setView&&setView("taches")} style={{cursor:(!isAdminPreview&&setView)?"pointer":"default"}}>
-     <KpiCard label="Tâches" value={counts.tachesEnCours} sub={counts.tachesEnCours>0?"en cours":"aucune en cours"} color={counts.tachesEnCours>0?C.orange:C.green}/>
-    </div>}
-   </div>
-  </div>
- );
-}
-
-function ClientDashboard({ client, isAdminPreview, onExitPreview, moisIdx, setMoisIdx, moisYear, setView }) {
-  const kpis        = calcMonthKpis(client, moisIdx, moisYear);
-  const emprunts    = client.emprunts||[];
-  const investissements = client.investissements||[];
-  const imports     = client.imports||[];
-  const chargeEmprunt = emprunts.reduce((s,e)=>{ const m=e.capital*(e.taux/100)/(1-Math.pow(1+e.taux/100,-e.duree)); return s+Math.round(m+e.assurance); },0);
-  const treso = calcTresoEstimee(client, moisIdx, moisYear);
-  const vncTotal    = investissements.reduce((s,inv)=>{const am=Math.round(inv.montantHT/(inv.duree||36));const me=Math.min(inv.duree,moisIdx+1);return s+Math.max(0,inv.montantHT-am*me);},0);
-
-  // ── Données 12 mois glissants
-  const months12 = Array.from({length:12},(_,i)=>{
-    const offset = moisIdx - 11 + i;
-    const mi = ((offset%12)+12)%12;
-    const yr = moisYear + Math.floor(offset/12);
-    const k  = calcMonthKpis(client, mi, yr);
-    const moisKey = `${yr}-${String(mi+1).padStart(2,"0")}`;
-    const ventesRows = imports.filter(imp=>imp.type==="ventes_produits"&&imp.mois===moisKey).flatMap(imp=>imp.rows);
-    const qte = ventesRows.reduce((s,r)=>s+parseInt(r.quantite_vendue||0),0);
-    return { l:MONTHS[mi].slice(0,3), mi, yr, ca:k.ca, marge:k.marge, ebe:k.ebe, result:k.result, charges:k.charges, salaires:k.salaires, qte, hasData:k.hasData };
-  });
-
-  // ── Coefficient de saisonnalité : ratio CA mois / moyenne CA
-  // Moyenne sur les seuls mois avec du CA : diviser par 12 avec des mois vides
-  // (client récent, historique partiel) faisait paraître chaque mois « au-dessus de la moyenne ».
-  const monthsWithCA = months12.filter(m=>m.ca>0);
-  const avgCA = monthsWithCA.length ? monthsWithCA.reduce((s,m)=>s+m.ca,0)/monthsWithCA.length : 1;
-  const saisonnalite = months12.map(m=>({ l:m.l, coef:m.ca>0?(m.ca/avgCA):0, ca:m.ca }));
-
-  // ── Trésorerie cumulative
-  // Trésorerie cumulée : partir du solde initial, accumuler les résultats depuis dateSolde
-  const si = client.tresorerie?.soldeInitial||0;
-  const ds = client.tresorerie?.dateSolde||null;
-  const dsYr = ds ? parseInt(ds.split("-")[0]) : null;
-  const dsMi = ds ? parseInt(ds.split("-")[1])-1 : null;
-  // Calculer le solde de trésorerie au début de months12[0]
-  // en partant du solde initial et en cumulant jusqu'au mois précédent le premier mois du graphique
-  const firstMonth = months12[0];
-  const prevMi = firstMonth.mi === 0 ? 11 : firstMonth.mi - 1;
-  const prevYr = firstMonth.mi === 0 ? firstMonth.yr - 1 : firstMonth.yr;
-  // Solde au début du graphique = calcTresoEstimee jusqu'au mois précédent
-  let tresoRun = ds ? (calcTresoEstimee(client, prevMi, prevYr) || si) : si;
-  const tresoData = months12.map(m=>{
-    const moisTotal = m.yr*12 + m.mi;
-    const datesoldeTotal = ds ? (dsYr*12 + dsMi) : -1;
-    const apresDateSolde = !ds || moisTotal >= datesoldeTotal;
-    if(apresDateSolde) {
-      const solde = m.hasData ? m.result : 0;
-      tresoRun = tresoRun + solde;
-      return { l:m.l, solde, cumul:tresoRun, available:true };
-    }
-    return { l:m.l, solde:0, cumul:null, available:false };
-  });
-
-  // ── Alertes dynamiques
-  const alertes = calcAlertes(client, moisIdx, moisYear).filter(a=>a.level!=="green");
-
-  // ── Helpers SVG
-  const W=500, pad=8;
-
-  // Graphique barres double (CA + Marge ou autre)
-  // ── Tooltip : rendu SVG inline, positionné localement dans chaque graphique
-  const [tooltip, setTooltip] = useState(null);
-  const Tooltip = () => null; // plus utilisé · tooltips dans le SVG directement
-
-  // ── BarChart2 · défini en top-level (function BarChart2)
-
-  // ── LineAreaChart · tooltip SVG inline
-  const LineAreaChart = ({data, color=C.primary, h=80, showZero=false, labelFn}) => {
-    const [hov, setHov] = useState(null);
-    if(data.length<2) return null;
-    const vals=data.map(d=>d.v!=null?d.v:null);
-    const validVals=vals.filter(v=>v!=null);
-    if(validVals.length<2) return null;
-    const maxV=Math.max(...validVals,showZero?0:validVals[0]);
-    const minV=Math.min(...validVals,showZero?0:validVals[0]);
-    const range=maxV-minV||1;
-    const xs=data.map((_,i)=>pad+i*(W-pad*2)/(data.length-1));
-    const ys=data.map(d=>d.v!=null?h-4-Math.round(((d.v-minV)/range)*(h-8)):null);
-    const zeroY=showZero?Math.min(h-4,Math.max(4,h-4-Math.round(((0-minV)/range)*(h-8)))):h-4;
-    const path="M"+xs.map((x,i)=>`${x},${ys[i]}`).join(" L");
-    const area=`M${xs[0]},${zeroY} L`+xs.map((x,i)=>`${x},${ys[i]}`).join(" L")+` L${xs[xs.length-1]},${zeroY} Z`;
-    const uid=color.replace(/[^a-zA-Z0-9]/g,"");
-    const TW=140;
-    return (
-      <svg viewBox={`0 0 ${W} ${h+22}`} width="100%" style={{display:"block"}} onMouseLeave={()=>setHov(null)}>
-        <defs>
-          <linearGradient id={`lg_${uid}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity={0.25}/>
-            <stop offset="100%" stopColor={color} stopOpacity={0}/>
-          </linearGradient>
-        </defs>
-        {showZero&&<line x1={0} y1={zeroY} x2={W} y2={zeroY} stroke={C.borderLight} strokeWidth={1} strokeDasharray="4,3"/>}
-        <path d={area} fill={`url(#lg_${uid})`}/>
-        <path d={path} fill="none" stroke={color} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round"/>
-        {/* Zones survol */}
-        {xs.map((x,i)=>{
-          const xStart=i===0?0:(x+xs[i-1])/2;
-          const xEnd=i===xs.length-1?W:(x+xs[i+1])/2;
-          return <rect key={i} x={xStart} y={0} width={xEnd-xStart} height={h+4}
-            fill="transparent" style={{cursor:"crosshair"}}
-            onMouseEnter={()=>setHov(i)} onMouseLeave={()=>setHov(null)}/>;
-        })}
-        {/* Points */}
-        {xs.map((x,i)=>(
-          <g key={i}>
-            {hov===i&&<line x1={x} y1={4} x2={x} y2={h-4} stroke={color} strokeWidth={1} strokeDasharray="3,2" opacity={0.4}/>}
-            <circle cx={x} cy={ys[i]} r={hov===i?5:data[i].active?3.5:2}
-              fill={hov===i||data[i].active?color:"white"} stroke={color} strokeWidth={1.5}/>
-            <text x={x} y={h+14} textAnchor="middle" fontSize={8}
-              fill={data[i].active||hov===i?C.text:C.textLight}
-              fontWeight={data[i].active?700:400} fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{data[i].l}</text>
-          </g>
-        ))}
-        {/* Tooltip SVG */}
-        {hov!=null&&(()=>{
-          const tx=Math.min(W-TW-4, Math.max(4, xs[hov]-TW/2));
-          const ty=Math.max(4, ys[hov]-48);
-          const val=labelFn?labelFn(data[hov].v):fmt(data[hov].v);
-          return (
-            <g pointerEvents="none">
-              <rect x={tx} y={ty} width={TW} height={38} rx={6} fill={C.primaryDark}/>
-              <text x={tx+8} y={ty+14} fontSize={10} fontWeight={800} fill="white" fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{data[hov].l}</text>
-              <text x={tx+8} y={ty+28} fontSize={9} fill="rgba(255,255,255,0.85)" fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{val}</text>
-            </g>
-          );
-        })()}
-      </svg>
-    );
-  };
-
-  // ── SaisonnaliteChart · tooltip SVG inline
-  const SaisonnaliteChart = ({data, h=70}) => {
-    const [hov, setHov] = useState(null);
-    const max=Math.max(...data.map(d=>d.coef),1.5);
-    const n=data.length;
-    const bw=Math.max(8,Math.floor((W-pad*(n+2))/n));
-    const base=Math.round((1/max)*(h-4));
-    const TW=160;
-    return (
-      <svg viewBox={`0 0 ${W} ${h+22}`} width="100%" style={{display:"block"}} onMouseLeave={()=>setHov(null)}>
-        <line x1={0} y1={h-4-base} x2={W} y2={h-4-base} stroke={C.border} strokeWidth={1.5} strokeDasharray="5,3"/>
-        <text x={W-2} y={h-4-base-4} textAnchor="end" fontSize={8} fill={C.textMid} fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">moyenne (1.0)</text>
-        {data.map((d,i)=>{
-          const barH=Math.round((d.coef/max)*(h-4));
-          const x=pad+i*(bw+pad);
-          const col=d.coef>1.2?C.green:d.coef<0.8?C.orange:C.primary;
-          return (
-            <g key={i} style={{cursor:"crosshair"}} onMouseEnter={()=>setHov(i)} onMouseLeave={()=>setHov(null)}>
-              <rect x={x} y={0} width={bw} height={h+4} fill="transparent"/>
-              <rect x={x} y={h-4-barH} width={bw} height={barH} rx={2} fill={col} opacity={hov===i?1:0.75}/>
-              {hov!==i&&<text x={x+bw/2} y={h-4-barH-3} textAnchor="middle" fontSize={8}
-                fill={col} fontWeight={700} fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{d.coef>0?d.coef.toFixed(2):""}</text>}
-              <text x={x+bw/2} y={h+14} textAnchor="middle" fontSize={8}
-                fill={hov===i?C.text:C.textLight} fontWeight={hov===i?700:400} fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{d.l}</text>
-            </g>
-          );
-        })}
-        {/* Tooltip SVG */}
-        {hov!=null&&(()=>{
-          const d=data[hov];
-          const x=pad+hov*(bw+pad);
-          const barH=Math.round((d.coef/max)*(h-4));
-          const interp=d.coef>1.3?"Mois très fort":d.coef>1.1?"Au-dessus de la moyenne":d.coef<0.7?"Mois très faible":d.coef<0.9?"En dessous de la moyenne":"Dans la moyenne";
-          const tx=Math.min(W-TW-4, Math.max(4, x+bw/2-TW/2));
-          const ty=Math.max(4, h-4-barH-62);
-          const col=d.coef>1.2?C.green:d.coef<0.8?C.orange:C.primary;
-          return (
-            <g pointerEvents="none">
-              <rect x={tx} y={ty} width={TW} height={56} rx={6} fill={C.primaryDark}/>
-              <text x={tx+8} y={ty+14} fontSize={10} fontWeight={800} fill="white" fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{d.l} · {d.coef.toFixed(2)}x</text>
-              <text x={tx+8} y={ty+28} fontSize={9} fill="rgba(255,255,255,0.8)" fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">CA : {fmt(d.ca)}</text>
-              <text x={tx+8} y={ty+42} fontSize={9} fill={col} fontWeight={700} fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{interp}</text>
-            </g>
-          );
-        })()}
-      </svg>
-    );
-  };
-
-  // ── WaterfallChart · calcul propre sans espace blanc
-  const WaterfallChart = ({h=110}) => {
-    const [hov, setHov] = useState(null);
-    const raw=[
-      {l:"CA",       v:kpis.ca,               desc:"Chiffre d'affaires HT",  type:"pos"},
-      {l:"Achats",   v:kpis.ca-kpis.marge,    desc:"Coûts d'achat directs",  type:"neg"},
-      {l:"Charges",  v:kpis.charges,           desc:"Charges externes",        type:"neg"},
-      {l:"Salaires", v:kpis.salaires,          desc:"Masse salariale",         type:"neg"},
-      {l:"Emprunts", v:chargeEmprunt,           desc:"Remboursements emprunts", type:"neg"},
-      {l:"Amort.",   v:kpis.amort,             desc:"Amortissements",          type:"neg"},
-      {l:"Résultat", v:Math.abs(kpis.result),  desc:"Résultat net",            type:"total", pos:kpis.result>=0},
-    ];
-
-    const usableH = h - 8; // hauteur utile en pixels
-    const total   = kpis.ca || 1; // référence = CA
-    const px = v => Math.round((v / total) * usableH); // valeur → pixels
-
-    // On construit les barres du bas vers le haut
-    // Le CA commence à la base (y=h-4) et monte
-    // Chaque déduction descend depuis la position courante
-    const baseY = h - 4;
-    let top = baseY - px(kpis.ca); // sommet du CA
-    let curTop = top; // curseur = sommet actuel de la pile
-
-    const bars = raw.map((it, i) => {
-      let barTop, barBot, barH;
-      if (it.type === "pos") {
-        barTop = baseY - px(it.v);
-        barBot = baseY;
-        curTop = barTop;
-      } else if (it.type === "total") {
-        const rPx = px(it.v);
-        barBot = baseY;
-        barTop = baseY - rPx;
-        // Ne pas mettre à jour curTop
-      } else {
-        // Déduction : la barre part du curseur courant et descend
-        barTop = curTop;
-        barBot = curTop + px(it.v);
-        curTop = barBot; // le nouveau sommet = bas de cette barre
-      }
-      barH = Math.max(2, barBot - barTop);
-      return { ...it, barTop, barBot, barH };
-    });
-
-    const n   = raw.length;
-    const bw  = Math.max(26, Math.floor((W - pad*(n+2)) / n));
-
-    return (
-      <svg viewBox={`0 0 ${W} ${h+26}`} width="100%" style={{display:"block"}}
-        >
-
-        {/* Grilles horizontales */}
-        {[0,0.25,0.5,0.75,1].map(f=>{
-          const gy = baseY - px(total*f);
-          return <line key={f} x1={0} y1={gy} x2={W} y2={gy}
-            stroke={f===0?C.border:C.borderLight} strokeWidth={f===0?1:0.5} strokeDasharray={f===0?"none":"3,3"}/>;
-        })}
-
-        {bars.map((it, i) => {
-          const col = it.type==="total"
-            ? (it.pos!==false ? C.green : C.red)
-            : it.type==="pos" ? C.primary : "#ef4444";
-          const x    = pad + i*(bw+pad);
-          // Connecteur horizontal entre barres
-          const prev = i > 0 ? bars[i-1] : null;
-          const connY = prev
-            ? (it.type==="neg" || it.type==="total") ? prev.barBot : prev.barTop
-            : null;
-
-          return (
-            <g key={i} style={{cursor:"crosshair"}} onMouseEnter={()=>setHov(i)} onMouseLeave={()=>setHov(null)}>
-
-              {/* Connecteur pointillé */}
-              {connY!=null && (
-                <line x1={pad+(i-1)*(bw+pad)+bw} x2={x}
-                  y1={connY} y2={connY}
-                  stroke={C.borderLight} strokeWidth={1} strokeDasharray="3,2"/>
-              )}
-
-              {/* Barre */}
-              <rect x={x} y={it.barTop} width={bw} height={it.barH} rx={3} fill={col} opacity={0.9}/>
-
-              {/* Valeur · dans la barre si assez grande, sinon au-dessus */}
-              {it.v > 0 && (it.barH >= 16
-                ? <text x={x+bw/2} y={it.barTop+it.barH/2+4} textAnchor="middle"
-                    fontSize={8} fill="white" fontWeight={800} fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">
-                    {fmt(it.v)}
-                  </text>
-                : <text x={x+bw/2} y={it.barTop-4} textAnchor="middle"
-                    fontSize={8} fill={col} fontWeight={800} fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">
-                    {fmt(it.v)}
-                  </text>
-              )}
-
-              {/* Label en bas */}
-              <text x={x+bw/2} y={h+18} textAnchor="middle" fontSize={9}
-                fill={it.type==="total" ? C.text : C.textMid}
-                fontWeight={it.type==="total"?800:500}
-                fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{it.l}</text>
-            </g>
-          );
-        })}
-        {/* Tooltip SVG waterfall */}
-        {hov!=null&&(()=>{
-          const it=bars[hov];
-          const x=pad+hov*(bw+pad);
-          const TW=170;
-          const tx=Math.min(W-TW-4,Math.max(4,x+bw/2-TW/2));
-          const ty=Math.max(4,it.barTop-52);
-          const col=it.type==="total"?(it.pos!==false?C.green:C.red):it.type==="pos"?C.primary:"#ef4444";
-          return (
-            <g pointerEvents="none">
-              <rect x={tx} y={ty} width={TW} height={42} rx={6} fill={C.primaryDark}/>
-              <text x={tx+8} y={ty+15} fontSize={10} fontWeight={800} fill="white" fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{it.desc}</text>
-              <text x={tx+8} y={ty+30} fontSize={9} fill={col} fontWeight={700} fontFamily="'VAG Rounded Next','Baloo 2',sans-serif">{`${it.type==="neg"?"– ":""}${fmt(it.v)}`}</text>
-            </g>
-          );
-        })()}
-      </svg>
-    );
-  };
-
-  const Legend = ({items}) => (
-    <div style={{display:"flex",gap:14,flexWrap:"wrap",marginBottom:10}}>
-      {items.map(it=>(
-        <div key={it.l} style={{display:"flex",alignItems:"center",gap:5}}>
-          <div style={{width:10,height:10,borderRadius:it.round?5:2,background:it.c}}/>
-          <span style={{fontSize:11,color:C.textMid,fontWeight:600}}>{it.l}</span>
-        </div>
-      ))}
-    </div>
-  );
-
-  return (
-    <div style={{padding:24,display:"flex",flexDirection:"column",gap:20}} className="fade-up">
-
-      <Tooltip/>
-      {/* Bandeau aperçu admin */}
-      {isAdminPreview&&(
-        <div style={{padding:"10px 18px",background:C.primary,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <span style={{fontSize:13,color:"white",fontWeight:700}}>Mode aperçu · {client.name}</span>
-          <Btn small variant="ghost" style={{color:"white",borderColor:"rgba(255,255,255,0.4)"}} onClick={onExitPreview}>← Retour admin</Btn>
-        </div>
-      )}
-
-      {/* ── HEADER avec sélecteur de mois ── */}
-      <div style={{background:`linear-gradient(135deg,${C.primaryDark} 0%,${C.primary} 60%,${C.primaryLight} 100%)`,borderRadius:20,padding:"26px 30px",color:"white",boxShadow:"0 20px 44px rgba(0,86,83,.22)"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:18}}>
-          <div>
-            <div style={{fontSize:22,fontWeight:900,letterSpacing:"-0.01em"}}>{client.name}</div>
-            <div style={{fontSize:12,color:"rgba(255,255,255,0.6)",marginTop:4}}>{client.sector} · Tableau de bord · {MONTHS[moisIdx]} {moisYear}</div>
-            {kpis.hasData&&<span style={{marginTop:6,display:"inline-block",background:"rgba(255,255,255,0.15)",borderRadius:20,padding:"2px 10px",fontSize:11,fontWeight:800}}>Données réelles du mois</span>}
-          </div>
-          <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8}}>
-            <div style={{textAlign:"right"}}>
-              <div style={{fontSize:11,color:"rgba(255,255,255,0.45)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>Conseiller {client.advisorLabel||"NVM Finance"}</div>
-              <div style={{fontSize:13,fontWeight:800}}>{client.manager}</div>
-            </div>
-            <div style={{display:"flex",alignItems:"center",gap:6,background:C.white,borderRadius:100,padding:"4px 6px"}}>
-              <Btn small variant="ghost" style={{padding:"2px 8px",border:"none"}} onClick={()=>setMoisIdx(m=>m-1)}>‹</Btn>
-              <span style={{fontSize:13,fontWeight:800,minWidth:90,textAlign:"center",color:C.text}}>{MONTHS[moisIdx]} {moisYear}</span>
-              <Btn small variant="ghost" style={{padding:"2px 8px",border:"none"}} onClick={()=>setMoisIdx(m=>m+1)}>›</Btn>
-            </div>
-          </div>
-        </div>
-        <div style={{display:"flex"}}>
-          {[
-            {l:"CA mensuel",v:fmt(kpis.ca),sub:monthsWithCA.length<2?"Ce mois-ci":kpis.ca>avgCA?"Au-dessus de la moyenne":"En dessous de la moyenne"},
-            {l:"Résultat net",v:fmt(kpis.result),sub:kpis.result>=0?"Bénéficiaire":"Déficitaire"},
-            // Offre gratuite : pas de solde bancaire saisi, la trésorerie afficherait 0 € « saine ».
-            client.plan==="dashboard"
-              ? {l:"Marge brute",v:fmt(kpis.marge),sub:`${pct(kpis.ca>0?kpis.marge/kpis.ca*100:0)} du CA`}
-              : {l:"Trésorerie",v:fmt(treso),sub:treso>=0?"Position saine":"Position tendue"},
-            {l:"EBE",v:fmt(kpis.ebe),sub:`${pct(kpis.ca>0?kpis.ebe/kpis.ca*100:0)} du CA`},
-          ].map((it,i)=>(
-            <div key={i} style={{flex:1,paddingRight:20,marginRight:20,borderRight:i<3?"1px solid rgba(255,255,255,0.18)":"none"}}>
-              <div style={{fontSize:11,color:"rgba(255,255,255,0.55)",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.08em"}}>{it.l}</div>
-              <div style={{fontSize:26,fontWeight:900,letterSpacing:"-0.01em"}}>{it.v}</div>
-              <div style={{fontSize:12,color:"rgba(255,255,255,0.55)",marginTop:4}}>{it.sub}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Alertes */}
-      {alertes.length>0&&alertes.slice(0,2).map((a,i)=>(
-        <div key={i} style={{padding:"16px 22px",background:a.level==="red"?C.redBg:C.orangeBg,border:`2px solid ${a.level==="red"?C.red:C.orange}`,borderRadius:16,boxShadow:"0 16px 36px rgba(0,86,83,.06)",display:"flex",gap:12,alignItems:"center"}}>
-          <Pill color={a.level==="red"?C.red:C.orange}>{a.level==="red"?"CRITIQUE":"VIGILANCE"}</Pill>
-          <span style={{fontSize:13,fontWeight:700,color:C.text}}>{a.kpi}</span>
-          <span style={{fontSize:12,color:C.textMid,flex:1}}>{a.msg}</span>
-          <span style={{fontSize:12,fontWeight:800,color:a.level==="red"?C.red:C.orange,whiteSpace:"nowrap"}}>{a.current}</span>
-        </div>
-      ))}
-      {alertes.length>2&&<div style={{fontSize:12,color:C.textMid,textAlign:"center"}}>+{alertes.length-2} autre{alertes.length-3>0?"s":""} alerte{alertes.length-3>0?"s":""} · voir l'onglet <strong>Mes alertes</strong></div>}
-
-      <EquipeSnapshot client={client} setView={setView} isAdminPreview={isAdminPreview}/>
-
-      {/* ── Valeur créée (visible uniquement si activé par l'admin ET que le client a un journal d'actions) ── */}
-      {client.impactJournalEnabled&&client.impactJournal?.items?.length>0&&(
-        <div>
-          <div style={{fontSize:11,fontWeight:800,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10}}>Valeur créée</div>
-          <div style={{display:"grid",gridTemplateColumns:"300px 1fr",gap:16}}>
-            <div style={{background:C.primary,borderRadius:20,padding:"24px 26px",color:"white",boxShadow:"0 20px 44px rgba(0,86,83,.25)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center"}}>
-              <div style={{fontSize:11,color:"rgba(255,255,255,0.75)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>{client.impactJournal.totalLabel||"Valeur créée"}</div>
-              <div style={{fontSize:36,fontWeight:900,letterSpacing:"-0.01em"}}>{fmt(client.impactJournal.total||0)}</div>
-            </div>
-            <Card>
-              <SectionHead title="Journal des actions" sub="Ce que votre conseiller a mis en place"/>
-              <div style={{padding:"4px 20px 14px"}}>
-                {client.impactJournal.items.map((it,i)=>(
-                  <div key={it.id||i} style={{display:"flex",alignItems:"center",gap:14,padding:"12px 0",borderBottom:i<client.impactJournal.items.length-1?`1px solid ${C.borderLight}`:"none"}}>
-                    <div style={{width:8,height:8,borderRadius:"50%",background:it.kind==="temps"?C.primary:C.green,flexShrink:0}}/>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:13,fontWeight:700,color:C.text}}>{it.label}</div>
-                      {it.date&&<div style={{fontSize:11,color:C.textLight,marginTop:2}}>{it.date}</div>}
-                    </div>
-                    {it.kind==="temps"?(
-                      <div style={{textAlign:"right"}}>
-                        <div style={{fontSize:14,fontWeight:900,color:C.primary,whiteSpace:"nowrap"}}>
-                          {it.avant} <span style={{color:C.textLight,fontWeight:700}}>→</span> {it.apres}{it.frequence?<span style={{fontSize:11,fontWeight:700,color:C.textLight}}> {it.frequence}</span>:""}
-                        </div>
-                        {it.valeurEstimee>0&&(
-                          <div style={{fontSize:11,fontWeight:700,color:C.textLight,marginTop:2}}>
-                            ≈ {fmt(it.valeurEstimee)}/mois{it.tauxHoraire?` (${it.tauxHoraire} €/h)`:""}
-                          </div>
-                        )}
-                      </div>
-                    ):(
-                      <div style={{fontSize:14,fontWeight:900,color:C.green,whiteSpace:"nowrap"}}>
-                        {it.type==="economie"?"–":"+"}{fmt(it.montant)}{it.recurrent?"/mois":""}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </div>
-        </div>
-      )}
-
-      {/* ── KPIs PERFORMANCE ── */}
-      <div>
-        <div style={{fontSize:11,fontWeight:800,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10}}>Performance mensuelle</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>
-          <KpiCard label="Chiffre d'affaires HT" value={fmt(kpis.ca)} sub={`Taux marge : ${pct(kpis.ca>0?kpis.marge/kpis.ca*100:0)}`} color={C.primary}/>
-          <KpiCard label="Marge brute" value={fmt(kpis.marge)} sub={`${pct(kpis.ca>0?kpis.marge/kpis.ca*100:0)} du CA`} color={C.green}/>
-          <KpiCard label="EBE" value={fmt(kpis.ebe)} sub={`${pct(kpis.ca>0?kpis.ebe/kpis.ca*100:0)} du CA`} color={kpis.ebe>=0?C.primary:C.red}/>
-          <KpiCard label="Résultat net" value={fmt(kpis.result)} sub={kpis.result>=0?"Bénéficiaire":"Déficitaire"} color={kpis.result>=0?C.green:C.red}/>
-        </div>
-      </div>
-      <div>
-        <div style={{fontSize:11,fontWeight:800,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10}}>Trésorerie & financement</div>
-        {client.plan==="dashboard" ? (
-          <LockedStrip viewId="tresorerie" isAdminPreview={isAdminPreview} setView={setView} label="Votre trésorerie, vos emprunts et vos investissements, suivis avec votre conseiller."/>
-        ) : (
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>
-          <KpiCard label="Trésorerie" value={fmt(treso)} sub={treso>=0?"Position saine":"Tendue"} color={treso>=0?C.green:C.red}/>
-          <KpiCard label="CAF" value={fmt(kpis.result+kpis.amort)} sub="Résultat + Amortissements" color={C.primary}/>
-          <KpiCard label="Charge emprunts" value={fmt(chargeEmprunt)} sub={`${emprunts.length} contrat(s) actif(s)`} color={C.red}/>
-          <KpiCard label="VNC investissements" value={fmt(vncTotal)} sub="Valeur nette comptable" color={C.orange}/>
-        </div>
-        )}
-      </div>
-
-      {/* ── G1 · CA & Marge + Saisonnalité côte à côte ── */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-        <Card>
-          <SectionHead title="CA & Marge brute · 12 mois glissants" sub="Évolution mensuelle du chiffre d'affaires et de la marge"/>
-          <div style={{padding:"14px 20px 12px"}}>
-            <Legend items={[{l:"CA HT",c:C.primary},{l:"Marge brute",c:C.green}]}/>
-            <BarChart2
-              data={months12.map(m=>({l:m.l,v1:m.ca,v2:m.marge,active:m.mi===moisIdx&&m.yr===moisYear}))}
-              c1={C.primary} c2={C.green} h={100} label1="CA HT" label2="Marge brute"
-            />
-            <div style={{display:"flex",justifyContent:"space-between",marginTop:8,fontSize:11,color:C.textMid}}>
-              <span>Moy. CA : <strong style={{color:C.primary}}>{fmt(Math.round(avgCA))}</strong></span>
-              <span>Ce mois : <strong style={{color:C.primary}}>{fmt(kpis.ca)}</strong> · <strong style={{color:C.green}}>{fmt(kpis.marge)}</strong></span>
-            </div>
-          </div>
-        </Card>
-
-        <Card>
-          <SectionHead title="Coefficient de saisonnalité · CA" sub="Vert = mois fort · Orange = mois faible · Survol pour détail"/>
-          <div style={{padding:"14px 20px 12px"}}>
-            {months12.filter(m=>m.hasData).length<4&&(
-              <div style={{padding:"8px 12px",background:"#fffbeb",border:`1px solid ${C.orange}44`,borderRadius:8,marginBottom:12,fontSize:12,color:C.textMid}}>
-                ⚠ Données insuffisantes, il faut au moins 4 mois pour un coefficient fiable. Importez davantage de données mensuelles.
-              </div>
-            )}
-            <div style={{display:"flex",gap:14,marginBottom:10,fontSize:11}}>
-              {[{l:"Mois fort (>1.2)",c:C.green},{l:"Normal",c:C.primary},{l:"Mois faible (<0.8)",c:C.orange}].map(it=>(
-                <div key={it.l} style={{display:"flex",alignItems:"center",gap:4}}>
-                  <div style={{width:8,height:8,borderRadius:1,background:it.c}}/>
-                  <span style={{color:C.textMid,fontWeight:600}}>{it.l}</span>
-                </div>
-              ))}
-            </div>
-            <SaisonnaliteChart data={saisonnalite} h={100}/>
-            <div style={{marginTop:8,padding:"7px 10px",background:C.bg,borderRadius:6,fontSize:11,color:C.textMid}}>
-              Fort : <strong style={{color:C.green}}>{saisonnalite.reduce((a,b)=>b.coef>a.coef?b:a,saisonnalite[0]).l}</strong> ({saisonnalite.reduce((a,b)=>b.coef>a.coef?b:a,saisonnalite[0]).coef.toFixed(2)}x) ·
-              Faible : <strong style={{color:C.orange}}>{(()=>{const f=saisonnalite.filter(s=>s.coef>0);return f.length?f.reduce((a,b)=>b.coef<a.coef?b:a,f[0]).l:"—";})()}</strong>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* ── G2 · Cascade + Volumes côte à côte ── */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-        <Card>
-          <SectionHead title="Cascade du résultat" sub="Du CA au résultat net · survol pour le détail"/>
-          <div style={{padding:"14px 20px 12px"}}>
-            <WaterfallChart h={110}/>
-            <div style={{marginTop:8,display:"flex",justifyContent:"space-between",fontSize:11}}>
-              <span style={{color:C.primary,fontWeight:700}}>CA : {fmt(kpis.ca)}</span>
-              <span style={{color:kpis.result>=0?C.green:C.red,fontWeight:700}}>Résultat : {fmt(kpis.result)}</span>
-            </div>
-            {/* Analyse des postes */}
-            {kpis.ca>0&&(()=>{
-              const isBarTabac = client.sector === "Bar / Tabac / Presse";
-              const posts = [
-                {label:"Marge brute", val:kpis.marge, pct:kpis.marge/kpis.ca*100,
-                  seuil:isBarTabac?25:40, inv:false,
-                  tip:isBarTabac?"En dessous de 25% : renforcer la part bar (tabac/presse ont des marges de 6-20%)":"En dessous de 40% : attention aux coûts d'achat"},
-                {label:"Charges externes", val:kpis.charges, pct:kpis.charges/kpis.ca*100,
-                  seuil:isBarTabac?38:30, inv:true,
-                  tip:isBarTabac?"Au-dessus de 38% : licences et approvisionnement tabac élèvent les charges":"Au-dessus de 30% du CA : charges trop élevées"},
-                {label:"Masse salariale", val:kpis.salaires, pct:kpis.salaires/kpis.ca*100,
-                  seuil:isBarTabac?30:35, inv:true,
-                  tip:isBarTabac?"Au-dessus de 30% du CA : masse salariale lourde pour ce secteur":"Au-dessus de 35% du CA : masse salariale lourde"},
-                {label:"EBE", val:kpis.ebe, pct:kpis.ebe/kpis.ca*100,
-                  seuil:isBarTabac?8:10, inv:false,
-                  tip:isBarTabac?"En dessous de 8% : rentabilité faible (tabac/presse compriment l'EBE)":"En dessous de 10% : rentabilité opérationnelle faible"},
-              ];
-              return (
-                <div style={{marginTop:14,borderTop:`1px solid ${C.borderLight}`,paddingTop:10,display:"flex",flexDirection:"column",gap:6}}>
-                  {posts.map((p,i)=>{
-                    const ok = p.inv ? p.pct<=p.seuil : p.pct>=p.seuil;
-                    const warn = p.inv ? p.pct>p.seuil*1.2 : p.pct<p.seuil*0.7;
-                    const color = p.val<0 ? C.red : warn ? C.red : ok ? C.green : C.orange;
-                    const icon = p.val<0 ? "⚠" : warn ? "⚠" : ok ? "✓" : "~";
-                    return (
-                      <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:11}}>
-                        <div style={{display:"flex",alignItems:"center",gap:6}}>
-                          <span style={{color,fontWeight:800,fontSize:12}}>{icon}</span>
-                          <span style={{color:C.text,fontWeight:600}}>{p.label}</span>
-                          {(!ok||p.val<0)&&<span style={{color:C.textLight,fontSize:10}}>{p.tip}</span>}
-                        </div>
-                        <span style={{color,fontWeight:700}}>{p.pct.toFixed(1)}% du CA</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })()}
-          </div>
-        </Card>
-
-        <Card>
-          {(()=>{
-            const sectorsService = ["Prestation de services","Conseil","Immobilier","Santé","Bar / Tabac / Presse"];
-            const isService = sectorsService.includes(client.sector);
-            const hasVolumes = months12.some(m=>m.qte>0);
-            // Pour secteurs service : afficher répartition CA par prestation
-            if(isService || !hasVolumes) {
-              const moisKey2 = `${moisYear}-${String(moisIdx+1).padStart(2,"0")}`;
-              const ventesRows = (client.imports||[]).filter(i=>i.type==="ventes_produits"&&i.mois===moisKey2).flatMap(i=>i.rows);
-              const byProduit = ventesRows.reduce((acc,r)=>{
-                const k = r.produit||r.libelle||r.designation||"Autre";
-                acc[k]=(acc[k]||0)+parseFloat(r.ca_ht||r.pvht||0);
-                return acc;
-              },{});
-              const total = Object.values(byProduit).reduce((s,v)=>s+v,0);
-              const items = Object.entries(byProduit).sort((a,b)=>b[1]-a[1]).slice(0,6);
-              return (
-                <>
-                  <SectionHead title="Répartition CA par prestation" sub="Contribution de chaque service au CA du mois"/>
-                  <div style={{padding:"14px 20px 12px"}}>
-                    {items.length>0?(
-                      <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                        {items.map(([k,v],i)=>{
-                          const p=total>0?Math.round(v/total*100):0;
-                          const cols=["#005653","#1D9E75","#185FA5","#d97706","#8b5cf6","#059669"];
-                          return (
-                            <div key={i}>
-                              <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:3}}>
-                                <span style={{fontWeight:600,color:C.text}}>{k}</span>
-                                <span style={{fontWeight:700,color:cols[i%6]}}>{fmt(v)} <span style={{color:C.textLight,fontWeight:400}}>· {p}%</span></span>
-                              </div>
-                              <div style={{height:6,borderRadius:3,background:C.borderLight}}>
-                                <div style={{height:"100%",width:`${p}%`,background:cols[i%6],borderRadius:3}}/>
-                              </div>
-                            </div>
-                          );
-                        })}
-                        <div style={{marginTop:4,fontSize:11,color:C.textMid,borderTop:`1px solid ${C.borderLight}`,paddingTop:6}}>
-                          Total CA : <strong>{fmt(total)}</strong>
-                        </div>
-                      </div>
-                    ):(
-                      <div style={{padding:"32px 0",textAlign:"center",color:C.textLight,display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
-                        <div style={{fontSize:13,fontWeight:700,color:C.textMid}}>Aucune donnée pour ce mois</div>
-                        <div style={{fontSize:12,maxWidth:220,lineHeight:1.5}}>Sélectionnez un mois avec des imports ou demandez à votre conseiller {client.advisorLabel||"NVM Finance"} d'importer vos données.</div>
-                      </div>
-                    )}
-                  </div>
-                </>
-              );
-            }
-            // Secteurs produits : volumes vendus
-            return (
-              <>
-                <SectionHead title="Volumes vendus · 12 mois" sub="Nombre d'unités vendues par mois"/>
-                <div style={{padding:"14px 20px 12px"}}>
-                  <Legend items={[{l:"Quantités (unités)",c:"#8b5cf6"}]}/>
-                  <BarChart2
-                    data={months12.map(m=>({l:m.l,v1:m.qte,active:m.mi===moisIdx&&m.yr===moisYear}))}
-                    c1="#8b5cf6" h={110}
-                    label1="Quantités" labelUnit=" unités"
-                  />
-                  <div style={{marginTop:8,fontSize:11,color:C.textMid,display:"flex",justifyContent:"space-between"}}>
-                    <span>Total 12 mois : <strong>{months12.reduce((s,m)=>s+m.qte,0).toLocaleString("fr-FR")} unités</strong></span>
-                    <span>Ce mois : <strong style={{color:"#8b5cf6"}}>{months12[11].qte.toLocaleString("fr-FR")} unités</strong></span>
-                  </div>
-                </div>
-              </>
-            );
-          })()}
-        </Card>
-      </div>
-
-      {/* ── G3 · EBE + Trésorerie ── */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-        <Card>
-          <SectionHead title="EBE & Résultat · 12 mois" sub="Tendance de rentabilité"/>
-          <div style={{padding:"14px 20px 12px"}}>
-            <Legend items={[{l:"EBE",c:C.primary,round:true}]}/>
-            <LineAreaChart
-              data={months12.map(m=>({l:m.l,v:m.ebe,active:m.mi===moisIdx&&m.yr===moisYear}))}
-              color={C.primary} h={80} showZero={true} labelFn={v=>`EBE : ${fmt(v)}`}
-            />
-            <div style={{marginTop:4,fontSize:11,color:C.textMid,display:"flex",justifyContent:"space-between"}}>
-              <span>EBE ce mois : <strong style={{color:kpis.ebe>=0?C.primary:C.red}}>{fmt(kpis.ebe)}</strong></span>
-              <span>Résultat : <strong style={{color:kpis.result>=0?C.green:C.red}}>{fmt(kpis.result)}</strong></span>
-            </div>
-          </div>
-        </Card>
-
-        <Card>
-          <SectionHead title="Trésorerie cumulée · 12 mois" sub="Évolution du solde de trésorerie"/>
-          <div style={{padding:"14px 20px 12px"}}>
-            <Legend items={[{l:"Solde cumulé",c:treso>=0?C.green:C.red,round:true}]}/>
-            <LineAreaChart
-              data={tresoData.map((m,i)=>({l:months12[i].l,v:m.cumul,active:months12[i].mi===moisIdx&&months12[i].yr===moisYear,unavailable:!m.available}))}
-              color={treso>=0?C.green:C.red} h={80} showZero={true} labelFn={v=>`Trésorerie : ${fmt(v)}`}
-            />
-            <div style={{marginTop:4,fontSize:11,color:C.textMid,display:"flex",justifyContent:"space-between"}}>
-              <span>Solde initial : <strong>{fmt(treso)}</strong></span>
-              <span>Solde {tresoData[tresoData.length-1]?.available?"estimé":"indisponible"} : <strong style={{color:tresoData[tresoData.length-1]?.available?(tresoData[tresoData.length-1]?.cumul>=0?C.green:C.red):C.textLight}}>{tresoData[tresoData.length-1]?.available?fmt(tresoData[tresoData.length-1]?.cumul||0):"N/A"}</strong></span>
-            </div>
-          </div>
-        </Card>
-      </div>
 
 
-      {/* ── RÉPARTITION CHARGES + FINANCEMENT ── */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-        <Card>
-          <SectionHead title="Répartition des charges" sub={`Structure des coûts · ${MONTHS[moisIdx]} ${moisYear}`}/>
-          <div style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
-            {[
-              {l:"Coûts d'achat",        v:kpis.ca-kpis.marge, c:C.orange},
-              {l:"Charges externes",     v:kpis.charges,       c:C.red},
-              {l:"Masse salariale",      v:kpis.salaires,      c:"#7c3aed"},
-              {l:"Emprunts",             v:chargeEmprunt,      c:"#0891b2"},
-              {l:"Amortissements",       v:kpis.amort,         c:C.textMid},
-            ].map((r,i)=>{
-              const p=kpis.ca>0?Math.round(r.v/kpis.ca*100):0;
-              return (
-                <div key={i}>
-                  <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}}>
-                    <span style={{fontWeight:600,color:C.text}}>{r.l}</span>
-                    <span style={{fontWeight:800,color:r.c}}>{fmt(r.v)} <span style={{color:C.textLight,fontWeight:400}}>· {p}%</span></span>
-                  </div>
-                  <div style={{height:7,borderRadius:3,background:C.borderLight}}>
-                    <div style={{height:"100%",width:`${Math.min(100,p)}%`,background:r.c,borderRadius:3}}/>
-                  </div>
-                </div>
-              );
-            })}
-            <div style={{marginTop:6,padding:"6px 10px",background:C.bg,borderRadius:6,fontSize:11,color:C.textMid,textAlign:"center"}}>
-              Total charges : <strong style={{color:C.red}}>{fmt((kpis.ca-kpis.marge)+kpis.charges+kpis.salaires+chargeEmprunt+kpis.amort)}</strong> · Résultat : <strong style={{color:kpis.result>=0?C.green:C.red}}>{fmt(kpis.result)}</strong>
-            </div>
-          </div>
-        </Card>
 
-        <Card>
-          <SectionHead title="Emprunts & investissements" sub="Progression des remboursements et amortissements"/>
-          <div style={{padding:"14px 16px",display:"flex",flexDirection:"column",gap:8}}>
-            {emprunts.map(e=>{
-              const mens=e.capital*(e.taux/100)/(1-Math.pow(1+e.taux/100,-e.duree));
-              const mp=Math.min(e.duree,moisIdx+1);
-              let restant=e.capital;
-              for(let i=0;i<mp;i++){const int=restant*e.taux/100;restant=Math.max(0,restant-(mens-int));}
-              const prog=Math.round((1-restant/e.capital)*100);
-              return (
-                <div key={e.id} style={{padding:"8px 0",borderBottom:`1px solid ${C.borderLight}`}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                    <span style={{fontSize:12,fontWeight:800,color:C.text}}>{e.libelle}</span>
-                    <span style={{fontSize:12,fontWeight:800,color:C.red}}>{fmt(Math.round(mens+e.assurance))}/mois</span>
-                  </div>
-                  <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <div style={{flex:1,height:6,borderRadius:3,background:C.borderLight}}>
-                      <div style={{height:"100%",width:`${prog}%`,background:C.primary,borderRadius:3}}/>
-                    </div>
-                    <span style={{fontSize:10,color:C.textLight,whiteSpace:"nowrap"}}>{prog}% · {fmt(Math.round(restant))} restant</span>
-                  </div>
-                </div>
-              );
-            })}
-            {investissements.map(inv=>{
-              const am=Math.round(inv.montantHT/(inv.duree||36));
-              const me=Math.min(inv.duree,moisIdx+1);
-              const vnc=Math.max(0,inv.montantHT-am*me);
-              const p=Math.round(me/inv.duree*100);
-              return (
-                <div key={inv.id} style={{padding:"8px 0",borderBottom:`1px solid ${C.borderLight}`}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                    <span style={{fontSize:12,fontWeight:800,color:C.text}}>{inv.libelle}</span>
-                    <span style={{fontSize:12,fontWeight:800,color:C.orange}}>{fmt(am)}/mois</span>
-                  </div>
-                  <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <div style={{flex:1,height:6,borderRadius:3,background:C.borderLight}}>
-                      <div style={{height:"100%",width:`${p}%`,background:C.orange,borderRadius:3}}/>
-                    </div>
-                    <span style={{fontSize:10,color:C.textLight,whiteSpace:"nowrap"}}>{p}% amorti · VNC {fmt(vnc)}</span>
-                  </div>
-                </div>
-              );
-            })}
-            {emprunts.length===0&&investissements.length===0&&(
-              <div style={{textAlign:"center",padding:"20px 0",color:C.textLight,fontSize:12}}>Aucun emprunt ni investissement enregistré</div>
-            )}
-          </div>
-        </Card>
-      </div>
-
-      {!isAdminPreview&&(
-        <div style={{padding:"10px 16px",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,color:C.textLight,textAlign:"center"}}>
-          Tableau de bord en lecture seule · Détail complet dans chaque onglet · Contactez votre conseiller {client.advisorLabel||"NVM Finance"}
-        </div>
-      )}
-    </div>
-  );
-}
-
-
-// 
-// CLIENT DONNÉES DÉTAILLÉES · avec switch mois
-// 
-function ClientDonnees({ client, moisIdx, setMoisIdx, moisYear }) {
- const [tab,setTab]=useState("synthese");
- const imports=client.imports||[];
- const emprunts=client.emprunts||[];
- const investissements=client.investissements||[];
-
- const kpis = calcMonthKpis(client, moisIdx, moisYear);
- const amortMensuel = kpis.amort;
- const isD = client.is||{totalPrecedent:0,taux:15};
- const treso = calcTresoEstimee(client, moisIdx, moisYear);
- const chargeEmprunt = emprunts.reduce((s,e)=>{ const m=e.capital*(e.taux/100)/(1-Math.pow(1+e.taux/100,-e.duree)); return s+Math.round(m+e.assurance); },0);
- const moisKey = getMonthKey(moisIdx, moisYear);
-
- // Mois disponibles pour afficher le badge
- const availMois = new Set((imports).map(i=>i.mois));
-
- const TABS=[
- {id:"synthese",label:"Synthèse"},
- {id:"ventes_produits",label:"Ventes produits"},
- {id:"autres_ventes",label:"Autres ventes"},
- {id:"charges",label:"Charges"},
- {id:"salaires",label:"Masse salariale"},
- {id:"catalogue",label:"Catalogue"},
- {id:"emprunts",label:"Emprunts"},
- {id:"investissements",label:"Investissements"},
- {id:"tresorerie",label:"Trésorerie"},
- {id:"compte_resultat",label:"Compte de résultat"},
- ];
-
- const renderImports=(modId)=>{
- const list=imports.filter(imp=>imp.type===modId&&imp.mois===moisKey);
- const all=imports.filter(imp=>imp.type===modId);
- if(list.length===0) return (
- <Card>
- <div style={{textAlign:"center",padding:"40px 0",color:C.textLight}}>
- <div style={{fontSize:32,marginBottom:10}}></div>
- <div style={{fontSize:14,fontWeight:700,color:C.text}}>Aucune donnée pour {MONTHS[moisIdx]} {moisYear}</div>
- {all.length>0&&<div style={{fontSize:12,marginTop:8,color:C.textMid}}>Données disponibles pour : {all.map(i=>i.mois).join(", ")}</div>}
- <div style={{fontSize:12,marginTop:6,color:C.textLight}}>Changez le mois via le sélecteur en haut ou demandez à votre conseiller {client.advisorLabel||"NVM Finance"}</div>
- </div>
- </Card>
- );
- return list.map(imp=>(
- <Card key={imp.id} style={{marginBottom:14}}>
- <SectionHead title={imp.label} sub={`${MONTHS[moisIdx]} ${moisYear} · ${imp.count} ligne${imp.count>1?"s":""} · ${imp.importedAt}`}/>
- <div style={{overflowX:"auto"}}>
- <table style={{width:"100%",borderCollapse:"collapse"}}>
- <thead><tr>{Object.keys(imp.rows[0]||{}).map(h=><Th key={h}>{h.replace(/_/g," ")}</Th>)}</tr></thead>
- <tbody>{imp.rows.map((row,i)=><Tr key={i}>{Object.values(row).map((v,j)=><Td key={j}>{v||"—"}</Td>)}</Tr>)}</tbody>
- </table>
- </div>
- </Card>
- ));
- };
-
- return (
- <div style={{padding:24,display:"flex",flexDirection:"column",gap:20}} className="fade-up">
-
- {/* Header + switch mois */}
- <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
- <div>
- <div style={{fontSize:16,fontWeight:900,color:C.text}}>Données financières · {client.name}</div>
- {kpis.hasData?<div style={{fontSize:11,color:C.green,fontWeight:700,marginTop:3}}>Donnees reelles importées pour ce mois</div>:<div style={{fontSize:11,color:C.textLight,marginTop:3}}>Données estimées · aucun import pour ce mois</div>}
- </div>
- <div style={{display:"flex",alignItems:"center",gap:8,background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"6px 12px"}}>
- <Btn small variant="ghost" onClick={()=>setMoisIdx(m=>m-1)}>‹</Btn>
- <span style={{fontSize:15,fontWeight:900,color:C.text,minWidth:100,textAlign:"center"}}>{MONTHS[moisIdx]} {moisYear}</span>
- <Btn small variant="ghost" onClick={()=>setMoisIdx(m=>m+1)}>›</Btn>
- {availMois.has(moisKey)&&<span style={{background:C.green,color:"white",borderRadius:8,padding:"2px 8px",fontSize:10,fontWeight:900}}>Données</span>}
- </div>
- </div>
-
- {/* Onglets */}
- <div style={{display:"flex",gap:4,flexWrap:"wrap",borderBottom:`2px solid ${C.border}`,paddingBottom:0}}>
- {TABS.map(t=>{
- const csvTabs=["ventes_produits","autres_ventes","charges","salaires","catalogue"];
- const hasMois=csvTabs.includes(t.id)&&imports.some(i=>i.type===t.id&&i.mois===moisKey);
- return (
- <button key={t.id} onClick={()=>setTab(t.id)} style={{
- padding:"9px 14px",fontSize:12,fontWeight:tab===t.id?800:600,
- color:tab===t.id?C.primary:C.textLight,
- borderBottom:tab===t.id?`3px solid ${C.primary}`:"3px solid transparent",
- background:"none",border:"none",cursor:"pointer",marginBottom:"-2px",
- display:"flex",alignItems:"center",gap:5,
- }}>
- {t.label}
- {hasMois&&<span style={{background:C.green,color:"white",borderRadius:8,padding:"1px 6px",fontSize:9,fontWeight:900}}></span>}
- </button>
- );
- })}
- </div>
-
- {/* SYNTHESE */}
- {tab==="synthese"&&(
- <div style={{display:"flex",flexDirection:"column",gap:16}}>
- <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>
- <KpiCard label="CA mensuel HT" value={fmt(kpis.ca)} color={C.primary}/>
- <KpiCard label="Marge brute" value={fmt(kpis.marge)} sub={`Taux : ${pct(kpis.ca>0?kpis.marge/kpis.ca*100:0)}`} color={C.green}/>
- <KpiCard label="EBE" value={fmt(kpis.ebe)} sub={`${pct(kpis.ca>0?kpis.ebe/kpis.ca*100:0)} du CA`} color={kpis.ebe>=0?C.primary:C.red}/>
- <KpiCard label="Résultat net" value={fmt(kpis.result)} color={kpis.result>=0?C.green:C.red}/>
- </div>
- <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>
- <KpiCard label="Trésorerie" value={fmt(treso)} color={treso>=0?C.green:C.red}/>
- <KpiCard label="CAF" value={fmt(kpis.result+amortMensuel)} color={C.primary}/>
- <KpiCard label="Charge emprunts" value={fmt(chargeEmprunt)} color={C.red}/>
- <KpiCard label="Provision IS (mois)" value={fmt(Math.round(kpis.provIS/12))} sub={`Taux ${isD.taux}%`} color={C.orange}/>
- </div>
- <Card>
- <SectionHead title="Répartition des charges"/>
- <div style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
- {[
- {l:"Coûts d'achat",v:kpis.ca-kpis.marge,c:C.orange},
- {l:"Charges externes",v:kpis.charges,c:C.red},
- {l:"Masse salariale",v:kpis.salaires,c:"#7c3aed"},
- {l:"Emprunts",v:chargeEmprunt,c:"#0891b2"},
- {l:"Amortissements",v:amortMensuel,c:C.textMid},
- ].map((r,i)=>{
- const p=kpis.ca>0?Math.round(r.v/kpis.ca*100):0;
- return (<div key={i}><div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}}><span style={{color:C.textMid,fontWeight:600}}>{r.l}</span><span style={{fontWeight:800,color:r.c}}>{fmt(r.v)} <span style={{color:C.textLight,fontWeight:400}}>· {p}%</span></span></div><div style={{height:7,borderRadius:3,background:C.borderLight}}><div style={{height:"100%",width:`${Math.min(100,p)}%`,background:r.c,borderRadius:3}}/></div></div>);
- })}
- </div>
- </Card>
- </div>
- )}
-
- {/* COMPTE DE RÉSULTAT */}
- {tab==="compte_resultat"&&(
- <div style={{display:"flex",flexDirection:"column",gap:16}}>
- <Card>
- <SectionHead title={`Compte de résultat · ${MONTHS[moisIdx]} ${moisYear}`} sub={kpis.hasData?"Données réelles du mois":"Données estimées"}/>
- <table style={{width:"100%",borderCollapse:"collapse"}}>
- <tbody>
- {[
- {l:"Chiffre d'affaires HT",v:kpis.ca,bold:true},
- {l:"— Coûts d'achat directs",v:-(kpis.ca-kpis.marge)},
- {l:"= Marge brute",v:kpis.marge,bold:true,c:C.green,sep:true},
- {l:"Taux de marge brute",v:null,extra:`${pct(kpis.ca>0?kpis.marge/kpis.ca*100:0)}`},
- {l:"— Charges externes",v:-kpis.charges},
- {l:"— Masse salariale",v:-kpis.salaires},
- {l:"= EBE",v:kpis.ebe,bold:true,c:kpis.ebe>=0?C.primary:C.red,sep:true},
- {l:"Taux d'EBE",v:null,extra:`${pct(kpis.ca>0?kpis.ebe/kpis.ca*100:0)}`},
- {l:"— Amortissements",v:-amortMensuel},
- {l:"— Charge emprunts",v:-chargeEmprunt},
- {l:"— Provision IS",v:-Math.round(kpis.provIS/12)},
- {l:"= Résultat net",v:kpis.result,bold:true,c:kpis.result>=0?C.green:C.red,sep:true},
- {l:"Taux de résultat",v:null,extra:`${pct(kpis.ca>0?kpis.result/kpis.ca*100:0)}`},
- ].filter(r=>r!==null).map((r,i)=>{
- if(r.extra) return <Tr key={i} style={{borderBottom:`1px solid ${C.borderLight}`,background:C.bg}}><Td color={C.textLight} style={{paddingLeft:24,fontStyle:"italic"}}>{r.l}</Td><Td right color={C.textLight}>{r.extra}</Td></Tr>;
- return (
- <Tr key={i} style={{borderBottom:r.sep?`2px solid ${C.border}`:`1px solid ${C.borderLight}`,background:r.sep?C.bg:""}}>
- <Td bold={r.bold} color={r.c||C.textMid}>{r.l}</Td>
- <Td right mono bold={r.bold} color={r.c||(r.v<0?C.red:C.text)}>{r.v<0?`(${fmt(Math.abs(r.v))})`:fmt(r.v)}</Td>
- </Tr>
- );
- })}
- </tbody>
- </table>
- </Card>
- </div>
- )}
-
- {/* MODULES CSV */}
- {["ventes_produits","autres_ventes","charges","salaires","catalogue"].includes(tab)&&(
- <div style={{display:"flex",flexDirection:"column",gap:14}}>
- {tab==="ventes_produits"&&(
- <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:4}}>
- <KpiCard label="CA HT" value={fmt(kpis.ca)} color={C.primary}/>
- <KpiCard label="Marge brute" value={fmt(kpis.marge)} sub={`Taux ${pct(kpis.ca>0?kpis.marge/kpis.ca*100:0)}`} color={C.green}/>
- <KpiCard label="Coût des ventes" value={fmt(kpis.ca-kpis.marge)} color={C.orange}/>
- </div>
- )}
- {tab==="charges"&&(
- <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:4}}>
- <KpiCard label="Charges totales" value={fmt(kpis.charges)} color={C.red}/>
- <KpiCard label="% du CA" value={pct(kpis.ca>0?kpis.charges/kpis.ca*100:0)} color={C.orange}/>
- <KpiCard label="Fixes estimées (60%)" value={fmt(Math.round(kpis.charges*0.6))} color={C.textMid}/>
- </div>
- )}
- {tab==="salaires"&&(
- <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:4}}>
- <KpiCard label="Coût total employeur" value={fmt(kpis.salaires)} color={C.red}/>
- <KpiCard label="Salaires nets est." value={fmt(Math.round(kpis.salaires*0.75))} color={C.text}/>
- <KpiCard label="Cotisations totales" value={fmt(Math.round(kpis.salaires*0.67))} color={C.orange}/>
- </div>
- )}
- {renderImports(tab)}
- </div>
- )}
-
- {/* EMPRUNTS */}
- {tab==="emprunts"&&(
- <div style={{display:"flex",flexDirection:"column",gap:16}}>
- <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14}}>
- <KpiCard label="Emprunts actifs" value={emprunts.length} color={C.primary}/>
- <KpiCard label="Capital total" value={fmt(emprunts.reduce((s,e)=>s+e.capital,0))} color={C.orange}/>
- <KpiCard label="Charge mensuelle" value={fmt(chargeEmprunt)} color={C.red}/>
- </div>
- {emprunts.length===0&&<Card><div style={{textAlign:"center",padding:"40px 0",color:C.textLight}}><div style={{fontSize:28,marginBottom:8}}></div><div style={{fontWeight:700}}>Aucun emprunt enregistré</div></div></Card>}
- {emprunts.map(e=>{
- const mens=e.capital*(e.taux/100)/(1-Math.pow(1+e.taux/100,-e.duree));
- const rows=[];let restant=e.capital;
- for(let i=0;i<Math.min(e.duree,12);i++){const int=Math.round(restant*e.taux/100*100)/100;const cap=Math.round((mens-int)*100)/100;restant=Math.max(0,Math.round((restant-cap)*100)/100);rows.push({mois:MONTHS[i%12],int,cap,restant,sortie:Math.round(mens+e.assurance)});}
- return (
- <Card key={e.id}>
- <div style={{height:4,background:C.primary}}/>
- <SectionHead title={e.libelle} sub={`Souscrit le ${e.dateDebut} · ${e.duree} mois · Assurance ${fmt(e.assurance)}/mois`}/>
- <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,padding:16}}>
- <KpiCard label="Capital initial" value={fmt(e.capital)} color={C.primary}/>
- <KpiCard label="Taux mensuel" value={`${e.taux}%`} sub={`≈ ${pct(e.taux*12)} annuel`} color={C.textMid}/>
- <KpiCard label="Mensualité totale" value={fmt(Math.round(mens+e.assurance))} color={C.red}/>
- <KpiCard label="Capital restant" value={fmt(Math.round(rows[rows.length-1]?.restant||0))} color={C.orange}/>
- </div>
- <div style={{overflowX:"auto",borderTop:`1px solid ${C.borderLight}`}}>
- <table style={{width:"100%",borderCollapse:"collapse"}}>
- <thead><tr><Th>Mois</Th><Th right>Intérêts</Th><Th right>Capital remb.</Th><Th right>Capital restant</Th><Th right>Assurance</Th><Th right>Sortie tréso</Th></tr></thead>
- <tbody>
- {rows.map((r,i)=><Tr key={i}><Td bold>{r.mois}</Td><Td right mono color={C.orange}>{fmt(r.int)}</Td><Td right mono color={C.primary}>{fmt(r.cap)}</Td><Td right mono bold>{fmt(r.restant)}</Td><Td right mono color={C.textMid}>{fmt(e.assurance)}</Td><Td right mono bold color={C.red}>{fmt(r.sortie)}</Td></Tr>)}
- <Tr style={{background:C.bg}}><Td bold>TOTAL</Td><Td right mono bold color={C.orange}>{fmt(Math.round(rows.reduce((s,r)=>s+r.int,0)))}</Td><Td right mono bold color={C.primary}>{fmt(Math.round(rows.reduce((s,r)=>s+r.cap,0)))}</Td><Td right mono bold>{fmt(rows[rows.length-1]?.restant||0)}</Td><Td right mono bold color={C.textMid}>{fmt(e.assurance*rows.length)}</Td><Td right mono bold color={C.red}>{fmt(Math.round((mens+e.assurance)*rows.length))}</Td></Tr>
- </tbody>
- </table>
- </div>
- </Card>
- );
- })}
- </div>
- )}
-
- {/* INVESTISSEMENTS */}
- {tab==="investissements"&&(
- <div style={{display:"flex",flexDirection:"column",gap:16}}>
- <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>
- <KpiCard label="Investissements" value={investissements.length} color={C.primary}/>
- <KpiCard label="Valeur brute" value={fmt(investissements.reduce((s,i)=>s+i.montantHT,0))} color={C.orange}/>
- <KpiCard label="Amort. mensuel" value={fmt(amortMensuel)} color={C.red}/>
- <KpiCard label="VNC totale" value={fmt(investissements.reduce((s,inv)=>{const am=Math.round(inv.montantHT/(inv.duree||36));const me=Math.min(inv.duree,moisIdx+1);return s+Math.max(0,inv.montantHT-am*me);},0))} color={C.text}/>
- </div>
- {investissements.length===0&&<Card><div style={{textAlign:"center",padding:"40px 0",color:C.textLight}}><div style={{fontSize:28,marginBottom:8}}></div><div style={{fontWeight:700}}>Aucun investissement</div></div></Card>}
- {investissements.map(inv=>{
- const am=Math.round(inv.montantHT/(inv.duree||36));const me=Math.min(inv.duree,moisIdx+1);const vnc=Math.max(0,inv.montantHT-am*me);const tva=Math.round(inv.montantHT*inv.tauxTVA/100);const pctF=Math.round(me/inv.duree*100);
- return (
- <Card key={inv.id}>
- <div style={{height:4,background:C.orange}}/>
- <SectionHead title={inv.libelle} sub={`Achat : ${inv.dateAchat} · MEP : ${inv.dateMEP} · ${inv.duree} mois`}/>
- <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:14,padding:16}}>
- <KpiCard label="Montant HT" value={fmt(inv.montantHT)} color={C.primary}/>
- <KpiCard label="TVA récup." value={fmt(tva)} sub={`${inv.tauxTVA}%`} color={C.green}/>
- <KpiCard label="TTC" value={fmt(inv.montantHT+tva)} color={C.textMid}/>
- <KpiCard label="Amort./mois" value={fmt(am)} color={C.orange}/>
- <KpiCard label="VNC" value={fmt(vnc)} sub={`${pctF}% amorti`} color={vnc>0?C.text:C.green}/>
- </div>
- <div style={{padding:"0 16px 14px"}}>
- <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:C.textMid,marginBottom:6}}><span>Avancement : {me}/{inv.duree} mois ({MONTHS[moisIdx]} {moisYear})</span><span style={{fontWeight:800,color:pctF>=100?C.green:C.primary}}>{pctF}% amorti</span></div>
- <div style={{height:10,borderRadius:5,background:C.borderLight}}><div style={{height:"100%",width:`${pctF}%`,background:pctF>=100?C.green:C.primary,borderRadius:5}}/></div>
- {me<inv.duree&&<div style={{marginTop:8,fontSize:11,color:C.orange,fontWeight:700}}>{inv.duree-me} mois restants · {fmt((inv.duree-me)*am)} à amortir</div>}
- </div>
- <div style={{borderTop:`1px solid ${C.borderLight}`,overflowX:"auto"}}>
- <table style={{width:"100%",borderCollapse:"collapse"}}>
- <thead><tr><Th>Année</Th><Th right>Dotation</Th><Th right>Amort. cumulé</Th><Th right>VNC fin d'année</Th></tr></thead>
- <tbody>{Array.from({length:Math.ceil(inv.duree/12)},(_,yr)=>{const dot=am*Math.min(12,inv.duree-yr*12);const cum=am*Math.min((yr+1)*12,inv.duree);const vA=Math.max(0,inv.montantHT-cum);return <Tr key={yr}><Td bold>Année {yr+1}</Td><Td right mono color={C.orange}>{fmt(dot)}</Td><Td right mono color={C.textMid}>{fmt(cum)}</Td><Td right mono bold color={vA>0?C.text:C.green}>{fmt(vA)}</Td></Tr>;})}</tbody>
- </table>
- </div>
- </Card>
- );
- })}
- </div>
- )}
-
- {/* TRÉSORERIE */}
- {tab==="tresorerie"&&(()=>{
- const tRows=MONTHS.map((m,i)=>{
- const enc=Math.round(calcMonthKpis(client,i,moisYear).ca*0.95);
- const dec=Math.round((calcMonthKpis(client,i,moisYear).charges+calcMonthKpis(client,i,moisYear).salaires)*0.95);
- const ajM=(client.tresorerie?.ajustements||[]).filter(a=>a.mois===`${moisYear}-${String(i+1).padStart(2,"0")}`);
- const ajE=ajM.filter(a=>a.type==="encaissement").reduce((s,a)=>s+a.montant,0);
- const ajD=ajM.filter(a=>a.type==="decaissement").reduce((s,a)=>s+a.montant,0);
- const solde=enc+ajE-dec-ajD-chargeEmprunt;
- return {mois:m,enc:enc+ajE,dec:dec+ajD,solde,cumul:treso+solde*(i+1),actif:i<=moisIdx};
- });
- const minC=Math.min(...tRows.filter(r=>r.actif).map(r=>r.cumul));
- return (
- <div style={{display:"flex",flexDirection:"column",gap:16}}>
- <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>
- <KpiCard label="Solde initial" value={fmt(treso)} color={treso>=0?C.green:C.red}/>
- <KpiCard label="Encaissements moy." value={fmt(Math.round(kpis.ca*0.95))} color={C.green}/>
- <KpiCard label="Décaissements moy." value={fmt(Math.round((kpis.charges+kpis.salaires)*0.95))} color={C.red}/>
- <KpiCard label="Point bas" value={fmt(minC)} color={minC>=0?C.text:C.red}/>
- </div>
- <Card>
- <SectionHead title={`Trésorerie · Janv. à ${MONTHS[moisIdx]} ${moisYear}`}/>
- <div style={{overflowX:"auto"}}>
- <table style={{width:"100%",borderCollapse:"collapse"}}>
- <thead><tr><Th>Mois</Th><Th right>Encaissements</Th><Th right>Décaissements</Th><Th right>Emprunts</Th><Th right>Solde mois</Th><Th right>Solde cumulé</Th></tr></thead>
- <tbody>
- {tRows.filter(r=>r.actif).map((r,i)=>(
- <Tr key={i} style={{background:i===moisIdx?C.bg:""}}>
- <Td bold>{r.mois} {moisYear}{i===moisIdx?" ":""}</Td>
- <Td right mono color={C.green}>{fmt(r.enc)}</Td>
- <Td right mono color={C.red}>{fmt(r.dec)}</Td>
- <Td right mono color={C.orange}>{fmt(chargeEmprunt)}</Td>
- <Td right><Pill color={r.solde>=0?C.green:C.red} bg={(r.solde>=0?C.green:C.red)+"18"}>{fmt(r.solde)}</Pill></Td>
- <Td right mono bold color={r.cumul>=0?C.text:C.red}>{fmt(r.cumul)}</Td>
- </Tr>
- ))}
- </tbody>
- </table>
- </div>
- </Card>
- {(client.tresorerie?.ajustements||[]).length>0&&(
- <Card>
- <SectionHead title="Ajustements manuels"/>
- <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr><Th>Mois</Th><Th>Libellé</Th><Th right>Montant</Th><Th>Type</Th></tr></thead><tbody>{(client.tresorerie.ajustements||[]).map(a=><Tr key={a.id}><Td>{a.mois}</Td><Td bold>{a.libelle}</Td><Td right mono color={a.type==="encaissement"?C.green:C.red}>{a.type==="encaissement"?"+":"–"}{fmt(a.montant)}</Td><Td><Pill color={a.type==="encaissement"?C.green:C.red}>{a.type==="encaissement"?"Encaissement":"Décaissement"}</Pill></Td></Tr>)}</tbody></table></div>
- </Card>
- )}
- </div>
- );
- })()}
- </div>
- );
-}
 
 
 // 
@@ -3640,7 +2417,7 @@ function ClientSpace(props) {
  return <ClientSpaceContent {...props}/>;
 }
 
-function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, moisYear, isAdminPreview=false, setView, onSaveImport, onDeleteImport }) {
+function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, setMoisKey, moisYear, isAdminPreview=false, setView, onSaveImport, onDeleteImport }) {
  // Tous les hooks doivent être déclarés inconditionnellement (règle React)
  const [moisPrev,  setMoisPrev]  = useState(CUR_M);
  const [adjPrev,   setAdjPrev]   = useState(() => client.previsionnel?.adjustments || {});
@@ -3653,11 +2430,11 @@ function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, moisYear, isAdm
  const emprunts = client.emprunts||[];
  const investissements = client.investissements||[];
  const moisKey = `${moisYear}-${String(moisIdx+1).padStart(2,"0")}`;
- const chargeEmprunt = emprunts.reduce((s,e)=>{ const m=e.capital*(e.taux/100)/(1-Math.pow(1+e.taux/100,-e.duree)); return s+Math.round(m+e.assurance); },0);
+ const chargeEmprunt = chargeEmprunts(emprunts, moisIdx, moisYear);
  const amort = kpis.amort;
  const treso = calcTresoEstimee(client, moisIdx, moisYear);
  const isD = client.is||{totalPrecedent:0,taux:15};
- const provIS = Math.max(0,Math.round((kpis.ebe)*isD.taux/100));
+ const provIS = kpis.provIS;
  // Seuil de rentabilité : CA minimum pour couvrir les charges fixes, via le taux de marge sur coûts variables
  const chargesFixesMensuelles = kpis.charges + kpis.salaires + chargeEmprunt + amort;
  const tauxMargeCA = kpis.ca>0 ? kpis.marge/kpis.ca : 0;
@@ -3710,9 +2487,31 @@ function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, moisYear, isAdm
  };
 
  // ALERTES 
+ // Comptabilité importée (FEC) : vues de contrôle de gestion, chiffres exacts.
+ if (hasFec(client)) {
+  const pv = { client, moisIdx, moisYear, setMoisIdx, setMoisKey };
+  if (view==="resultat") return <CompteResultat {...pv}/>;
+  if (view==="bilan") return <BilanView {...pv}/>;
+  if (view==="tresorerie") return <TresorerieFec {...pv}/>;
+  if (view==="creances") return <TiersView {...pv} side="C"/>;
+  if (view==="dettes") return <TiersView {...pv} side="F"/>;
+  if (view==="ventes"||view==="achats"||view==="charges"||view==="salaires") return <PosteView {...pv} vue={view}/>;
+  if (view==="tva") return <TvaFec {...pv}/>;
+  if (view==="is") return <ImpotFec {...pv}/>;
+ } else if (view==="bilan") return (
+  <div style={{padding:24}} className="fade-up">
+  <PageHeader title="Bilan et fonds de roulement" hidePicker/>
+  <Card><div style={{padding:"28px 24px",textAlign:"center"}}>
+  <div style={{fontSize:16,fontWeight:900,color:C.text,marginBottom:8}}>Le bilan se construit à partir de votre comptabilité</div>
+  <div style={{fontSize:13.5,color:C.textMid,lineHeight:1.6,maxWidth:560,margin:"0 auto 16px"}}>Avec le fichier des écritures comptables (FEC), on reconstitue chaque mois votre bilan : fonds de roulement, besoin en fonds de roulement, endettement et ratios regardés par les banques, expliqués simplement.</div>
+  {onSaveImport?<Btn onClick={()=>setView("import")}>Importer ma comptabilité</Btn>:<div style={{fontSize:12.5,color:C.textLight}}>{client.advisorLabel||"Votre conseiller"} peut importer votre comptabilité pour vous.</div>}
+  </div></Card>
+  </div>
+ );
+
  if (view==="alertes") return (
  <div style={{padding:24}} className="fade-up">
- <PageHeader title="Mes alertes" sub={`Points de vigilance identifiés par ${client.advisorLabel||"NVM Finance"}`}/>
+ <PageHeader title="Points d'attention" sub={`Ce que ${client.advisorLabel||"NVM Finance"} surveille pour vous ce mois-ci`}/>
  <AlertesView singleClient={client} moisIdx={moisIdx} moisYear={moisYear}/>
  </div>
  );
@@ -3720,8 +2519,8 @@ function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, moisYear, isAdm
  // DASHBOARD 
  if (view==="dashboard") return (
  <>
- {imports.length===0&&!isAdminPreview&&onSaveImport&&<ClientImportWelcome onStart={()=>setView("import")}/>}
- <ClientDashboard client={client} isAdminPreview={false} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear} setView={setView}/>
+ <Synthese client={client} moisIdx={moisIdx} moisYear={moisYear} setMoisIdx={setMoisIdx} setMoisKey={setMoisKey} setView={setView} isAdminPreview={isAdminPreview} onSaveImport={onSaveImport} canImport={!!onSaveImport}
+  kpisOf={(mi,yr)=>calcMonthKpis(client,mi,yr)} tresoOf={(mi,yr)=>calcTresoEstimee(client,mi,yr)} alertes={calcAlertes(client,moisIdx,moisYear)}/>
  </>
  );
 
@@ -3944,16 +2743,16 @@ function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, moisYear, isAdm
     // Calcul depuis les vraies données CSV
     const salBrut = salRows.length>0
       ? salRows.reduce((s,r)=>s+parseFloat(r.salaire_brut||0),0)
-      : Math.round(kpis.salaires*0.83);
+      : Math.round(kpis.salaires*PAIE.brut);
     const salPatronales = salRows.length>0
       ? salRows.reduce((s,r)=>s+parseFloat(r.cotisations_patronales||0),0)
-      : Math.round(kpis.salaires*0.30);
+      : Math.round(kpis.salaires*PAIE.patronales);
     const salSalariales = salRows.length>0
       ? salRows.reduce((s,r)=>s+parseFloat(r.cotisations_salariales||0),0)
-      : Math.round(kpis.salaires*0.22);
+      : Math.round(kpis.salaires*PAIE.salariales);
     const netSal = salRows.length>0
       ? salRows.reduce((s,r)=>s+parseFloat(r.salaire_net||0),0)
-      : Math.round(kpis.salaires*0.75);
+      : Math.round(kpis.salaires*PAIE.net);
     const coutEmployeur = salBrut + salPatronales;
     // Réalité légale :
     // - Salaires nets   → versés aux employés CE mois (M)
@@ -3974,13 +2773,13 @@ function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, moisYear, isAdm
       const { k, mi, yr } = getKm(offset);
       const kPrev   = getKm(offset - 1).k;   // mois précédent
 
-      const netCeMois = Math.round(k.salaires * 0.75);   // net versé employés CE mois
-      const csSalGen  = Math.round(k.salaires * 0.21);   // cotis.sal. générées CE mois → payées M+1
-      const cpPatGen  = Math.round(k.salaires * 0.46);   // cotis.pat. générées CE mois → payées M+1
+      const netCeMois = Math.round(k.salaires * PAIE.net);   // net versé employés CE mois
+      const csSalGen  = Math.round(k.salaires * PAIE.salariales);   // cotis.sal. générées CE mois → payées M+1
+      const cpPatGen  = Math.round(k.salaires * PAIE.patronales);   // cotis.pat. générées CE mois → payées M+1
 
       // Ce qui est DECAISSE ce mois pour les cotisations = cotisations du mois PRECEDENT
-      const csSalPayee = Math.round(kPrev.salaires * 0.21); // cotis.sal. de M-1 reversées CE mois
-      const cpPatPayee = Math.round(kPrev.salaires * 0.46); // cotis.pat. de M-1 reversées CE mois
+      const csSalPayee = Math.round(kPrev.salaires * PAIE.salariales); // cotis.sal. de M-1 reversées CE mois
+      const cpPatPayee = Math.round(kPrev.salaires * PAIE.patronales); // cotis.pat. de M-1 reversées CE mois
       const totalCotisDecaissees = csSalPayee + cpPatPayee;
       const totalDecaisse = netCeMois + totalCotisDecaissees;
 
@@ -3998,10 +2797,10 @@ function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, moisYear, isAdm
 
         {/* 1. KPIs · basés sur les vrais imports si disponibles, sinon estimation */}
         {(()=>{
-          const realBrut  = salRows.length>0 ? salRows.reduce((s,r)=>s+parseFloat(r.salaire_brut||0),0) : kpis.salaires*0.83;
-          const realNet   = salRows.length>0 ? salRows.reduce((s,r)=>s+parseFloat(r.salaire_net||0),0) : kpis.salaires*0.75;
-          const realCotSal= salRows.length>0 ? salRows.reduce((s,r)=>s+parseFloat(r.cotisations_salariales||0),0) : kpis.salaires*0.21;
-          const realCotPat= salRows.length>0 ? salRows.reduce((s,r)=>s+parseFloat(r.cotisations_patronales||0),0) : kpis.salaires*0.46;
+          const realBrut  = salRows.length>0 ? salRows.reduce((s,r)=>s+parseFloat(r.salaire_brut||0),0) : kpis.salaires*PAIE.brut;
+          const realNet   = salRows.length>0 ? salRows.reduce((s,r)=>s+parseFloat(r.salaire_net||0),0) : kpis.salaires*PAIE.net;
+          const realCotSal= salRows.length>0 ? salRows.reduce((s,r)=>s+parseFloat(r.cotisations_salariales||0),0) : kpis.salaires*PAIE.salariales;
+          const realCotPat= salRows.length>0 ? salRows.reduce((s,r)=>s+parseFloat(r.cotisations_patronales||0),0) : kpis.salaires*PAIE.patronales;
           const realTotal = realBrut + realCotPat;
           const source    = salRows.length>0 ? "Donnees reelles importees" : "Estimation (pas d'import ce mois)";
           return (
@@ -4100,10 +2899,10 @@ function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, moisYear, isAdm
           <div style={{padding:20}}>
             {[
               {label:"Cout total employeur",   val:kpis.salaires,pct2:100,color:C.red,    desc:"Ce que vous deboursez reellement"},
-              {label:"Salaire brut",            val:salBrut,      pct2:83, color:"#6366f1",desc:"Base de calcul des cotisations"},
-              {label:"Salaire net verse",       val:netSal,       pct2:75, color:C.green,  desc:"Ce que l employe recoit · paye CE mois"},
-              {label:"Cotis. salariales (21%)", val:Math.round(kpis.salaires*0.21),pct2:21,color:C.orange,desc:"Versees a l URSSAF en M+1"},
-              {label:"Cotis. patronales (46%)", val:Math.round(kpis.salaires*0.46),pct2:46,color:C.red,   desc:"A votre charge · versees en M+1"},
+              {label:"Salaire brut",            val:salBrut,      pct2:kpis.salaires>0?Math.round(salBrut/kpis.salaires*100):PAIE.brut*100, color:"#6366f1",desc:"Base de calcul des cotisations"},
+              {label:"Salaire net versé",       val:netSal,       pct2:kpis.salaires>0?Math.round(netSal/kpis.salaires*100):PAIE.net*100, color:C.green,  desc:"Ce que reçoivent les salariés · payé ce mois-ci"},
+              {label:"Cotisations salariales",  val:salSalariales,pct2:kpis.salaires>0?Math.round(salSalariales/kpis.salaires*100):PAIE.salariales*100,color:C.orange,desc:"Retenues sur le brut, versées à l'URSSAF le mois suivant"},
+              {label:"Cotisations patronales",  val:salPatronales,pct2:kpis.salaires>0?Math.round(salPatronales/kpis.salaires*100):PAIE.patronales*100,color:C.red,   desc:"À la charge de l'entreprise, versées le mois suivant"},
             ].map((r,i)=>(
               <div key={i} style={{display:"flex",alignItems:"center",gap:14,marginBottom:12}}>
                 <div style={{width:200,flexShrink:0,fontSize:12,fontWeight:700,color:C.text}}>{r.label}</div>
@@ -4274,14 +3073,8 @@ function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, moisYear, isAdm
  const k2 = kpis;
  // Salaires : utiliser vraies données CSV si disponibles, sinon approximation
  const salRows = (client.imports||[]).filter(i=>i.type==="salaires"&&i.mois===moisKey).flatMap(i=>i.rows||[]);
- const salBrut = salRows.length>0 ? salRows.reduce((s,r)=>s+parseFloat(r.salaire_brut||0),0) : Math.round(k2.salaires*0.83);
- const netSalaire = salRows.length>0 ? salRows.reduce((s,r)=>s+parseFloat(r.salaire_net||0),0) : Math.round(k2.salaires*0.75);
- const cotSal = salRows.length>0 ? salRows.reduce((s,r)=>s+parseFloat(r.cotisations_salariales||0),0) : Math.round(k2.salaires*0.21);
- const cotPat = salRows.length>0 ? salRows.reduce((s,r)=>s+parseFloat(r.cotisations_patronales||0),0) : Math.round(k2.salaires*0.46);
- const tvaCollectee = Math.round(k2.ca * 0.20); // TVA collectée sur ventes
- const tvaDeductible= Math.round((k2.ca - k2.marge) * 0.20 + k2.charges * 0.18); // TVA déductible
- const tvaNette = Math.max(0, tvaCollectee - tvaDeductible); // TVA à reverser (M+1)
- const isProvision= Math.round(k2.ebe * (client.is?.taux||15) / 100 / 12); // IS provision mensuelle
+ const salBrut = salRows.length>0 ? salRows.reduce((s,r)=>s+parseFloat(r.salaire_brut||0),0) : Math.round(k2.salaires*PAIE.brut);
+ const netSalaire = salRows.length>0 ? salRows.reduce((s,r)=>s+parseFloat(r.salaire_net||0),0) : Math.round(k2.salaires*PAIE.net);
  const empMens = chargeEmprunt;
  const amort = k2.amort; // amortissement (charge comptable, pas de sortie tréso)
 
@@ -4291,32 +3084,31 @@ function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, moisYear, isAdm
  const ajDec = ajM.filter(a=>a.type==="decaissement").reduce((s,a)=>s+a.montant,0);
 
  // Cotisations patronales mois précédent (décaissées ce mois)
- const prevM = moisIdx>0 ? moisIdx-1 : 0;
+ const prevM = moisIdx>0 ? moisIdx-1 : 11;
  const prevY = moisIdx>0 ? moisYear : moisYear-1;
  const kprev = calcMonthKpis(client, prevM, prevY);
- const cotPatPrevMois = Math.round(kprev.salaires * 0.46);
+ // Cotisations (salariales + patronales) du mois précédent, prélevées ce mois-ci
+ const cotPatPrevMois = Math.round(kprev.salaires * (PAIE.patronales + PAIE.salariales));
 
  // TVA mois précédent à reverser ce mois
- const tvaPrevCollectee = Math.round(kprev.ca * 0.20);
- const tvaPrevDeductible = Math.round((kprev.ca - kprev.marge)*0.20 + kprev.charges*0.18);
- const tvaReverserCeMois = Math.max(0, tvaPrevCollectee - tvaPrevDeductible);
+ const tvaReverserCeMois = Math.max(0, tvaImports(client.imports, `${prevY}-${String(prevM+1).padStart(2,"0")}`).solde);
 
  // Total encaissements / décaissements réels ce mois
  const encTotal = Math.round(k2.ca * 0.95) + ajEnc; // CA encaissé (avec délai)
- const decTotal = Math.round(k2.charges * 0.95) + netSalaire + cotSal + cotPatPrevMois + tvaReverserCeMois + empMens + ajDec;
+ const decTotal = Math.round(k2.charges * 0.95) + netSalaire + cotPatPrevMois + tvaReverserCeMois + empMens + ajDec;
  const soldeM = encTotal - decTotal;
 
  // Tableau historique
  const tRows = MONTHS.map((m,i)=>{
  const km=calcMonthKpis(client,i,moisYear);
- const km1=calcMonthKpis(client,Math.max(0,i-1),i>0?moisYear:moisYear-1);
+ const km1=calcMonthKpis(client,i>0?i-1:11,i>0?moisYear:moisYear-1);
+ const km1Key=`${i>0?moisYear:moisYear-1}-${String(i>0?i:12).padStart(2,"0")}`;
  const enc2=Math.round(km.ca*0.95);
  const dec2=Math.round(km.charges*0.95)
- + Math.round(km.salaires*0.75)
- + Math.round(km.salaires*0.21)
- + Math.round(km1.salaires*0.46)
- + Math.max(0,Math.round(km1.ca*0.20)-Math.round((km1.ca-km1.marge)*0.20+km1.charges*0.18))
- + chargeEmprunt;
+ + Math.round(km.salaires*PAIE.net)
+ + Math.round(km1.salaires*(PAIE.salariales+PAIE.patronales))
+ + Math.max(0,tvaImports(client.imports,km1Key).solde)
+ + chargeEmprunts(client.emprunts,i,moisYear);
  const ajMi=(client.tresorerie?.ajustements||[]).filter(a=>a.mois===`${moisYear}-${String(i+1).padStart(2,"0")}`);
  const ajEi=ajMi.filter(a=>a.type==="encaissement").reduce((s,a)=>s+a.montant,0);
  const ajDi=ajMi.filter(a=>a.type==="decaissement").reduce((s,a)=>s+a.montant,0);
@@ -4382,9 +3174,8 @@ function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, moisYear, isAdm
  <div style={{padding:0}}>
  {[
  {label:"Charges fournisseurs", montant:Math.round(k2.charges*0.95), desc:"Loyer, publicité, livraisons, abonnements…", icon:"·", when:"Ce mois"},
- {label:"Salaires nets versés", montant:netSalaire, desc:`${fmt(salBrut)} brut × 75% net`, icon:"≡", when:"Ce mois"},
- {label:"Cotisations salariales", montant:cotSal, desc:"Retenues sur salaire → URSSAF", icon:"·", when:"Ce mois"},
- {label:"Cotisations patronales (M-1)", montant:cotPatPrevMois, desc:`Cotisations de ${MONTHS[moisIdx>0?moisIdx-1:11]} payées ce mois · décalage 1 mois`,icon:"↩", when:"Décalé M+1"},
+ {label:"Salaires nets versés", montant:netSalaire, desc:salRows.length>0?`Net des bulletins importés (brut : ${fmt(salBrut)})`:"Estimation : environ 55 % du coût employeur", icon:"≡", when:"Ce mois"},
+ {label:"Cotisations sociales (M-1)", montant:cotPatPrevMois, desc:`Cotisations salariales et patronales de ${MONTHS[moisIdx>0?moisIdx-1:11]}, prélevées ce mois-ci`,icon:"↩", when:"Décalé M+1"},
  {label:"TVA nette à reverser (M-1)", montant:tvaReverserCeMois, desc:`TVA collectée de ${MONTHS[moisIdx>0?moisIdx-1:11]} reversée ce mois`,icon:"·", when:"Décalé M+1"},
  {label:"Remboursements emprunts", montant:empMens, desc:`${emprunts.length} emprunt(s) · capital + intérêts + assurance`,icon:"", when:"Ce mois"},
  ...(ajDec>0?[{label:"Sorties exceptionnelles",montant:ajDec,desc:ajM.filter(a=>a.type==="decaissement").map(a=>a.libelle).join(", "),icon:"!",when:"Exceptionnel"}]:[]),
@@ -4520,14 +3311,14 @@ function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, moisYear, isAdm
  </div>
  {emprunts.length===0&&<Card><div style={{textAlign:"center",padding:"40px",color:C.textLight}}><div style={{fontSize:36,marginBottom:12}}></div><div style={{fontWeight:700,fontSize:14}}>Aucun emprunt enregistré</div></div></Card>}
  {emprunts.map(e=>{
- const mens=e.capital*(e.taux/100)/(1-Math.pow(1+e.taux/100,-e.duree));
+ const mens=mensualiteHorsAssurance(e);
  const dateD=e.dateDebut?new Date(e.dateDebut):new Date(CUR_Y-1,0,1);
  const moisDebutEmprunt=dateD.getFullYear()*12+dateD.getMonth();
  const moisCourantTotal=moisYear*12+moisIdx;
  const moisPasses=Math.min(e.duree,Math.max(0,moisCourantTotal-moisDebutEmprunt+1));
- const rows2=[]; let restant=e.capital;
- for(let i=0;i<Math.min(e.duree,12);i++){const int=Math.round(restant*e.taux/100*100)/100;const cap=Math.round((mens-int)*100)/100;restant=Math.max(0,Math.round((restant-cap)*100)/100);rows2.push({m:MONTHS[i%12],int,cap,restant,sortie:Math.round(mens+e.assurance)});}
- let rCur=e.capital;for(let i=0;i<moisPasses;i++){const int=rCur*e.taux/100;rCur=Math.max(0,rCur-(mens-int));}
+ // Les 12 prochaines échéances à partir du mois affiché, avec leur vrai mois.
+ const rows2=[]; { let r=e.capital; const t=(e.taux||0)/100; for(let i=0;i<e.duree&&rows2.length<12;i++){ const int=r*t; const cap=Math.min(r,mens-int); r=Math.max(0,r-cap); const m=moisDebutEmprunt+i; if(m>=moisCourantTotal) rows2.push({m:`${MONTHS[m%12]} ${Math.floor(m/12)}`,int:Math.round(int*100)/100,cap:Math.round(cap*100)/100,restant:Math.round(r*100)/100,sortie:Math.round(mens+(e.assurance||0))}); } }
+ const rCur=capitalRestant(e,moisPasses);
  const prog=Math.round((1-rCur/e.capital)*100);
  return (
  <Card key={e.id} style={{marginBottom:16}}>
@@ -4553,7 +3344,7 @@ function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, moisYear, isAdm
  <thead><tr><Th>Mois</Th><Th right>Intérêts payés</Th><Th right>Capital remboursé</Th><Th right>Capital restant</Th><Th right>Assurance</Th><Th right>Total mensuel</Th></tr></thead>
  <tbody>
  {rows2.map((r,i)=><Tr key={i}><Td bold>{r.m}</Td><Td right mono color={C.orange}>{fmt(r.int)}</Td><Td right mono color={C.primary}>{fmt(r.cap)}</Td><Td right mono bold>{fmt(r.restant)}</Td><Td right mono color={C.textMid}>{fmt(e.assurance)}</Td><Td right mono bold color={C.red}>{fmt(r.sortie)}</Td></Tr>)}
- <Tr style={{background:C.bg}}><Td bold>TOTAL 12 mois</Td><Td right mono bold color={C.orange}>{fmt(Math.round(rows2.reduce((s,r)=>s+r.int,0)))}</Td><Td right mono bold color={C.primary}>{fmt(Math.round(rows2.reduce((s,r)=>s+r.cap,0)))}</Td><Td/><Td right mono bold color={C.textMid}>{fmt(e.assurance*12)}</Td><Td right mono bold color={C.red}>{fmt(Math.round((mens+e.assurance)*12))}</Td></Tr>
+ <Tr style={{background:C.bg}}><Td bold>Total des {rows2.length} prochaines échéances</Td><Td right mono bold color={C.orange}>{fmt(Math.round(rows2.reduce((s,r)=>s+r.int,0)))}</Td><Td right mono bold color={C.primary}>{fmt(Math.round(rows2.reduce((s,r)=>s+r.cap,0)))}</Td><Td/><Td right mono bold color={C.textMid}>{fmt((e.assurance||0)*rows2.length)}</Td><Td right mono bold color={C.red}>{fmt(Math.round((mens+(e.assurance||0))*rows2.length))}</Td></Tr>
  </tbody>
  </table>
  </div>
@@ -4574,11 +3365,11 @@ function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, moisYear, isAdm
  <KpiCard label="Investissements actifs" value={investissements.length} color={C.primary}/>
  <KpiCard label="Valeur d'achat totale" value={fmt(investissements.reduce((s,i)=>s+i.montantHT,0))} color={C.orange}/>
  <KpiCard label="Amortissement/mois" value={fmt(amort)} sub="Déduit de votre résultat" color={C.red}/>
- <KpiCard label="Valeur actuelle (VNC)" value={fmt(investissements.reduce((s,inv)=>{const am=Math.round(inv.montantHT/(inv.duree||36));const me=Math.min(inv.duree,moisIdx+1);return s+Math.max(0,inv.montantHT-am*me);},0))} sub="Valeur nette comptable" color={C.text}/>
+ <KpiCard label="Valeur actuelle (VNC)" value={fmt(Math.round(investissements.reduce((s,inv)=>s+vncInv(inv,moisIdx,moisYear),0)))} sub="Valeur nette comptable" color={C.text}/>
  </div>
  {investissements.length===0&&<Card><div style={{textAlign:"center",padding:"40px",color:C.textLight}}><div style={{fontSize:36,marginBottom:12}}></div><div style={{fontWeight:700,fontSize:14}}>Aucun investissement enregistré</div></div></Card>}
  {investissements.map(inv=>{
- const am=Math.round(inv.montantHT/(inv.duree||36));const me=Math.min(inv.duree,moisIdx+1);const vnc=Math.max(0,inv.montantHT-am*me);const tva=Math.round(inv.montantHT*inv.tauxTVA/100);const pctF=Math.round(me/inv.duree*100);
+ const am=Math.round(amortMensuelInv(inv));const me=moisAmortis(inv,moisIdx,moisYear);const vnc=Math.round(vncInv(inv,moisIdx,moisYear));const tva=Math.round(inv.montantHT*inv.tauxTVA/100);const pctF=Math.round(me/(inv.duree||36)*100);
  const gainM=inv.gainMensuel||0;const paybackM=gainM>0?Math.ceil(inv.montantHT/gainM):null;const rentable=paybackM!==null?paybackM<=inv.duree:null;
  return (
  <Card key={inv.id} style={{marginBottom:16}}>
@@ -4673,9 +3464,12 @@ function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, moisYear, isAdm
  if (view==="is") {
     const isD = client.is||{totalPrecedent:0,taux:15};
 
-    // Résultat imposable = EBE - amortissements
-    const resultatImposable = Math.max(0, kpis.ebe - amort);
-    const isAnnuelEstime   = Math.round(resultatImposable * 12 * isD.taux / 100);
+    // Résultat imposable estimé : résultats des mois connus de l'année projetés sur 12 mois,
+    // puis barème PME (15 % jusqu'à 42 500 €, 25 % au-delà), sauf si le taux normal est choisi.
+    const moisConnus = Array.from({length:moisIdx+1},(_,i)=>calcMonthKpis(client,i,moisYear)).filter(k=>k.hasData);
+    const resultatAnnuel = moisConnus.length ? moisConnus.reduce((s,k)=>s+k.result,0)*12/moisConnus.length : 0;
+    const resultatImposable = Math.max(0, resultatAnnuel/12);
+    const isAnnuelEstime   = estimateIS(Math.max(0,resultatAnnuel), isD.taux!==25);
     const isMensuel        = Math.round(isAnnuelEstime / 12);
     const acompteTrimes    = Math.round(isAnnuelEstime / 4);
 
@@ -4689,10 +3483,11 @@ function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, moisYear, isAdm
     // Calendrier des acomptes N (basé sur IS N-1 si IS N non connu)
     const baseAcomptes = isN1 > 0 ? isN1 : isAnnuelEstime;
     const acomptes = [
-      { date:`15/06/${moisYear}`, label:"1er acompte", montant:Math.round(baseAcomptes*0.25), verse:moisIdx>=5 },
-      { date:`15/09/${moisYear}`, label:"2ème acompte", montant:Math.round(baseAcomptes*0.25), verse:moisIdx>=8 },
-      { date:`15/12/${moisYear}`, label:"3ème acompte", montant:Math.round(baseAcomptes*0.25), verse:moisIdx>=11 },
-      { date:`15/03/${moisYear+1}`, label:"4ème acompte", montant:Math.round(baseAcomptes*0.25), verse:false },
+      // Exercice calé sur l'année civile : acomptes les 15 mars, juin, septembre et décembre.
+      { date:`15/03/${moisYear}`, label:"1er acompte", montant:Math.round(baseAcomptes*0.25), verse:moisIdx>=2 },
+      { date:`15/06/${moisYear}`, label:"2ème acompte", montant:Math.round(baseAcomptes*0.25), verse:moisIdx>=5 },
+      { date:`15/09/${moisYear}`, label:"3ème acompte", montant:Math.round(baseAcomptes*0.25), verse:moisIdx>=8 },
+      { date:`15/12/${moisYear}`, label:"4ème acompte", montant:Math.round(baseAcomptes*0.25), verse:moisIdx>=11 },
       { date:`15/05/${moisYear+1}`, label:"Solde IS (régularisation)", montant:soldeDu, verse:false, solde:true },
     ];
     const totalAcomptes = acomptes.slice(0,4).reduce((s,a)=>s+a.montant,0);
@@ -4706,8 +3501,8 @@ function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, moisYear, isAdm
           <div style={{fontSize:13,fontWeight:800,color:C.text,marginBottom:8}}>Comment fonctionne l'IS ?</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
             {[
-              {titre:"Calcul de l'IS",desc:`Taux de ${isD.taux}% appliqué sur votre bénéfice imposable (EBE - amortissements). PME : taux réduit 15% jusqu'à 42 500 EUR de bénéfice, puis 25% au-delà.`},
-              {titre:"Les acomptes trimestriels",desc:"Vous versez 4 acomptes en cours d'année (15/06, 15/09, 15/12, 15/03) basés sur l'IS de l'année précédente. C'est une avance sur l'IS futur."},
+              {titre:"Calcul de l'IS",desc:isD.taux!==25?"Barème PME : 15 % jusqu'à 42 500 € de bénéfice, puis 25 % au-delà, appliqué au bénéfice imposable (résultat avant impôt).":"Taux normal de 25 % appliqué au bénéfice imposable (résultat avant impôt)."},
+              {titre:"Les acomptes trimestriels",desc:"4 acomptes en cours d'année (15 mars, 15 juin, 15 septembre, 15 décembre), calculés sur l'impôt de l'exercice précédent : une avance sur l'impôt à venir."},
               {titre:"La régularisation",desc:"En mai de l'année suivante, vous payez le solde : IS réel calculé moins les acomptes déjà versés. Si vous avez trop payé, l'excédent est remboursé."},
             ].map((c,i)=>(
               <div key={i} style={{background:"white",borderRadius:8,padding:"12px 14px",border:`1px solid ${C.border}`}}>
@@ -4720,7 +3515,7 @@ function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, moisYear, isAdm
 
         {/* KPIs */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:20}}>
-          <KpiCard label="Resultat imposable estimé" value={fmt(resultatImposable*12)} sub={`Base annuelle (${MONTHS[moisIdx]} x12)`} color={C.primary}/>
+          <KpiCard label="Résultat imposable estimé" value={fmt(resultatImposable*12)} sub={`Projection sur l'année (${moisConnus.length} mois connus)`} color={C.primary}/>
           <KpiCard label="IS annuel estimé" value={fmt(isAnnuelEstime)} sub={`Taux ${isD.taux}%`} color={C.orange}/>
           <KpiCard label="IS mensuel (provision)" value={fmt(isMensuel)} sub="A provisionner chaque mois" color={C.red}/>
           <KpiCard label="Solde IS estimé (mai N+1)" value={fmt(soldeDu)} sub="Regularisation finale" color={soldeDu>0?C.red:C.green}/>
@@ -4864,43 +3659,25 @@ function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, moisYear, isAdm
     const chargeRows = (client.imports||[]).filter(i=>i.type==="charges"&&i.mois===moisKey).flatMap(i=>i.rows);
 
     // TVA collectée / déductible du mois affiché (sera payée le mois suivant)
-    const tvaCollecteeVentes = ventesRows.reduce((s,r)=>s+Math.round(parseFloat(r.ca_ht||0)*0.20),0);
-    const tvaCollecteeAutres = autresVentesRows.reduce((s,r)=>s+Math.round(parseFloat(r.ca_ht||0)*parseFloat(r.taux_tva||20)/100),0);
-    const tvaCollectee = tvaCollecteeVentes + tvaCollecteeAutres;
-    const tvaDeductible = chargeRows.filter(r=>r.tva_recuperable==="oui").reduce((s,r)=>
-      s+Math.round(parseFloat(r.montant_ht||0)*parseFloat(r.taux_tva||20)/100),0);
-    const soldeMois = tvaCollectee - tvaDeductible; // solde du mois affiché → payable mois suivant
+    // Même calcul que la vue Trésorerie (src/lib/estimations.js) : taux de chaque ligne,
+    // TVA déductible sur les charges et sur les achats de marchandises.
+    const tvaMoisAff = tvaImports(client.imports, moisKey);
+    const tvaCollectee = tvaMoisAff.collectee;
+    const tvaDeductible = tvaMoisAff.deductible;
+    const tvaAchats = Math.round(ventesRows.reduce((s,r)=>s+parseFloat(r.cout_achat_ht||0)*tauxVente(r)/100,0));
+    const tvaCollecteeVentes = Math.round(ventesRows.reduce((s,r)=>s+parseFloat(r.ca_ht||0)*tauxVente(r)/100,0));
+    const tvaCollecteeAutres = Math.round(autresVentesRows.reduce((s,r)=>s+parseFloat(r.ca_ht||0)*tauxVente(r)/100,0));
+    const soldeMois = tvaMoisAff.solde; // solde du mois affiché → payable mois suivant
 
     // TVA à payer CE mois = solde du mois précédent (décalage -1)
     const prevOffset = moisIdx - 1;
     const prevMi = ((prevOffset%12)+12)%12;
     const prevYr = moisYear + Math.floor(prevOffset/12);
     const prevKey = `${prevYr}-${String(prevMi+1).padStart(2,"0")}`;
-    const prevVentes = (client.imports||[]).filter(i=>i.type==="ventes_produits"&&i.mois===prevKey).flatMap(i=>i.rows);
-    const prevAutres = (client.imports||[]).filter(i=>i.type==="autres_ventes"&&i.mois===prevKey).flatMap(i=>i.rows);
-    const prevCharges = (client.imports||[]).filter(i=>i.type==="charges"&&i.mois===prevKey).flatMap(i=>i.rows);
-    const prevColl = prevVentes.reduce((s,r)=>s+Math.round(parseFloat(r.ca_ht||0)*0.20),0)
-                   + prevAutres.reduce((s,r)=>s+Math.round(parseFloat(r.ca_ht||0)*parseFloat(r.taux_tva||20)/100),0);
-    const prevDed = prevCharges.filter(r=>r.tva_recuperable==="oui").reduce((s,r)=>
-      s+Math.round(parseFloat(r.montant_ht||0)*parseFloat(r.taux_tva||20)/100),0);
-    const soldeTVA = prevColl - prevDed; // ce qu'on paie ce mois
+    const soldeTVA = tvaImports(client.imports, prevKey).solde; // ce qu'on paie ce mois
     const aVerser = soldeTVA > 0;
     const MONTHS_FR = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
 
-    // TVA 12 mois
-    const tva12 = Array.from({length:12},(_,i)=>{
-      const offset = moisIdx - 11 + i;
-      const mi2 = ((offset%12)+12)%12;
-      const yr2 = moisYear + Math.floor(offset/12);
-      const key2 = `${yr2}-${String(mi2+1).padStart(2,"0")}`;
-      const k2 = calcMonthKpis(client, mi2, yr2);
-      const vR=(client.imports||[]).filter(im=>im.type==="ventes_produits"&&im.mois===key2).flatMap(im=>im.rows);
-      const aR=(client.imports||[]).filter(im=>im.type==="autres_ventes"&&im.mois===key2).flatMap(im=>im.rows);
-      const cR=(client.imports||[]).filter(im=>im.type==="charges"&&im.mois===key2).flatMap(im=>im.rows);
-      const coll=vR.reduce((s,r)=>s+Math.round(parseFloat(r.ca_ht||0)*0.20),0)+aR.reduce((s,r)=>s+Math.round(parseFloat(r.ca_ht||0)*parseFloat(r.taux_tva||20)/100),0);
-      const ded=cR.filter(r=>r.tva_recuperable==="oui").reduce((s,r)=>s+Math.round(parseFloat(r.montant_ht||0)*parseFloat(r.taux_tva||20)/100),0);
-      return {l:MONTHS[mi2],coll,ded,solde:coll-ded,hasData:k2.hasData};
-    });
 
     // Mois de versement = mois suivant le mois affiché
     const verseMi = (moisIdx+1)%12;
@@ -4913,11 +3690,7 @@ function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, moisYear, isAdm
       const mi2 = ((off%12)+12)%12;
       const yr2 = moisYear + Math.floor(off/12);
       const key2 = `${yr2}-${String(mi2+1).padStart(2,"0")}`;
-      const vR2=(client.imports||[]).filter(im=>im.type==="ventes_produits"&&im.mois===key2).flatMap(im=>im.rows);
-      const aR2=(client.imports||[]).filter(im=>im.type==="autres_ventes"&&im.mois===key2).flatMap(im=>im.rows);
-      const cR2=(client.imports||[]).filter(im=>im.type==="charges"&&im.mois===key2).flatMap(im=>im.rows);
-      const coll2=vR2.reduce((s,r)=>s+Math.round(parseFloat(r.ca_ht||0)*0.20),0)+aR2.reduce((s,r)=>s+Math.round(parseFloat(r.ca_ht||0)*parseFloat(r.taux_tva||20)/100),0);
-      const ded2=cR2.filter(r=>r.tva_recuperable==="oui").reduce((s,r)=>s+Math.round(parseFloat(r.montant_ht||0)*parseFloat(r.taux_tva||20)/100),0);
+      const { collectee:coll2, deductible:ded2 } = tvaImports(client.imports, key2);
       const hasData2 = calcMonthKpis(client,mi2,yr2).hasData;
       const verseMi2 = (mi2+1)%12;
       const verseYr2 = mi2===11?yr2+1:yr2;
@@ -4975,9 +3748,15 @@ function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, moisYear, isAdm
           </div>
         </Card>
         <Card style={{marginTop:16}}>
-          <SectionHead title="Détail TVA déductible" sub="Charges avec TVA récupérable"/>
+          <SectionHead title="Détail TVA déductible" sub="Charges et achats avec TVA récupérable"/>
           <div style={{padding:"8px 20px 16px"}}>
-            {chargeRows.filter(r=>r.tva_recuperable==="oui").length===0?(
+            {tvaAchats>0&&(
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${C.borderLight}`,fontSize:12}}>
+                <span style={{fontWeight:700,color:C.text}}>Achats de marchandises</span>
+                <span style={{fontWeight:800,color:C.green}}>{fmt(tvaAchats)}</span>
+              </div>
+            )}
+            {chargeRows.filter(r=>r.tva_recuperable==="oui").length===0&&tvaAchats===0?(
               <div style={{padding:"20px 0",textAlign:"center",color:C.textLight,fontSize:13}}>Aucune charge avec TVA récupérable ce mois</div>
             ):(
               chargeRows.filter(r=>r.tva_recuperable==="oui").map((r,i)=>{
@@ -8349,13 +7128,24 @@ function PointageView({ client, isAdminPreview=false }) {
 // CALCUL DYNAMIQUE DES ALERTES depuis les KPIs du mois
 //
 function calcTresoEstimee(client, toMi, toYr) {
+  // Avec la comptabilité : solde réel des banques et de la caisse en fin de mois ;
+  // au-delà du dernier mois importé, on repart de ce solde réel.
+  const fidx = fecIndex(client);
+  const tKey = `${toYr}-${String(toMi+1).padStart(2,"0")}`;
+  if (fidx.months.has(tKey)) return Math.round(tresoAt(client, tKey));
+  if (fidx.has && tKey > fidx.last) {
+    let [ly, lm] = fidx.last.split("-").map(Number); lm--;
+    let cumul = tresoAt(client, fidx.last), it = 48;
+    while (it-- > 0) { lm++; if (lm > 11) { lm = 0; ly++; } if (ly*12+lm > toYr*12+toMi) break; const k = calcMonthKpis(client, lm, ly); if (k.hasData) cumul += k.result; }
+    return Math.round(cumul);
+  }
   const si = client.tresorerie?.soldeInitial||0;
   const ds = client.tresorerie?.dateSolde||null;
   if(!ds) return si;
   const dsYr2=parseInt(ds.split("-")[0]), dsMi2=parseInt(ds.split("-")[1])-1;
   // Si le mois demandé est avant dateSolde, retourner null
   if(toYr*12+toMi < dsYr2*12+dsMi2) return null;
-  const emp=(client.emprunts||[]).reduce((s,e)=>{const m=e.capital*(e.taux/100)/(1-Math.pow(1+e.taux/100,-e.duree));return s+Math.round(m+(e.assurance||0));},0);
+
   let cYr=dsYr2, cMi=dsMi2;
   let cumul=si, maxIt=48;
   while((cYr<toYr||(cYr===toYr&&cMi<=toMi))&&maxIt-->0){
@@ -8369,24 +7159,22 @@ function calcTresoEstimee(client, toMi, toYr) {
 function calcAlertes(client, moisIdx, moisYear) {
   const kpis = calcMonthKpis(client, moisIdx, moisYear);
   const emprunts = client.emprunts||[];
-  const chargeEmprunt = emprunts.reduce((s,e)=>{ const m=e.capital*(e.taux/100)/(1-Math.pow(1+e.taux/100,-e.duree)); return s+Math.round(m+e.assurance); },0);
+ const chargeEmprunt = chargeEmprunts(emprunts, moisIdx, moisYear);
   const treso = calcTresoEstimee(client, moisIdx, moisYear);
   const alerts = [];
 
-  // ── Résultat net négatif
-  if (kpis.result < 0) alerts.push({
-    level:"red", kpi:"Résultat net négatif",
-    current: fmt(kpis.result), threshold:"> 0 €",
-    msg:`Vos charges dépassent vos recettes ce mois (résultat : ${fmt(kpis.result)}).`,
-    action:"Analysez vos charges fixes et cherchez à augmenter votre marge sur les ventes."
-  });
-
-  // ── EBE négatif
+  // ── Exploitation déficitaire (EBE) ou résultat négatif : une seule alerte pour un même problème
   if (kpis.ebe < 0) alerts.push({
-    level:"red", kpi:"EBE négatif",
+    level:"red", kpi:"Activité déficitaire ce mois-ci",
     current: fmt(kpis.ebe), threshold:"> 0 €",
-    msg:`Votre exploitation ne couvre pas ses charges (EBE : ${fmt(kpis.ebe)}).`,
-    action:"Réduisez vos charges variables ou augmentez votre prix de vente."
+    msg:`Les achats, les charges et les salaires ont dépassé les ventes du mois (excédent d'exploitation : ${fmt(kpis.ebe)}, résultat : ${fmt(kpis.result)}).`,
+    action:"Deux leviers à regarder ensemble : la marge sur les ventes (prix, achats) et les charges. Un mois isolé peut venir de la saisonnalité ; c'est la répétition qui compte."
+  });
+  else if (kpis.result < 0) alerts.push({
+    level:"orange", kpi:"Résultat négatif",
+    current: fmt(kpis.result), threshold:"> 0 €",
+    msg:`L'activité dégage un excédent (${fmt(kpis.ebe)}), mais les amortissements, frais financiers ou éléments exceptionnels le font passer en perte (résultat : ${fmt(kpis.result)}).`,
+    action:"Le poids des investissements et des emprunts est le point à examiner."
   });
 
   // ── Masse salariale > 50% du CA (critique) ou > 35% (vigilance)
@@ -8395,13 +7183,13 @@ function calcAlertes(client, moisIdx, moisYear) {
     level:"red", kpi:"Masse salariale critique",
     current: `${Math.round(tauxSal)}% du CA`, threshold:"< 50% du CA",
     msg:`Votre masse salariale représente ${Math.round(tauxSal)}% de votre CA. Au-delà de 50%, votre activité est fortement sous pression.`,
-    action:"Analysez la productivité par employé et vérifiez si le volume d'activité justifie la masse salariale actuelle."
+    action:"Comparer le volume d'activité et l'organisation des équipes mois par mois aide à retrouver le bon équilibre."
   });
   else if (tauxSal > 35 && kpis.ca > 0) alerts.push({
     level:"orange", kpi:"Masse salariale élevée",
     current: `${Math.round(tauxSal)}% du CA`, threshold:"< 35% du CA",
     msg:`Votre masse salariale représente ${Math.round(tauxSal)}% de votre CA. Le seuil de vigilance est à 35%.`,
-    action:"Surveillez l'évolution du ratio masse salariale / CA chaque mois."
+    action:"Un ratio à suivre chaque mois : il remonte vite quand l'activité ralentit."
   });
 
   // ── Taux de marge faible (seuils adaptés par secteur)
@@ -8416,8 +7204,8 @@ function calcAlertes(client, moisIdx, moisYear) {
       ? `Votre marge brute est de ${Math.round(tauxMarge)}% du CA. Même en tenant compte des faibles marges tabac/presse (6-20%), ce niveau est critique. Développez la partie bar.`
       : `Votre marge brute est de ${Math.round(tauxMarge)}% du CA. En dessous de 20%, votre activité manque gravement de rentabilité.`,
     action:isBarTabacPresse
-      ? "Augmentez la part des ventes bar (café, alcools) qui génèrent 60-70% de marge, et réduisez la dépendance au tabac."
-      : "Négociez vos prix d'achat fournisseurs ou augmentez vos prix de vente."
+      ? "La partie bar (café, alcools), qui marge à 60-70 %, est le levier naturel pour remonter la marge."
+      : "Prix d'achat fournisseurs et prix de vente sont les deux premiers leviers à étudier."
   });
   else if (tauxMarge > 0 && tauxMarge < seuilMargeOrange) alerts.push({
     level:"orange", kpi:"Taux de marge faible",
@@ -8426,8 +7214,8 @@ function calcAlertes(client, moisIdx, moisYear) {
       ? `Votre marge brute est de ${Math.round(tauxMarge)}% du CA. Le tabac (6%) et la presse (20%) tirent la marge vers le bas · le mix de ventes est déterminant.`
       : `Votre marge brute est de ${Math.round(tauxMarge)}% du CA. Le seuil de vigilance est à 30%.`,
     action:isBarTabacPresse
-      ? "Analysez la répartition bar/tabac/presse dans vos ventes et cherchez à valoriser les produits bar (cocktails, planches)."
-      : "Identifiez les produits/services à faible marge et optimisez votre mix commercial."
+      ? "La répartition bar / tabac / presse des ventes est à suivre : chaque point de bar en plus remonte la marge."
+      : "Repérer les produits ou services qui margent le moins permet d'ajuster les prix ou le mix commercial."
   });
 
   // ── Charges externes (seuils adaptés : Bar/Tabac/Presse a des charges structurellement élevées)
@@ -8441,8 +7229,8 @@ function calcAlertes(client, moisIdx, moisYear) {
       ? `Vos charges externes représentent ${Math.round(tauxChargesExt)}% du CA. Au-delà de 48% (licences + appro tabac + loyer), la rentabilité s'effondre.`
       : `Vos charges externes représentent ${Math.round(tauxChargesExt)}% de votre CA. C'est un niveau très élevé.`,
     action:isBarTabacPresse
-      ? "Renégociez le loyer, mutualisez les approvisionnements, et vérifiez les commissions sur les jeux si applicable."
-      : "Auditez chaque poste de charge : abonnements, prestataires, loyer. Négociez ou supprimez les dépenses non essentielles."
+      ? "Loyer, approvisionnements mutualisés et commissions sur les jeux sont les postes à renégocier en premier."
+      : "Passer en revue chaque poste (abonnements, prestataires, loyer) permet de repérer ce qui peut être renégocié ou arrêté."
   });
   else if (tauxChargesExt > seuilChargesOrange && kpis.ca > 0) alerts.push({
     level:"orange", kpi:"Charges externes à surveiller",
@@ -8451,8 +7239,8 @@ function calcAlertes(client, moisIdx, moisYear) {
       ? `Vos charges externes représentent ${Math.round(tauxChargesExt)}% du CA. Tabac et licences sont incompressibles · surveillez loyer et approvisionnements.`
       : `Vos charges externes représentent ${Math.round(tauxChargesExt)}% de votre CA.`,
     action:isBarTabacPresse
-      ? "Comparez vos tarifs d'approvisionnement boissons et identifiez les charges compressibles hors tabac/presse."
-      : "Identifiez les charges compressibles et négociez-les."
+      ? "Comparer les tarifs d'approvisionnement boissons fait souvent apparaître des économies."
+      : "Quelques postes compressibles suffisent souvent à retrouver de la marge."
   });
 
   // ── Total charges (sal + ext) > 80% du CA
@@ -8461,19 +7249,19 @@ function calcAlertes(client, moisIdx, moisYear) {
     level:"red", kpi:"Charges totales excessives",
     current: `${Math.round(tauxTotalCharges)}% du CA`, threshold:"< 80% du CA",
     msg:`Vos charges totales (externes + salaires) représentent ${Math.round(tauxTotalCharges)}% de votre CA. Il reste très peu pour couvrir emprunts et IS.`,
-    action:"Action urgente : réduction immédiate des charges ou augmentation du CA."
+    action:"À arbitrer rapidement ensemble : alléger les charges ou augmenter le chiffre d'affaires."
   });
 
   // Sans solde de départ saisi, la trésorerie vaut 0 par défaut : ne pas en tirer
   // d'alerte (« trésorerie insuffisante » fausse pour un dossier pas encore configuré).
-  const tresoConfiguree = !!client.tresorerie?.dateSolde || (client.tresorerie?.soldeInitial||0)!==0;
+  const tresoConfiguree = fecIndex(client).has || !!client.tresorerie?.dateSolde || (client.tresorerie?.soldeInitial||0)!==0;
 
   // ── Trésorerie négative
   if (tresoConfiguree && treso < 0) alerts.push({
     level:"red", kpi:"Trésorerie négative",
     current: fmt(treso), threshold:"> 0 €",
-    msg:`Votre trésorerie est négative (${fmt(treso)}). Vous êtes en situation de découvert bancaire.`,
-    action:`Contactez votre conseiller ${client.advisorLabel||"NVM Finance"} en urgence pour trouver une solution de financement à court terme.`
+    msg:`Votre trésorerie est négative (${fmt(treso)}) : les comptes sont à découvert.`,
+    action:`${client.advisorLabel||"NVM Finance"} peut vous aider à trouver un financement court terme : c'est à regarder ensemble sans attendre.`
   });
 
   // ── Trésorerie < 1 mois de charges
@@ -8482,7 +7270,7 @@ function calcAlertes(client, moisIdx, moisYear) {
     level:"orange", kpi:"Trésorerie insuffisante",
     current: fmt(treso), threshold:`> ${fmt(Math.round(chargesMensuelles))} (1 mois)`,
     msg:`Votre trésorerie (${fmt(treso)}) couvre moins d'un mois de charges (${fmt(Math.round(chargesMensuelles))}/mois). Marge de sécurité insuffisante.`,
-    action:"Constituez une réserve de trésorerie d'au moins 2-3 mois de charges."
+    action:"Une réserve de 2 à 3 mois de charges donne de la marge face aux imprévus et aux décalages de paiement."
   });
 
   // ── Emprunts > 25% du CA
@@ -8492,24 +7280,18 @@ function calcAlertes(client, moisIdx, moisYear) {
       level:"red", kpi:"Charge d'emprunts critique",
       current: `${Math.round(tauxEmp)}% du CA`, threshold:"< 25% du CA",
       msg:`Vos remboursements d'emprunts représentent ${Math.round(tauxEmp)}% de votre CA mensuel. C'est un niveau critique.`,
-      action:"Envisagez une renégociation ou un rééchelonnement de vos emprunts."
+      action:"Une renégociation ou un rééchelonnement des emprunts peut être étudié avec votre banque."
     });
     else if (tauxEmp > 25) alerts.push({
       level:"orange", kpi:"Charge d'emprunts élevée",
       current: `${Math.round(tauxEmp)}% du CA`, threshold:"< 25% du CA",
       msg:`Vos remboursements d'emprunts représentent ${Math.round(tauxEmp)}% de votre CA mensuel.`,
-      action:"Surveillez l'évolution de ce ratio. Au-delà de 35%, c'est critique."
+      action:"Un ratio à suivre : au-delà de 35 %, il devient critique."
     });
   }
 
-  // ── CAF négative
-  const caf = kpis.result + kpis.amort;
-  if (caf < 0) alerts.push({
-    level:"red", kpi:"CAF négative",
-    current: fmt(caf), threshold:"> 0 €",
-    msg:`Votre capacité d'autofinancement est négative (${fmt(caf)}). Vous ne générez pas assez de trésorerie pour couvrir vos remboursements d'emprunts.`,
-    action:"Revoyez votre structure de charges et cherchez à augmenter votre résultat."
-  });
+  // ── Contrôle de gestion à partir de la comptabilité (créances anciennes, marge, charges, activité)
+  alerts.push(...fecAlertes(client, `${moisYear}-${String(moisIdx+1).padStart(2,"0")}`));
 
   // ── Échéances fiscales & sociales (génériques, indépendantes du mois consulté)
   alerts.push(...calcAlertesFiscales(client));
@@ -8553,14 +7335,14 @@ function calcAlertesFiscales(client, today = new Date()) {
     "Déclaration de TVA",
     new Date(year, today.getMonth(), 19),
     "Votre déclaration de TVA mensuelle approche.",
-    `Préparez votre CA3 et vérifiez vos justificatifs de TVA déductible avec ${advisor}.`
+    `Déclaration CA3 à préparer ; les justificatifs de TVA déductible sont à vérifier avec ${advisor}.`
   );
 
   pushEcheance(
     "DSN mensuelle",
     new Date(year, today.getMonth(), 15),
     "Votre Déclaration Sociale Nominative mensuelle approche.",
-    "Vérifiez les données de paie transmises à l'URSSAF avant la date limite."
+    "Les données de paie transmises à l'URSSAF sont à vérifier avant la date limite."
   );
 
   [[2,"1er acompte IS"],[5,"2e acompte IS"],[8,"3e acompte IS"],[11,"4e acompte IS"]].forEach(([month, label]) => {
@@ -8568,7 +7350,7 @@ function calcAlertesFiscales(client, today = new Date()) {
       label,
       new Date(year, month, 15),
       `Votre ${label.toLowerCase()} arrive à échéance.`,
-      `Vérifiez le montant à verser avec ${advisor}.`
+      `Montant à confirmer avec ${advisor}.`
     );
   });
 
@@ -8576,7 +7358,7 @@ function calcAlertesFiscales(client, today = new Date()) {
     "Cotisation Foncière des Entreprises (CFE)",
     new Date(year, 11, 15),
     "Le solde de la CFE arrive à échéance.",
-    "Vérifiez le montant dû sur votre espace impots.gouv.fr."
+    "Le montant dû figure sur votre espace impots.gouv.fr."
   );
 
   return alerts;
@@ -8721,12 +7503,33 @@ function AdminAcces({ clients }) {
   );
 }
 
-function RapportIA({ clients, moisIdx, moisYear }) {
+function RapportIA({ clients, moisIdx:moisIdxApp, moisYear:moisYearApp, onSaveImport }) {
   const [selId,setSelId]=useState(clients[0]?.id);
   const [text,setText]=useState("");
   const [loading,setLoading]=useState(false);
+  const [publie,setPublie]=useState("");
   const client=clients.find(c=>c.id===selId);
+  // Rapport sur le dernier mois qui a des chiffres (le mois en cours n'est en général pas encore importé).
+  const lastKey=client?latestDataKey(client):null;
+  const moisYear=lastKey?Number(lastKey.slice(0,4)):moisYearApp;
+  const moisIdx=lastKey?Number(lastKey.slice(5,7))-1:moisIdxApp;
+  const moisKeyR=`${moisYear}-${String(moisIdx+1).padStart(2,"0")}`;
   const kpis=client?calcMonthKpis(client,moisIdx,moisYear):null;
+  // Contexte complet quand la comptabilité est importée : cumul de l'exercice, bilan, délais.
+  const contexteFec=(()=>{
+    if(!client||!fecIndex(client).months.has(moisKeyR)) return "";
+    const idx=fecIndex(client), ytd=ytdKeys(idx,moisKeyR), n1=sameKeysN1(idx,ytd);
+    const sY=sigOf(plOver(idx,ytd)), s1=n1?sigOf(plOver(idx,n1)):null, b=bilanAt(client,moisKeyR), r=ratiosAt(client,moisKeyR);
+    const vs=(x,y)=>s1?` (meme periode N-1 : ${fmt(y)})`:"";
+    return `\nCumul de l'exercice (${ytd.length} mois) : CA ${fmt(sY.ca)}${vs(sY.ca,s1?.ca)} | Marge brute ${pct(sY.ca>0?sY.margeBrute/sY.ca*100:0)} | EBE ${fmt(sY.ebe)}${vs(sY.ebe,s1?.ebe)} | Resultat ${fmt(sY.rn)}${vs(sY.rn,s1?.rn)}`
+      +`\nBilan fin de mois : tresorerie nette ${fmt(b.tresoNette)} | BFR ${fmt(b.bfr)} | fonds de roulement ${fmt(b.fr)} | fonds propres ${fmt(b.capitauxPropres)} | emprunts ${fmt(b.dettesFin)}`
+      +`\nDelais : clients ${r.dso!=null?Math.round(r.dso)+" jours":"-"} | fournisseurs ${r.dpo!=null?Math.round(r.dpo)+" jours":"-"} | autonomie de tresorerie ${r.autonomieTreso!=null?r.autonomieTreso.toFixed(1)+" mois de depenses":"-"}`;
+  })();
+  const publier=async()=>{
+    const texte=text.replace(/\*\*/g,"").replace(/^#+\s*/gm,"").trim();
+    const ok=await onSaveImport(client.id,{type:"note",label:"Note du conseiller",mois:moisKeyR,rows:[{texte,date:new Date().toISOString().slice(0,10)}],count:1,importedAt:new Date().toLocaleDateString("fr-FR")});
+    setPublie(ok?"Publié dans la synthèse du client · modifiable depuis « Voir comme client »":"La publication a échoué, réessayez.");
+  };
 
   const generate=async()=>{
     if(!client||!kpis) return;
@@ -8734,7 +7537,7 @@ function RapportIA({ clients, moisIdx, moisYear }) {
     const sectorContext = client.sector === "Bar / Tabac / Presse"
       ? "\nContexte sectoriel : activite mixte bar + tabac reglemente + presse. Marge structurellement faible : tabac 6-8%, presse 15-20%, bar 60-70%. Treso en cash importante (recettes journalieres). Charges fixes elevees : licence IV, approvisionnement tabac obligatoire, loyer. KPIs secteur : marge brute cible 20-30%, EBE cible 8-12%, charges ext max 38%."
       : "";
-    const prompt=`Tu es analyste financier senior. Rapport mensuel pour :\nClient : ${client.name} | Secteur : ${client.sector} | Periode : ${MONTHS[moisIdx]} ${moisYear}${sectorContext}\nCA HT : ${fmt(kpis.ca)} | Marge brute : ${fmt(kpis.marge)} (${pct(kpis.ca>0?kpis.marge/kpis.ca*100:0)}) | EBE : ${fmt(kpis.ebe)} | Resultat : ${fmt(kpis.result)}\nEmprunts : ${(client.emprunts||[]).length} en cours | Investissements : ${(client.investissements||[]).length}\nAlertes : ${calcAlertes(client,moisIdx,moisYear).filter(a=>a.level!=="green").map(a=>`[${a.level.toUpperCase()}] ${a.kpi}`).join(", ")||"Aucune"}\nRedige : 1. SYNTHESE 2. PERFORMANCES 3. TRESORERIE 4. POINTS D'ATTENTION 5. 3 RECOMMANDATIONS · Professionnel, concis, oriente decision.`;
+    const prompt=`Tu es analyste financier senior. Rapport mensuel pour :\nClient : ${client.name} | Secteur : ${client.sector} | Periode : ${MONTHS[moisIdx]} ${moisYear}${sectorContext}\nCA HT : ${fmt(kpis.ca)} | Marge brute : ${fmt(kpis.marge)} (${pct(kpis.ca>0?kpis.marge/kpis.ca*100:0)}) | EBE : ${fmt(kpis.ebe)} | Resultat : ${fmt(kpis.result)}${contexteFec}\nEmprunts : ${(client.emprunts||[]).length} en cours | Investissements : ${(client.investissements||[]).length}\nPoints d'attention : ${calcAlertes(client,moisIdx,moisYear).filter(a=>a.level!=="green"&&!a.isFiscal).map(a=>`[${a.level.toUpperCase()}] ${a.kpi} : ${a.msg}`).join(" / ")||"Aucun"}\nRedige en francais, en vouvoyant le dirigeant, sur un ton de partenaire (« ensemble, on… »), sans injonctions ni jargon non explique : 1. SYNTHESE 2. PERFORMANCES 3. TRESORERIE 4. POINTS D'ATTENTION 5. 3 PISTES D'ACTION · Concis, chiffre, oriente decision.`;
     if(!prompt?.trim()){setText("Erreur : prompt vide.");setLoading(false);return;}
     try {
       const {data:{session}} = await supabase.auth.getSession();
@@ -8761,9 +7564,11 @@ function RapportIA({ clients, moisIdx, moisYear }) {
       <Card>
         <SectionHead title="Generation de rapport IA" sub="Rapport de gestion mensuel genere automatiquement"/>
         <div style={{padding:16,display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
-          <select value={selId} onChange={e=>setSelId(Number(e.target.value))} className="inp" style={{width:"auto"}}>{clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>
-          <span style={{fontSize:13,color:C.textMid,fontWeight:700}}>{MONTHS[moisIdx]} {moisYear}</span>
+          <select value={selId} onChange={e=>{setSelId(Number(e.target.value));setText("");setPublie("");}} className="inp" style={{width:"auto"}}>{clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>
+          <span style={{fontSize:13,color:C.textMid,fontWeight:700}}>{keyLabel(moisKeyR)}{contexteFec?" · comptabilité (FEC)":""}</span>
           <Btn onClick={generate} disabled={loading} variant="success">{loading?"Generation...":"Generer rapport IA"}</Btn>
+          {text&&!loading&&onSaveImport&&<Btn variant="ghost" onClick={publier}>Publier comme note du mois</Btn>}
+          {publie&&<span style={{fontSize:12,fontWeight:700,color:publie.startsWith("Publié")?C.green:C.red}}>{publie}</span>}
         </div>
         {loading&&<div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,padding:"40px 0"}}><div style={{width:32,height:32,border:`3px solid ${C.border}`,borderTop:`3px solid ${C.primary}`,borderRadius:"50%",animation:"spin 1s linear infinite"}}/><span style={{color:C.textLight}}>Analyse en cours...</span></div>}
         {text&&!loading&&<div style={{margin:"0 16px 16px",padding:"24px 28px",background:C.bg,borderRadius:10,border:`1px solid ${C.border}`}}><div style={{fontSize:14,fontWeight:800,color:C.text,marginBottom:18,paddingBottom:14,borderBottom:`2px solid ${C.borderLight}`}}>Rapport de gestion · {MONTHS[moisIdx]} {moisYear} · {client?.name}</div>{renderMD(text)}</div>}
@@ -9104,20 +7909,6 @@ export default function App() {
     }
   };
 
-  const saveClientToSupabase=async(client)=>{
-    try {
-      await supabase.from("clients").upsert({
-        id:client.id,name:client.name,sector:client.sector||"",color:client.color,
-        manager:client.manager,since:client.since,status:client.status,email:client.email||"",
-        kpis:client.kpis,emprunts:client.emprunts||[],investissements:client.investissements||[],
-        tresorerie:client.tresorerie||{soldeInitial:0,ajustements:[]},
-        is_data:client.is||{totalPrecedent:0,taux:15},
-        previsionnel:client.previsionnel||{adjustments:{}},
-        impact_journal:client.impactJournal||{total:0,totalLabel:"Valeur créée",periode:"",items:[]},
-        impact_journal_enabled:client.impactJournalEnabled===true,
-      },{onConflict:"id"});
-    } catch(e){console.error("Supabase save error:",e);}
-  };
   const [previewClient,setPreviewClient]=useState(null);
   const [previewCabinet,setPreviewCabinet]=useState(null);
   const [moisCourant,setMoisCourant]=useState(`${CUR_Y}-${String(CUR_M+1).padStart(2,"0")}`);
@@ -9136,7 +7927,15 @@ export default function App() {
     });
   };
 
-  const totalAlerts=clients.reduce((s,c)=>s+calcAlertes(c,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length,0);
+  const setMoisKey=(key)=>{ if(key<=`${CUR_Y}-${String(CUR_M+1).padStart(2,"0")}`) setMoisCourant(key); };
+  // À l'ouverture d'un espace client, on se place sur le dernier mois qui a des chiffres
+  // (les données du mois en cours arrivent en général au début du mois suivant).
+  const espaceClientId = previewClient?.id || (user?.role==="CLIENT" ? user.clientId : null);
+  const espaceClient = espaceClientId ? clients.find(c=>c.id===espaceClientId) : null;
+  const espaceLatest = espaceClient ? latestDataKey(espaceClient) : null;
+  useEffect(()=>{ if(espaceLatest) setMoisCourant(espaceLatest); },[espaceClientId, espaceLatest]);
+
+  const totalAlerts=clients.reduce((s,c)=>s+calcAlertes(c,moisIdx,moisYear).filter(a=>(a.level==="red"||a.level==="orange")&&!a.isFiscal).length,0);
   // Import fait par le client lui-même (RLS migration 031) : écriture directe dans
   // imports_csv, pas via updateClient qui réécrit aussi la ligne clients (lecture seule pour un CLIENT).
   const saveClientImport=async(clientId,imp)=>{
@@ -9272,8 +8071,8 @@ export default function App() {
   };
 
   const visibleClients = previewCabinet ? clients.filter(c=>c.cabinet_id===previewCabinet.id) : clients;
-  const ADMIN_TITLES={clients:`Portefeuille clients (${visibleClients.length})`,acces:"Accès & mots de passe clients",saisie:"Saisie & Import CSV",financier:"Donnees financieres",alertes:"Centre d'alertes",rapports:"Rapports IA",blog:"Blog",cabinets:"Cabinets partenaires"};
-  const CLIENT_TITLES={dashboard:"Tableau de bord",import:"Importer mes données",alertes:"Mes alertes",ventes:"Mes ventes",achats:"Mes coûts d'achat",charges:"Mes charges",salaires:"Ma masse salariale",creances:"Mes créances clients",dettes:"Mes dettes fournisseurs",resultat:"Mon resultat financier",tva:"Ma TVA",tresorerie:"Ma tresorerie",emprunts:"Mes emprunts",investissements:"Mes investissements",roi:"Calculateur ROI",embauche:"Simulateur d'embauche",is:"Mon impot (IS)",catalogue:"Mon catalogue produits", comparaison:"Comparaison de périodes", previsionnel:"Prévisionnel", planning:"Planning & équipe", conges:"Congés & absences", notesfrais:"Notes de frais", taches:"Tâches", equipetaches:"Gestion d'équipe & Tâches", pointage:"Pointage", stock:"Mon stock"};
+  const ADMIN_TITLES={clients:`Portefeuille clients (${visibleClients.length})`,acces:"Accès & mots de passe clients",saisie:"Imports : comptabilité (FEC) et fichiers CSV",financier:"Donnees financieres",alertes:"Centre d'alertes",rapports:"Rapports IA",blog:"Blog",cabinets:"Cabinets partenaires"};
+  const CLIENT_TITLES={dashboard:"Synthèse du mois",import:"Importer mes données",alertes:"Points d'attention",ventes:"Ventes",achats:"Achats et marge",charges:"Charges",salaires:"Masse salariale",creances:"Créances clients",dettes:"Dettes fournisseurs",resultat:"Compte de résultat",bilan:"Bilan et BFR",tva:"TVA",tresorerie:"Trésorerie",emprunts:"Emprunts",investissements:"Investissements",roi:"Calculateur d'investissement",embauche:"Simulateur d'embauche",is:"Impôt sur les sociétés",catalogue:"Rentabilité par produit", comparaison:"Comparer deux périodes", previsionnel:"Prévisionnel", planning:"Planning & équipe", conges:"Congés & absences", notesfrais:"Notes de frais", taches:"Tâches", equipetaches:"Gestion d'équipe & Tâches", pointage:"Pointage", stock:"Mon stock"};
 
   // Modal credentials nouveau client (admin)
   const CredentialsModal = newClientCredentials ? (
@@ -9305,7 +8104,7 @@ export default function App() {
     return (
       <div style={{display:"flex",height:"100vh",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif"}}>
         <GlobalCSS/>
-        <ClientSidebar view={view} setView={setView} onLogout={()=>setPreviewClient(null)} clientName={live.name} alertCount={calcAlertes(live,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length} planningEnabled={live.planningEnabled} congesEnabled={live.congesEnabled} pointageEnabled={live.pointageEnabled} notesFraisEnabled={live.notesFraisEnabled} tachesEnabled={live.tachesEnabled} equipeTachesEnabled={live.equipeTachesEnabled} stockEnabled={live.stockEnabled} freePlan={live?.plan==="dashboard"} canImport={true} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
+        <ClientSidebar view={view} setView={setView} onLogout={()=>setPreviewClient(null)} clientName={live.name} alertCount={calcAlertes(live,moisIdx,moisYear).filter(a=>(a.level==="red"||a.level==="orange")&&!a.isFiscal).length} planningEnabled={live.planningEnabled} congesEnabled={live.congesEnabled} pointageEnabled={live.pointageEnabled} notesFraisEnabled={live.notesFraisEnabled} tachesEnabled={live.tachesEnabled} equipeTachesEnabled={live.equipeTachesEnabled} stockEnabled={live.stockEnabled} freePlan={live?.plan==="dashboard"} canImport={true} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <TopBar
             title={`Aperçu client · ${live.name}`}
@@ -9319,7 +8118,7 @@ export default function App() {
             }
           />
           <div style={{flex:1,overflowY:"auto",background:"linear-gradient(155deg,#f0faf8 0%,#ffffff 45%,#ecfdf5 100%)"}}>
-            <ClientSpace client={{...live,advisorLabel:live.cabinet_id?(cabinets.find(cab=>cab.id===live.cabinet_id)?.name||"votre cabinet comptable"):"NVM Finance"}} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear} isAdminPreview={true} onSaveImport={imp=>saveClientImport(live.id,imp)} onDeleteImport={id=>deleteClientImport(live.id,id)} setView={setView}/>
+            <ClientSpace client={{...live,advisorLabel:live.cabinet_id?(cabinets.find(cab=>cab.id===live.cabinet_id)?.name||"votre cabinet comptable"):"NVM Finance"}} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear} isAdminPreview={true} setMoisKey={setMoisKey} onSaveImport={imp=>saveClientImport(live.id,imp)} onDeleteImport={id=>deleteClientImport(live.id,id)} setView={setView}/>
           </div>
         </div>
       </div>
@@ -9352,6 +8151,8 @@ export default function App() {
           setResetMsg("✅ Mot de passe défini ! Connexion en cours...");
           // Mettre à jour first_login et connecter le client
           const {data:sess} = await supabase.auth.getSession();
+          // Prévient le conseiller que le compte vient d'être activé (une seule fois, sans bloquer).
+          if(sess?.session?.access_token) fetch("/api/compte-active",{method:"POST",headers:{Authorization:`Bearer ${sess.session.access_token}`}}).catch(()=>{});
           if(sess?.session?.user?.email) {
             const userEmail = sess.session.user.email;
             await supabase.from("client_users").update({first_login:false}).eq("email",userEmail);
@@ -9397,11 +8198,11 @@ export default function App() {
         <GlobalCSS/>
         {/* Popup première connexion · priorité absolue */}
         {user.firstLogin&&<FirstLoginModal user={user} onComplete={(u)=>setUser(u)}/>}
-        <ClientSidebar view={view} setView={setView} onLogout={handleLogout} clientName={client?.name||user.name} alertCount={client?calcAlertes(client,moisIdx,moisYear).filter(a=>a.level==="red"||a.level==="orange").length:0} planningEnabled={client?.planningEnabled} congesEnabled={client?.congesEnabled} pointageEnabled={client?.pointageEnabled} notesFraisEnabled={client?.notesFraisEnabled} tachesEnabled={client?.tachesEnabled} equipeTachesEnabled={client?.equipeTachesEnabled} stockEnabled={client?.stockEnabled} freePlan={client?.plan==="dashboard"} canImport={client?.plan==="dashboard"} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
+        <ClientSidebar view={view} setView={setView} onLogout={handleLogout} clientName={client?.name||user.name} alertCount={client?calcAlertes(client,moisIdx,moisYear).filter(a=>(a.level==="red"||a.level==="orange")&&!a.isFiscal).length:0} planningEnabled={client?.planningEnabled} congesEnabled={client?.congesEnabled} pointageEnabled={client?.pointageEnabled} notesFraisEnabled={client?.notesFraisEnabled} tachesEnabled={client?.tachesEnabled} equipeTachesEnabled={client?.equipeTachesEnabled} stockEnabled={client?.stockEnabled} freePlan={client?.plan==="dashboard"} canImport={client?.plan==="dashboard"} open={menuOpen} onClose={()=>setMenuOpen(false)}/>
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <TopBar title={CLIENT_TITLES[view]||"Dashboard"} user={user} onMenuToggle={()=>setMenuOpen(o=>!o)}/>
           <div style={{flex:1,overflowY:"auto",background:"linear-gradient(155deg,#f0faf8 0%,#ffffff 45%,#ecfdf5 100%)"}}>
-            {client&&<ClientSpace client={{...client,advisorLabel:client.cabinet_id?(cabinets.find(cab=>cab.id===client.cabinet_id)?.name||"votre cabinet comptable"):"NVM Finance"}} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear} setView={setView} {...(client.plan==="dashboard"?{onSaveImport:imp=>saveClientImport(client.id,imp),onDeleteImport:id=>deleteClientImport(client.id,id)}:{})}/>}
+            {client&&<ClientSpace client={{...client,advisorLabel:client.cabinet_id?(cabinets.find(cab=>cab.id===client.cabinet_id)?.name||"votre cabinet comptable"):"NVM Finance"}} view={view} moisIdx={moisIdx} setMoisIdx={setMoisIdx} moisYear={moisYear} setMoisKey={setMoisKey} setView={setView} {...(client.plan==="dashboard"?{onSaveImport:imp=>saveClientImport(client.id,imp),onDeleteImport:id=>deleteClientImport(client.id,id)}:{})}/>}
           </div>
         </div>
       </div>
@@ -9454,10 +8255,10 @@ export default function App() {
           }
         })();}}/>}
           {view==="acces"&&<AdminAcces clients={visibleClients}/>}
-          {view==="saisie"&&<AdminSaisie clients={visibleClients} onUpdateClient={updateClient}/>}
+          {view==="saisie"&&<AdminSaisie clients={visibleClients} onSaveImport={saveClientImport} onDeleteImport={deleteClientImport}/>}
           {view==="financier"&&<AdminFinancier clients={visibleClients} onUpdateClient={updateClient}/>}
           {view==="alertes"&&<AlertesView clients={visibleClients} moisIdx={moisIdx} moisYear={moisYear}/>}
-          {view==="rapports"&&<RapportIA clients={visibleClients} moisIdx={moisIdx} moisYear={moisYear}/>}
+          {view==="rapports"&&<RapportIA clients={visibleClients} moisIdx={moisIdx} moisYear={moisYear} onSaveImport={saveClientImport}/>}
           {view==="blog"&&user.role==="ADMIN"&&!previewCabinet&&<AdminBlog/>}
           {view==="cabinets"&&user.role==="ADMIN"&&!previewCabinet&&<AdminCabinets cabinets={cabinets} clients={clients} onAddCabinet={handleAddCabinet} onDeleteCabinet={handleDeleteCabinet} onViewAsCabinet={(cab)=>{setPreviewCabinet(cab);setView("clients");}}/>}
         </div>
