@@ -20,14 +20,14 @@ No test suite is configured.
 
 `src/app/admin/**`, `src/app/client/**`, and `src/store/index.ts` (Zustand) are **dead scaffolding** — empty directories / unused code, never rendered, never imported. Do not build on them without first checking they're actually wired up.
 
-The real, live app — admin, client, and cabinet spaces alike — is a single ~8000-line client component: **`src/app/NVMFinance.jsx`**, mounted at the one route `src/app/dashboard/page.tsx`. It is `"use client"` and switches between sections via a local `view` string in `useState`, not Next.js routing. Three roles share this same render tree:
+The real, live app — admin, client, and cabinet spaces alike — is a single ~5600-line client component: **`src/app/NVMFinance.jsx`**, mounted at the one route `src/app/dashboard/page.tsx`. It is `"use client"` and switches between sections via a local `view` string in `useState`, not Next.js routing. Three roles share this same render tree:
 - ADMIN (the platform owner) and CABINET (a paying accounting firm) both render the same admin-style UI (`AdminClients`, `AdminSaisie`, `AdminFinancier`, `AlertesView`, `RapportIA`, `PlanningView`) — a CABINET session is scoped to its own clients by RLS (see below) plus a `cabinet_id` check, not by separate components.
 - CLIENT renders `ClientSpace` and its per-module subcomponents (ventes, achats, charges, salaires, trésorerie, résultat, IS, emprunts, investissements, créances, dettes, catalogue, comparaison, alertes, prévisionnel, planning).
 
 Pieces split out of it (all imported by `NVMFinance.jsx`, not routes):
 - `src/app/charte.jsx` — the brand palette `C`, `fmt`/`pct`, and base components (`Btn`, `Pill`, `KpiCard`, `Card`, `SectionHead`, `Th`/`Td`/`Tr`, `FormRow`). Reuse these; don't redefine colors.
-- `src/app/pilotage/` — the management-control client views: `synthese.jsx` (the client home, `view="dashboard"`: plain-language summary, health check, KPIs vs last month/last year, year-to-date, charts, advisor note), `vues.jsx` (FEC-based views: compte de résultat/SIG, bilan & BFR, trésorerie with cash-flow bridge, créances/dettes by age, ventes/achats/charges/salaires, TVA, IS), `import-fec.jsx` (FEC import UI, used in the client "Importer mes données" and in admin "Imports"), `graphiques.jsx` (SVG charts + `VIZ` palette, validated for color-blindness).
-- When a client has FEC data (`hasFec(client)`), `ClientSpaceContent` routes resultat/bilan/tresorerie/creances/dettes/ventes/achats/charges/salaires/tva/is to the `pilotage/vues.jsx` views; otherwise the legacy estimate-based views inside `NVMFinance.jsx` render.
+- `src/app/pilotage/` — every financial client view: `synthese.jsx` (the client home, `view="dashboard"`: health check, KPIs vs last month / last year / budget, year-to-date, charts; for paid clients the top text is the advisor's monthly note, for free clients an automatic plain-language reading), `vues.jsx` (compte de résultat/SIG, bilan & BFR, trésorerie with cash-flow bridge, créances/dettes by age, ventes/achats/charges/salaires with product, channel, employee and supplier detail, TVA, IS), `vues-plus.jsx` (budget vs réel + atterrissage, comparaison with the causes of the gap, simulations « et si », rentabilité par produit, emprunts, investissements, trésorerie estimée, points d'attention), `import-fec.jsx` (FEC import UI), `graphiques.jsx` (SVG charts + `VIZ` palette, validated for color-blindness).
+- `ClientSpaceContent` in `NVMFinance.jsx` is now only a router to these views (plus the team tools). All views work for every client: bilan and trésorerie réelle need a FEC, everything else also runs on simplified imports.
 
 `src/app/NVMFinance_backup.jsx` and `NVMFinance.jsx.bak` are dead, unimported backups — ignore them; don't edit them "just in case."
 
@@ -47,7 +47,7 @@ Supabase tables (see `supabase/migrations/`, currently up to `033`):
 - `profiles` — role + client/cabinet binding, RLS: own row readable, ADMIN full access
 - `cabinets` — accounting firms; `clients.cabinet_id` (nullable — null means managed directly by the platform owner) links a client to one
 - `clients` — client records; `kpis`, `emprunts`, `investissements`, `tresorerie`, `is_data`, `previsionnel` stored as JSONB columns; `planning_enabled` toggles the Planning module per client
-- `imports_csv` — one row per (client_id, type, mois), JSONB `rows[]`, unique key added in migration 033 (all writes are upserts on it). Types: the CSV modules below, plus `fec` (one row per month: monthly movements per account `{k:"a",c,l,d,cr,ad,ac}`, sales per client `{k:"c"}`, purchases per supplier `{k:"f"}`, meta `{k:"m",ex,fin,fichier,siren,an}`), `fec_tiers` (open client/supplier items at the FEC's last date, aged FIFO) and `note` (the advisor's monthly note shown on the client's Synthèse)
+- `imports_csv` — one row per (client_id, type, mois), JSONB `rows[]`, unique key added in migration 033 (all writes are upserts on it). Types: the CSV modules below, plus `budget` (mois = the year, e.g. "2026": 12 monthly values per line ca/achats/externes/personnel/autres, editable by the client — any plan — and the advisor), `fec` (one row per month: monthly movements per account `{k:"a",c,l,d,cr,ad,ac}`, sales per client `{k:"c"}`, purchases per supplier `{k:"f"}`, meta `{k:"m",ex,fin,fichier,siren,an}`), `fec_tiers` (open client/supplier items at the FEC's last date, aged FIFO) and `note` (the advisor's monthly note shown on the client's Synthèse)
 - `employes`, `plannings`, `planning_regles`, `planning_contraintes` — team planning module
 - `admin_users`, `client_users` — legacy, see above (`client_users` no longer stores a password — auth is 100% Supabase Auth)
 - `reset_requests` — currently unused by the app (password resets go through `supabase.auth.resetPasswordForEmail` directly)
@@ -61,12 +61,13 @@ Supabase clients:
 ### Finance calculations
 
 `src/lib/finance.ts` is **dead code** (never imported). The live logic:
-- `calcMonthKpis(client, moisIdx, year)` in `NVMFinance.jsx` — returns `fecMonthKpis(...)` when the month is covered by an imported FEC (exact figures, `source:"fec"`, `sig`, `pl`); otherwise derives KPIs from the simplified imports, falling back to `client.kpis` base values (`hasData:false`) when nothing is imported.
-- `calcTresoEstimee` — real cash (banks + caisse − overdrafts) from the FEC when available, else an estimate from `client.tresorerie` and monthly results.
+- `src/lib/donnees.js` — **the single data source**: `dataIndex(client)` merges FEC months with simplified-import months translated into PCG accounts (sales 706/708, cost of sales 607, charges by nature via keyword rules on supplier/label, payroll 641/645, estimated depreciation 681 and loan interest 661, VAT 4457/4456). `lireVente` reads every sector template (ca_ht, ca_ht_periode, loyer, pvht × quantité; marge_ht, marge_brute or CA − costs). `monthKpis` feeds `calcMonthKpis` in `NVMFinance.jsx` (falls back to `client.kpis` base values with `hasData:false` when nothing is imported).
+- `src/lib/budget.js` — budget storage, réalisé split like the budget, proposal from last year's months, annual-total spreading.
+- `calcTresoEstimee` / `fluxTresoEstime` — real cash (banks + caisse − overdrafts) from the FEC when available; otherwise solde de départ + monthly (résultat + amortissements − capital d'emprunt remboursé + ajustements saisis).
 - `calcAlertes` — threshold checks + `fecAlertes` (old client invoices, DSO, margin drop, external charges rise, activity decline vs last year) + generic tax reminders (`isFiscal:true`, excluded from badges).
 - `src/lib/fec.js` — FEC parsing (tab/pipe/semicolon, Debit/Credit or Montant/Sens, UTF-8/Windows-1252) and monthly summarizing; opening entries (à-nouveaux) are kept apart, closing entries (6/7 vs 12 in one écriture) are dropped. Everything runs in the browser; the raw file is never stored.
 - `src/lib/pilotage.js` — PCG mapping to P&L postes, SIG, bilan at any month end (balances from the latest à-nouveaux), BFR/FR/trésorerie nette, ratios (DSO/DPO/DIO, autonomie, endettement, capacité de remboursement, point mort), `fluxTresorerie` (cash-flow bridge whose lines sum exactly to the cash variation), IS estimate (15 % up to 42 500 €, then 25 %).
-- `src/lib/estimations.js` — estimate-mode helpers: loan payments (rate stored monthly in `emprunts[].taux`, `tauxAnnuel` kept for display; 0 % loans handled), depreciation from the in-service date, payroll split (`PAIE`: coût employeur = brut 70 + patronales 30; net 55, salariales 15), VAT per imported line.
+- `src/lib/estimations.js` — loans (rate stored monthly in `emprunts[].taux`, `tauxAnnuel` kept for display; 0 % loans handled; capital restant, intérêts, capital remboursé du mois) and investments (depreciation from the in-service date, VNC).
 
 ### AI features
 
@@ -82,7 +83,7 @@ A client's dashboard should never hardcode "NVM Finance" in user-facing text, si
 
 ### Imports
 
-The recommended source is the **FEC** (fichier des écritures comptables), imported monthly ("Importer mes données" → "Ma comptabilité (FEC)" for free clients; admin/cabinet via "Imports (FEC, CSV)" or "Voir comme client"). Each month of the file is upserted, so re-importing the current-year FEC each month just updates it; importing the previous year's FEC enables N-1 comparisons. Paid clients don't import themselves (their advisor does); the admin also publishes a monthly note from the client preview or from "Rapports IA" ("Publier comme note du mois").
+The recommended source is the **FEC** (fichier des écritures comptables), imported monthly ("Importer mes données" → "Ma comptabilité (FEC)" for free clients; admin/cabinet via "Imports (FEC, CSV)" or "Voir comme client"). Each month of the file is upserted, so re-importing the current-year FEC each month just updates it; importing the previous year's FEC enables N-1 comparisons. Only free clients import themselves; for paid clients the advisor imports (client preview, menu "Imports (conseiller)", or admin "Imports (FEC, CSV)"). The admin also publishes the monthly note from the client preview or from "Rapports IA" ("Publier comme note du mois"); it is the commentary paid clients see at the top of their Synthèse.
 
 `NVMFinance.jsx` has its own local `parseCSV`/CSV handling — `src/lib/csv.ts` (`parseCSV`, `validateRows`, `getTemplate`) is unused dead code, not the live implementation. Module types: `ventes_produits`, `autres_ventes`, `charges`, `salaires`, `catalogue`, `creances_clients`, `dettes_fournisseurs`.
 

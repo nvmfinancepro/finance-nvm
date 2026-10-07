@@ -7,6 +7,7 @@ import { useState } from "react";
 import { C, Card, Btn } from "@/app/charte";
 import { fecIndex, ytdKeys, plOver, sigOf, bilanAt, ratiosAt, tiersAt, topTiers, shiftKey, monthKey, keyLabel, monthEnd } from "@/lib/pilotage";
 import { VIZ, eur, pctFr, Colonnes, Courbe, Repartition, Variation, Legende, STATUT, PastilleStatut } from "@/app/pilotage/graphiques";
+import { lireBudget, ebeDe, budgetMois } from "@/lib/budget";
 
 const split = (key) => { const [y, m] = key.split("-").map(Number); return [m - 1, y]; };
 const DATA_TYPES = new Set(["fec", "ventes_produits", "autres_ventes", "charges", "salaires"]);
@@ -306,6 +307,11 @@ export default function Synthese(props) {
   const d = donneesSynthese({ client, moisIdx, moisYear, kpisOf, tresoOf });
   const { kp, kn, isFec, ytd, ytdN1, rep, series, ratios, treso, clients, topClients, meta, depenses, bil } = d;
   const gratuit = client.plan === "dashboard";
+  const noteTexte = (client.imports || []).find((i) => i.type === "note" && i.mois === key)?.rows?.[0]?.texte || "";
+  // Budget de l'année (s'il existe) : objectifs du mois et cumul sur les mêmes mois.
+  const budget = lireBudget(client, moisYear);
+  const bMois = budget ? budgetMois(budget, moisIdx) : null;
+  const bCumul = budget ? d.ytdList.filter((k) => k.startsWith(`${moisYear}-`)).reduce((acc, k) => { const b = budgetMois(budget, Number(k.slice(5)) - 1); return { ca: acc.ca + b.ca, ebe: acc.ebe + ebeDe(b), n: acc.n + 1 }; }, { ca: 0, ebe: 0, n: 0 }) : null;
   const { phrases, attention } = lecture(d, client, gratuit);
   const etat = sante(d).map((it) => (gratuit && (it.id === "treso" || it.id === "enc") ? { ...it, statut: "lock", text: it.id === "treso" ? "Solde et échéances suivis chaque mois" : "Factures clients suivies chaque mois" } : it));
   const tm = (x) => (x.ca > 0 ? (x.marge / x.ca) * 100 : null);
@@ -341,10 +347,24 @@ export default function Synthese(props) {
           </div>
           <NavMois moisIdx={moisIdx} moisYear={moisYear} setMoisIdx={setMoisIdx} onDark />
         </div>
-        <div style={{ marginTop: 16, fontSize: 15.5, lineHeight: 1.7, fontWeight: 600, maxWidth: 900 }}>
-          {phrases.join(" ")}
-          {attention && <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "flex-start" }}><span style={{ background: "#fbbf24", color: C.primaryDark, borderRadius: 100, padding: "1px 9px", fontSize: 11, fontWeight: 900, marginTop: 4, whiteSpace: "nowrap" }}>À SURVEILLER</span><span>{attention}</span></div>}
-        </div>
+        {gratuit ? (
+          // Offre gratuite : pas de conseiller dédié, lecture automatique du mois.
+          <div style={{ marginTop: 16, fontSize: 15.5, lineHeight: 1.7, fontWeight: 600, maxWidth: 900 }}>
+            {phrases.join(" ")}
+            {attention && <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "flex-start" }}><span style={{ background: "#fbbf24", color: C.primaryDark, borderRadius: 100, padding: "1px 9px", fontSize: 11, fontWeight: 900, marginTop: 4, whiteSpace: "nowrap" }}>À SURVEILLER</span><span>{attention}</span></div>}
+          </div>
+        ) : (
+          // Accompagnement : le commentaire du mois est celui du conseiller, jamais un texte automatique.
+          <div style={{ marginTop: 16, display: "flex", gap: 14, alignItems: "flex-start", maxWidth: 940 }}>
+            <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,.16)", border: "1px solid rgba(255,255,255,.3)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 15, flexShrink: 0 }}>{(client.advisorLabel || "N")[0]}</div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", opacity: 0.75, marginBottom: 4 }}>Le mot de votre conseiller · {client.advisorLabel || "NVM Finance"}</div>
+              {noteTexte
+                ? <div style={{ fontSize: 15.5, lineHeight: 1.7, fontWeight: 600, whiteSpace: "pre-wrap" }}>{noteTexte}</div>
+                : <div style={{ fontSize: 14.5, lineHeight: 1.6, fontWeight: 600, opacity: 0.85 }}>{isAdminPreview ? "Pas encore de note pour ce mois : rédigez-la juste en dessous, elle s'affichera ici pour le client." : `L'analyse de ${keyLabel(key)} par ${client.advisorLabel || "votre conseiller"} arrive bientôt. En attendant, voici vos chiffres.`}</div>}
+            </div>
+          </div>
+        )}
         <div style={{ ...grid(200), gap: 10, marginTop: 18 }}>
           {etat.map((it) => (
             <div key={it.id} style={{ background: "rgba(255,255,255,.96)", borderRadius: 14, padding: "10px 12px", display: "flex", gap: 10, alignItems: "center" }}>
@@ -358,20 +378,20 @@ export default function Synthese(props) {
         </div>
       </div>
 
-      <NoteConseiller client={client} moisKey={key} isAdminPreview={isAdminPreview} onSaveImport={onSaveImport} />
+      {(gratuit || isAdminPreview) && <NoteConseiller client={client} moisKey={key} isAdminPreview={isAdminPreview} onSaveImport={onSaveImport} />}
 
       {/* Indicateurs du mois */}
       <div>
         <Titre>Le mois en chiffres</Titre>
         <div style={grid(155)}>
           <Indicateur label="Chiffre d'affaires" value={eur(d.k.ca)} onClick={() => setView("ventes")}
-            deltas={[vs(d.k.ca, kp.ca, kp.hasData, { label: `vs ${moisPrec}` }), vs(d.k.ca, kn.ca, kn.hasData, { label: `vs ${moisN1}` })]}
+            deltas={[vs(d.k.ca, kp.ca, kp.hasData, { label: `vs ${moisPrec}` }), vs(d.k.ca, kn.ca, kn.hasData, { label: `vs ${moisN1}` }), bMois && bMois.ca > 0 ? <Variation key="b" cur={d.k.ca} prev={bMois.ca} label="vs budget" /> : null]}
             aide="Ce que vous avez facturé ce mois-ci, hors taxes." />
           <Indicateur label="Marge brute" value={eur(d.k.marge)} sub={tm(d.k) != null ? `${pctFr(tm(d.k))} du chiffre d'affaires` : null} onClick={() => setView("achats")}
             deltas={[kn.hasData && tm(kn) != null && tm(d.k) != null ? vs(tm(d.k), tm(kn), true, { label: `de taux vs ${moisN1}`, points: true }) : null]}
             aide="Ce qu'il reste une fois payés les achats nécessaires aux ventes." />
           <Indicateur label="Excédent d'exploitation" value={eur(d.k.ebe)} sub={d.k.ca > 0 ? `${pctFr((d.k.ebe / d.k.ca) * 100)} du chiffre d'affaires` : null} onClick={() => setView("resultat")}
-            deltas={[vs(d.k.ebe, kn.ebe, kn.hasData, { label: `vs ${moisN1}` })]}
+            deltas={[vs(d.k.ebe, kn.ebe, kn.hasData, { label: `vs ${moisN1}` }), bMois ? <Variation key="b" cur={d.k.ebe} prev={ebeDe(bMois)} label="vs budget" /> : null]}
             aide="EBE : ce que l'activité dégage après achats, charges et salaires, avant impôts, emprunts et amortissements." />
           <Indicateur label="Résultat" value={eur(d.k.result)} sub={d.k.result >= 0 ? "Bénéfice du mois" : "Perte du mois"} onClick={() => setView("resultat")}
             deltas={[vs(d.k.result, kn.result, kn.hasData, { label: `vs ${moisN1}` })]}
@@ -401,9 +421,9 @@ export default function Synthese(props) {
         </div>
         <div style={grid(170)}>
           {[
-            { l: "Chiffre d'affaires", v: ytd.ca, v1: ytdN1?.ca },
+            { l: "Chiffre d'affaires", v: ytd.ca, v1: ytdN1?.ca, b: bCumul?.n ? bCumul.ca : null },
             { l: "Marge brute", v: ytd.marge, v1: ytdN1?.marge, sub: tm(ytd) != null ? `${pctFr(tm(ytd))} du CA` : null },
-            { l: "Excédent d'exploitation", v: ytd.ebe, v1: ytdN1?.ebe, sub: ytd.ca > 0 ? `${pctFr((ytd.ebe / ytd.ca) * 100)} du CA` : null },
+            { l: "Excédent d'exploitation", v: ytd.ebe, v1: ytdN1?.ebe, sub: ytd.ca > 0 ? `${pctFr((ytd.ebe / ytd.ca) * 100)} du CA` : null, b: bCumul?.n ? bCumul.ebe : null },
             { l: "Résultat", v: ytd.result, v1: ytdN1?.result },
           ].map((x) => (
             <div key={x.l} style={{ borderLeft: `3px solid ${C.borderLight}`, paddingLeft: 12 }}>
@@ -411,6 +431,7 @@ export default function Synthese(props) {
               <div style={{ fontSize: 21, fontWeight: 900, color: C.text }}>{eur(x.v)}</div>
               {x.sub && <div style={{ fontSize: 11.5, fontWeight: 700, color: C.textMid }}>{x.sub}</div>}
               {x.v1 != null && <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}><Variation cur={x.v} prev={x.v1} compact /><span style={{ fontSize: 11, color: C.textLight, fontWeight: 600 }}>l'an dernier : {eur(x.v1)}</span></div>}
+              {x.b != null && <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}><Variation cur={x.v} prev={x.b} compact /><span style={{ fontSize: 11, color: C.textLight, fontWeight: 600 }}>budget : {eur(x.b)}</span></div>}
             </div>
           ))}
         </div>

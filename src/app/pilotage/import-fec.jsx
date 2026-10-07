@@ -133,8 +133,8 @@ export default function ImportFec({ client, onSaveImport, onDeleteImport, compac
           <div>
             <div style={{ fontSize: 15, fontWeight: 900, color: C.text, marginBottom: 6 }}>Importer le fichier des écritures comptables (FEC)</div>
             <div style={{ fontSize: 13, color: C.textMid, lineHeight: 1.65 }}>
-              Tout logiciel comptable sait produire ce fichier (c'est une obligation fiscale) : cherchez « Export FEC » ou « Fichier des écritures comptables ». Votre expert-comptable peut aussi vous l'envoyer en quelques clics.
-              <strong style={{ color: C.text }}> Chaque mois, il suffit d'importer le FEC à jour de l'exercice en cours</strong> : les mois déjà présents sont mis à jour, sans doublon. Importer aussi le FEC de l'exercice précédent permet la comparaison avec l'an dernier.
+              {compact ? null : <>Tout logiciel comptable sait produire ce fichier (c'est une obligation fiscale) : cherchez « Export FEC » ou « Fichier des écritures comptables ». Votre expert-comptable peut aussi vous l'envoyer en quelques clics. </>}
+              <strong style={{ color: C.text }}>Chaque mois, il suffit d'importer le FEC à jour de l'exercice en cours</strong> : les mois déjà présents sont mis à jour, sans doublon. Importer aussi le FEC de l'exercice précédent permet la comparaison avec l'an dernier.
             </div>
           </div>
 

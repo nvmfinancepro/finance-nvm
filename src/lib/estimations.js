@@ -1,15 +1,11 @@
-// Estimations utilisées quand la comptabilité (FEC) n'est pas importée : emprunts,
-// amortissements, paie et TVA calculés à partir des données saisies ou des imports
-// simplifiés. Fonctions pures, partagées par toutes les vues de NVMFinance.jsx.
+// Emprunts et investissements saisis par le conseiller : mensualités, capital restant,
+// intérêts, amortissements et valeur restante. Fonctions pures, utilisées par le
+// moteur (src/lib/donnees.js) et les vues.
 
 const moisIndex = (iso) => {
   const d = iso ? new Date(iso) : null;
   return d && !isNaN(d) ? d.getFullYear() * 12 + d.getMonth() : null;
 };
-
-// Répartition type d'un coût salarial (brut + cotisations patronales = 100) quand le
-// détail des bulletins n'est pas importé : patronales ≈ 42 % du brut, salariales ≈ 22 %.
-export const PAIE = { brut: 0.7, patronales: 0.3, net: 0.55, salariales: 0.15 };
 
 // Mensualité d'un emprunt (taux mensuel en %, durée en mois), hors assurance.
 export function mensualiteHorsAssurance(e) {
@@ -61,14 +57,12 @@ export function amortDuMois(inv, mi, yr) {
 export const amortissements = (invs, mi, yr) => Math.round((invs || []).reduce((s, i) => s + amortDuMois(i, mi, yr), 0));
 export const vnc = (inv, mi, yr) => Math.max(0, (inv.montantHT || 0) - amortMensuel(inv) * moisAmortis(inv, mi, yr));
 
-// TVA d'un mois à partir des imports simplifiés : taux de chaque ligne (20 % par défaut).
-const taux = (r) => (r.taux_tva != null && r.taux_tva !== "" && !isNaN(parseFloat(r.taux_tva)) ? parseFloat(r.taux_tva) : 20);
-const n = (v) => parseFloat(v) || 0;
-export function tvaImports(imports, key) {
-  const rows = (type) => (imports || []).filter((i) => i.type === type && i.mois === key).flatMap((i) => i.rows || []);
-  const ventes = rows("ventes_produits"), autres = rows("autres_ventes"), charges = rows("charges");
-  const collectee = ventes.reduce((s, r) => s + (n(r.ca_ht) * taux(r)) / 100, 0) + autres.reduce((s, r) => s + (n(r.ca_ht) * taux(r)) / 100, 0);
-  const deductible = charges.filter((r) => r.tva_recuperable === "oui").reduce((s, r) => s + (n(r.montant_ht) * taux(r)) / 100, 0)
-    + ventes.reduce((s, r) => s + (n(r.cout_achat_ht) * taux(r)) / 100, 0);
-  return { collectee: Math.round(collectee), deductible: Math.round(deductible), solde: Math.round(collectee - deductible), hasData: ventes.length + autres.length + charges.length > 0 };
-}
+
+// Capital d'emprunt remboursé pendant le mois (mi, yr) : sortie de trésorerie qui
+// n'est pas une charge (seuls les intérêts le sont).
+export const capitalRembourseMois = (e, mi, yr) => {
+  if (!mensualiteEmprunt(e, mi, yr)) return 0;
+  const k = echeancesPayees(e, mi, yr);
+  return capitalRestant(e, Math.max(0, k - 1)) - capitalRestant(e, k);
+};
+export const capitalRembourse = (emprunts, mi, yr) => Math.round((emprunts || []).reduce((s, e) => s + capitalRembourseMois(e, mi, yr), 0));

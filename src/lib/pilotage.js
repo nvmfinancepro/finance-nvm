@@ -45,7 +45,7 @@ const PCG = {
   "601": "Achats de matières premières", "602": "Achats d'approvisionnements", "603": "Variation des stocks", "6037": "Variation du stock de marchandises",
   "604": "Sous-traitance et prestations achetées", "605": "Achats de matériel et travaux", "606": "Achats non stockés (énergie, fournitures…)", "6061": "Eau, énergie, carburant", "6063": "Petit équipement", "6064": "Fournitures administratives",
   "607": "Achats de marchandises", "608": "Frais accessoires d'achat", "609": "Rabais obtenus sur achats",
-  "611": "Sous-traitance générale", "612": "Crédit-bail", "613": "Locations et loyers", "614": "Charges locatives", "615": "Entretien et réparations", "616": "Assurances", "617": "Études et recherches", "618": "Documentation et formations",
+  "611": "Sous-traitance générale", "612": "Crédit-bail", "613": "Locations et loyers", "6135": "Logiciels et locations de matériel", "614": "Charges locatives", "615": "Entretien et réparations", "616": "Assurances", "617": "Études et recherches", "618": "Documentation et formations",
   "621": "Personnel extérieur (intérim)", "622": "Honoraires (expert-comptable, avocat…)", "623": "Publicité et communication", "624": "Transports", "625": "Déplacements, missions et réceptions", "626": "Frais postaux et télécoms", "627": "Frais bancaires", "628": "Cotisations et frais divers",
   "63": "Impôts et taxes", "631": "Taxes sur les salaires", "633": "Taxes sur les salaires (formation…)", "635": "Impôts locaux (CFE, taxe foncière…)", "637": "Autres impôts et taxes",
   "641": "Salaires du personnel", "644": "Rémunération du dirigeant", "645": "Charges sociales patronales", "646": "Cotisations sociales du dirigeant", "647": "Autres charges sociales", "648": "Autres charges de personnel",
@@ -65,6 +65,11 @@ export function pcgLabel(compte) {
     if (l) return l;
   }
   return "";
+}
+// Racine de regroupement lisible : 4 chiffres quand le plan comptable la nomme (6061, 6135…), sinon 3.
+export function pcgRacine(compte) {
+  for (const n of [4, 3]) if (PCG[compte.slice(0, n)]) return compte.slice(0, n);
+  return compte.slice(0, 3);
 }
 // Libellé du fichier s'il est parlant, sinon celui du plan comptable.
 export function accountLabel(compte, fileLabel) {
