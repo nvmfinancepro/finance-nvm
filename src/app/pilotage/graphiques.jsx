@@ -82,7 +82,8 @@ export function Legende({ items }) {
     <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 12, fontWeight: 700, color: C.textMid }}>
       {items.map((it) => (
         <span key={it.label} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-          {it.line ? <span style={{ width: 14, height: 2, background: it.color, borderRadius: 2 }} /> : <span style={{ width: 10, height: 10, borderRadius: 3, background: it.color }} />}
+          {it.dash ? <svg width="16" height="4" aria-hidden><line x1="1" x2="15" y1="2" y2="2" stroke={it.color} strokeWidth="2" strokeDasharray="3 3" strokeLinecap="round" /></svg>
+            : it.line ? <span style={{ width: 14, height: 2, background: it.color, borderRadius: 2 }} /> : <span style={{ width: 10, height: 10, borderRadius: 3, background: it.color }} />}
           {it.label}
         </span>
       ))}
@@ -132,14 +133,21 @@ export function Colonnes({ data, height = 180, n1 = false, tip }) {
   );
 }
 
+// Libellé d'axe : un sur `every`, plus le dernier, sans qu'il chevauche son voisin.
+const afficheLibelle = (i, every, n) => i === n - 1 || (i % every === 0 && n - 1 - i >= Math.ceil(every / 2));
+
 // Courbe (trésorerie) : aire légère, point final mis en avant, survol par mois.
-export function Courbe({ data, height = 180, tip, color = VIZ.serie }) {
+// Les points portant `p` (et en option `pp`, scénario prudent) sont une prévision :
+// tracée en pointillés depuis le dernier point réel, sur fond teinté « Prévision ».
+export function Courbe({ data, height = 180, tip, color = VIZ.serie, colorPrudent = VIZ.achats }) {
   const [hov, setHov] = useState(null);
   const [ref, W] = useLargeur();
   const padL = 46, padR = 10, padT = 10, padB = 24;
   const every = pasLibelles(W - padL, data.length);
   const pts = data.map((d, i) => ({ ...d, i })).filter((d) => d.v != null);
-  const { max, min, ticks } = scale(pts.map((d) => d.v));
+  const prev = data.map((d, i) => ({ ...d, i })).filter((d) => d.p != null);
+  const prud = data.map((d, i) => ({ ...d, i })).filter((d) => d.pp != null);
+  const { max, min, ticks } = scale([...pts.map((d) => d.v), ...prev.map((d) => d.p), ...prud.map((d) => d.pp)]);
   const H = height - padT - padB;
   const y = (v) => padT + ((max - v) / (max - min)) * H;
   const step = (W - padL - padR) / Math.max(1, data.length - 1);
@@ -147,9 +155,20 @@ export function Courbe({ data, height = 180, tip, color = VIZ.serie }) {
   const path = pts.map((d, k) => `${k ? "L" : "M"}${x(d.i)},${y(d.v)}`).join(" ");
   const area = pts.length > 1 ? `${path} L${x(pts[pts.length - 1].i)},${y(Math.max(min, 0))} L${x(pts[0].i)},${y(Math.max(min, 0))} Z` : "";
   const last = pts[pts.length - 1];
+  // La prévision part du dernier point réel qui la précède.
+  const ancre = prev.length ? [...pts].reverse().find((d) => d.i < prev[0].i) : null;
+  const pointilles = (liste, cle) => [...(ancre ? [{ i: ancre.i, val: ancre.v }] : []), ...liste.map((d) => ({ i: d.i, val: d[cle] }))].map((d, k) => `${k ? "L" : "M"}${x(d.i)},${y(d.val)}`).join(" ");
+  const debutPrev = !prev.length ? null : ancre ? x(ancre.i) : x(prev[0].i) - step / 2;
+  const finPrev = prev[prev.length - 1];
   return (
     <div ref={ref} style={{ position: "relative" }} onMouseLeave={() => setHov(null)}>
       <svg viewBox={`0 0 ${W} ${height}`} width="100%" style={{ display: "block", overflow: "visible" }} role="img">
+        {debutPrev != null && (
+          <g>
+            <rect x={debutPrev} y={padT} width={W - padR - debutPrev} height={H} fill={C.bgLight} />
+            <text x={debutPrev + 6} y={padT + 11} fontSize={10} fontWeight={800} fill={VIZ.axis} fontFamily={FONT}>Prévision</text>
+          </g>
+        )}
         {ticks.map((t) => (
           <g key={t}>
             <line x1={padL} x2={W - padR} y1={y(t)} y2={y(t)} stroke={t === 0 ? C.border : VIZ.grid} strokeWidth={1} />
@@ -158,18 +177,24 @@ export function Courbe({ data, height = 180, tip, color = VIZ.serie }) {
         ))}
         {area && <path d={area} fill={color} opacity={0.1} />}
         {pts.length > 1 && <path d={path} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />}
+        {prud.length > 0 && <path d={pointilles(prud, "pp")} fill="none" stroke={colorPrudent} strokeWidth={2} strokeDasharray="2 5" strokeLinejoin="round" strokeLinecap="round" />}
+        {prev.length > 0 && <path d={pointilles(prev, "p")} fill="none" stroke={color} strokeWidth={2} strokeDasharray="5 5" strokeLinejoin="round" strokeLinecap="round" />}
         {data.map((d, i) => (
           <g key={i}>
-            {hov === i && d.v != null && <line x1={x(i)} x2={x(i)} y1={padT} y2={padT + H} stroke={C.border} strokeWidth={1} />}
-            {(i % every === 0 || i === data.length - 1) && <text x={x(i)} y={height - 6} textAnchor="middle" fontSize={10} fontWeight={d.current ? 800 : 500} fill={d.current ? C.text : VIZ.axis} fontFamily={FONT}>{d.l}</text>}
+            {hov === i && (d.v != null || d.p != null) && <line x1={x(i)} x2={x(i)} y1={padT} y2={padT + H} stroke={C.border} strokeWidth={1} />}
+            {afficheLibelle(i, every, data.length) && <text x={x(i)} y={height - 6} textAnchor="middle" fontSize={10} fontWeight={d.current ? 800 : 500} fill={d.current ? C.text : VIZ.axis} fontFamily={FONT}>{d.l}</text>}
           </g>
         ))}
         {pts.map((d) => (hov === d.i || d === last) && (
           <circle key={d.i} cx={x(d.i)} cy={y(d.v)} r={4.5} fill={d.v < 0 ? VIZ.neg : color} stroke="white" strokeWidth={2} />
         ))}
+        {prev.map((d) => (hov === d.i || d === finPrev) && (
+          <circle key={"p" + d.i} cx={x(d.i)} cy={y(d.p)} r={4.5} fill="white" stroke={d.p < 0 ? VIZ.neg : color} strokeWidth={2} />
+        ))}
+        {prud.map((d) => hov === d.i && <circle key={"pp" + d.i} cx={x(d.i)} cy={y(d.pp)} r={4} fill="white" stroke={colorPrudent} strokeWidth={2} />)}
         {data.map((d, i) => <rect key={i} x={x(i) - step / 2} y={0} width={step} height={height} fill="transparent" onMouseEnter={() => setHov(i)} />)}
       </svg>
-      {hov != null && data[hov].v != null && tip && <Bulle x={x(hov)} W={W} lines={tip(data[hov])} />}
+      {hov != null && (data[hov].v != null || data[hov].p != null) && tip && <Bulle x={x(hov)} W={W} lines={tip(data[hov])} />}
     </div>
   );
 }
@@ -267,7 +292,7 @@ export function Lignes({ labels, series, height = 190, keys }) {
             return <path key={s.label} d={pts.map((p, i) => `${i ? "L" : "M"}${p[0]},${p[1]}`).join(" ")} fill="none" stroke={s.color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />;
           })}
           {series.map((s) => s.values.map((v, i) => v != null && (hov === i || i === s.values.length - 1) && <circle key={s.label + i} cx={x(i)} cy={y(v)} r={4.5} fill={s.color} stroke="white" strokeWidth={2} />))}
-          {labels.map((l, i) => (i % every === 0 || i === labels.length - 1) && <text key={i} x={x(i)} y={height - 6} textAnchor="middle" fontSize={10} fill={i === labels.length - 1 ? C.text : VIZ.axis} fontWeight={i === labels.length - 1 ? 800 : 500} fontFamily={FONT}>{l}</text>)}
+          {labels.map((l, i) => afficheLibelle(i, every, labels.length) && <text key={i} x={x(i)} y={height - 6} textAnchor="middle" fontSize={10} fill={i === labels.length - 1 ? C.text : VIZ.axis} fontWeight={i === labels.length - 1 ? 800 : 500} fontFamily={FONT}>{l}</text>)}
           {labels.map((_, i) => <rect key={i} x={x(i) - step / 2} y={0} width={step} height={height} fill="transparent" onMouseEnter={() => setHov(i)} />)}
         </svg>
         {hov != null && <Bulle x={x(hov)} W={W} lines={[keys ? keys[hov] : labels[hov], ...series.map((s) => `${s.label} : ${eur(s.values[hov])}`)]} />}

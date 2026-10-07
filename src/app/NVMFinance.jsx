@@ -2,12 +2,13 @@
 import { useState, useCallback, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { DndContext, useDraggable, useDroppable, useSensor, useSensors, PointerSensor } from "@dnd-kit/core";
-import { C, fmt, pct, Btn, Pill, KpiCard, Card, SectionHead, Th, Td, Tr, FormRow } from "@/app/charte";
+import { C, fmt, pct, Btn, Pill, KpiCard, Card, SectionHead, Th, Td, Tr, FormRow, EnTetePage, grilleAuto } from "@/app/charte";
 import { fecIndex, tresoAt, fecAlertes, hasFec, estimateIS, keyLabel, ytdKeys, sameKeysN1, sigOf, plOver, bilanAt, ratiosAt } from "@/lib/pilotage";
 import Synthese, { latestDataKey } from "@/app/pilotage/synthese";
 import { CompteResultat, BilanView, TresorerieFec, TiersView, PosteView, TvaFec, ImpotFec } from "@/app/pilotage/vues";
 import { BudgetView, Comparaison, Simulations, RentabiliteProduits, EmpruntsView, InvestissementsView, TresorerieEstimee, PointsAttention } from "@/app/pilotage/vues-plus";
 import { PlanActions, PrevisionTresorerie } from "@/app/pilotage/decisions";
+import Previsionnel3Ans from "@/app/pilotage/previsionnel";
 import SuiviPortefeuille from "@/app/pilotage/portefeuille";
 import ImportFec from "@/app/pilotage/import-fec";
 import { monthKpis } from "@/lib/donnees";
@@ -572,7 +573,7 @@ const ICONES = {
  bilan:"M12 3v17M5 7h14M5 7l-3 7a3 3 0 006 0L5 7zM19 7l-3 7a3 3 0 006 0l-3-7M8 20h8", creances:"M20 12H8M13 7l-5 5 5 5M4 4v16", dettes:"M4 12h12M11 7l5 5-5 5M20 4v16",
  emprunts:"M3 10l9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18", investissements:"M3 21h18M5 21V9l7-5 7 5v12M10 21v-5h4v5",
  tva:"M19 5L5 19M6.5 9a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM17.5 20a2.5 2.5 0 100-5 2.5 2.5 0 000 5z", is:"M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6",
- comparaison:"M7 7h13M16 3l4 4-4 4M17 17H4M8 13l-4 4 4 4", actions:"M10 6h10M10 12h10M10 18h10M3.5 6l1.2 1.2L7 5M3.5 12l1.2 1.2L7 11M3.5 18l1.2 1.2L7 17", prevision:"M3 3v18h18M7 14l3-3 3 2 5-6M15 7h3v3", previsionnel:"M3 3v18h18M7 15l4-5 3 3 4-6", roi:"M6 3h12v18H6zM9 7h6M9 11h.01M12 11h.01M15 11h.01M9 15h.01M12 15h.01M15 15h.01",
+ comparaison:"M7 7h13M16 3l4 4-4 4M17 17H4M8 13l-4 4 4 4", actions:"M10 6h10M10 12h10M10 18h10M3.5 6l1.2 1.2L7 5M3.5 12l1.2 1.2L7 11M3.5 18l1.2 1.2L7 17", prevision:"M3 3v18h18M7 14l3-3 3 2 5-6M15 7h3v3", previsionnel:"M3 3v18h18M7 15l4-5 3 3 4-6", previsionnel3:"M4 20v-6M10 20V9M16 20V4M3 20h18", roi:"M6 3h12v18H6zM9 7h6M9 11h.01M12 11h.01M15 11h.01M9 15h.01M12 15h.01M15 15h.01",
  embauche:"M14 19v-1a4 4 0 00-8 0v1M10 11a3 3 0 100-6 3 3 0 000 6zM19 8v6M16 11h6", planning:"M4 5h16v15H4zM4 10h16M9 3v4M15 3v4",
  conges:"M12 4V2M12 22v-2M4 12H2M22 12h-2M12 17a5 5 0 100-10 5 5 0 000 10z", pointage:"M12 21a9 9 0 100-18 9 9 0 000 18zM12 7v5l3 3",
  notesfrais:"M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6", taches:"M4 4h16v16H4zM8 12l3 3 5-6", equipetaches:"M4 6h10M4 12h10M4 18h10M17 6l1.5 1.5L22 4", stock:"M3 7l9-4 9 4v10l-9 4-9-4V7zM3 7l9 4 9-4M12 11v10",
@@ -604,30 +605,33 @@ function ClientSidebar({ view, setView, onLogout, clientName, alertCount, planni
  // Import : le client gratuit importe lui-même ; pour un client accompagné, seul le conseiller (aperçu) importe.
  ...(canImport ? [{id:"import", icon:"import", label:modeConseiller?"Imports (conseiller)":"Importer mes données"}] : []),
  ]},
- { label:"RENTABILITÉ", items:[
- {id:"resultat", icon:"resultat", label:"Compte de résultat"},
- {id:"ventes", icon:"ventes", label:"Ventes"},
- {id:"achats", icon:"achats", label:"Achats et marge"},
- {id:"charges", icon:"charges", label:"Charges"},
+ { label:"PERFORMANCE", items:[
+ {id:"resultat", icon:"resultat", label:"Compte de résultat · SIG"},
+ {id:"ventes", icon:"ventes", label:"Chiffre d'affaires"},
+ {id:"achats", icon:"achats", label:"Achats et marge brute"},
+ {id:"charges", icon:"charges", label:"Frais généraux"},
  {id:"salaires", icon:"salaires", label:"Masse salariale"},
  {id:"catalogue", icon:"catalogue", label:"Rentabilité par produit"},
  ]},
  { label:"TRÉSORERIE ET BILAN", items:[
  {id:"tresorerie", icon:"tresorerie", label:"Trésorerie"},
- {id:"prevision", icon:"prevision", label:"Prévision de trésorerie"},
- {id:"bilan", icon:"bilan", label:"Bilan et BFR"},
+ {id:"bilan", icon:"bilan", label:"Bilan de gestion"},
  {id:"creances", icon:"creances", label:"Créances clients"},
  {id:"dettes", icon:"dettes", label:"Dettes fournisseurs"},
  {id:"emprunts", icon:"emprunts", label:"Emprunts"},
  {id:"investissements",icon:"investissements", label:"Investissements"},
  ]},
- { label:"IMPÔTS", items:[
+ { label:"FISCALITÉ", items:[
  {id:"tva", icon:"tva", label:"TVA"},
  {id:"is", icon:"is", label:"Impôt sur les sociétés"},
  ]},
- { label:"ANALYSE ET DÉCISIONS", items:[
- {id:"budget", icon:"previsionnel", label:"Budget"},
- {id:"comparaison", icon:"comparaison", label:"Comparer deux périodes"},
+ { label:"PRÉVISIONNEL", items:[
+ {id:"budget", icon:"previsionnel", label:"Budget prévisionnel"},
+ {id:"prevision", icon:"prevision", label:"Plan de trésorerie"},
+ {id:"previsionnel3", icon:"previsionnel3", label:"Prévisionnel à 3 ans"},
+ ]},
+ { label:"ANALYSE", items:[
+ {id:"comparaison", icon:"comparaison", label:"Analyse des écarts"},
  {id:"simulations", icon:"roi", label:"Simulations"},
  ]},
  { label:"MON ÉQUIPE", items:[
@@ -1213,19 +1217,20 @@ function AdminSaisie({ clients, onSaveImport, onDeleteImport }) {
 // gestion sont floutés avec un bouton qui prévient le conseiller sur WhatsApp.
 const FREE_LOCKED_VIEWS={
  alertes:{title:"Alertes",desc:"Votre conseiller surveille vos chiffres et vous prévient avant qu'un problème n'arrive."},
- bilan:{title:"Bilan et BFR",desc:"Votre bilan reconstitué chaque mois : fonds de roulement, besoin en fonds de roulement et ratios bancaires, expliqués simplement."},
- tresorerie:{title:"Trésorerie prévisionnelle",desc:"Votre trésorerie sur les 90 prochains jours, ajustée avec votre conseiller."},
+ bilan:{title:"Bilan de gestion",desc:"Votre bilan reconstitué chaque mois : FR, BFR, trésorerie nette et ratios financiers."},
+ tresorerie:{title:"Trésorerie",desc:"Votre trésorerie nette mois par mois et le tableau de flux qui l'explique."},
  creances:{title:"Créances clients",desc:"Le suivi des factures clients et des retards de paiement, pour sécuriser votre trésorerie."},
  dettes:{title:"Dettes fournisseurs",desc:"L'échéancier de vos fournisseurs, pour anticiper vos décaissements."},
  emprunts:{title:"Emprunts",desc:"Vos financements intégrés à votre pilotage : mensualités, capital restant, impact sur la trésorerie."},
  investissements:{title:"Investissements",desc:"Vos investissements et leurs amortissements, intégrés à votre résultat."},
  catalogue:{title:"Rentabilité par produit",desc:"Ce qui rapporte le plus, ce qui coûte trop cher : la marge produit par produit."},
- comparaison:{title:"Comparaison de périodes",desc:"Comparez deux périodes pour comprendre ce qui a changé et pourquoi."},
+ comparaison:{title:"Analyse des écarts",desc:"Deux périodes comparées et l'écart de résultat décomposé poste par poste."},
  actions:{title:"Plan d'actions",desc:"Les décisions prises avec votre conseiller, suivies jusqu'au résultat, et la valeur déjà créée par l'accompagnement."},
- prevision:{title:"Prévision de trésorerie",desc:"Votre trésorerie des 3, 6 ou 12 prochains mois, avec un scénario prudent pour anticiper un besoin de financement."},
- budget:{title:"Budget",desc:"Votre budget mois par mois, le réel comparé aux objectifs et la projection de fin d'année, construits avec votre conseiller."},
+ prevision:{title:"Plan de trésorerie",desc:"Votre trésorerie à 3, 6 ou 12 mois, avec un scénario prudent pour anticiper un besoin de financement."},
+ budget:{title:"Budget prévisionnel",desc:"Votre budget mensuel, le réalisé comparé aux objectifs et l'atterrissage de fin d'année, construits avec votre conseiller."},
+ previsionnel3:{title:"Prévisionnel à 3 ans",desc:"Compte de résultat prévisionnel, plan de financement et trésorerie sur 3 ans, construits avec votre conseiller."},
  simulations:{title:"Simulations",desc:"Mesurez l'effet d'une hausse de prix, d'une embauche ou d'un investissement avant de vous décider."},
- previsionnel:{title:"Prévisionnel",desc:"Votre prévisionnel sur 12 mois, construit et suivi avec votre conseiller."},
+ previsionnel:{title:"Budget prévisionnel",desc:"Votre budget mensuel, construit et suivi avec votre conseiller."},
  roi:{title:"Calculateur ROI",desc:"Mesurez la rentabilité d'un investissement avant de vous engager."},
  embauche:{title:"Simulateur d'embauche",desc:"Le vrai coût d'un recrutement et le chiffre d'affaires nécessaire pour le financer."},
  planning:{title:"Planning d'équipe",desc:"Un planning d'équipe simple, généré en quelques clics.",tool:true},
@@ -1781,7 +1786,7 @@ function EmpruntsForm({ client, onUpdate }) {
  <div style={{display:"flex",justifyContent:"flex-end"}}><Btn variant="success" small onClick={()=>setShowAdd(!showAdd)}>+ Ajouter un emprunt</Btn></div>
  {showAdd&&(
  <Card style={{border:`2px solid ${C.primary}`}}>
- <SectionHead title="Nouvel emprunt bancaire" sub="Tableau d'amortissement généré automatiquement"/>
+ <SectionHead title="Nouvel emprunt bancaire" info="Le tableau d'amortissement est généré automatiquement."/>
  <div style={{padding:20,display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14}}>
  {[{l:"Libellé",k:"libelle",ph:"Prêt BPI"},{l:"Capital (€)",k:"capital",ph:"45000",t:"number"},{l:"Taux annuel (%)",k:"taux",ph:"4,2"},{l:"Durée (mois)",k:"duree",ph:"60",t:"number"},{l:"Date souscription",k:"dateDebut",t:"date"},{l:"Assurance mensuelle (€)",k:"assurance",ph:"35",t:"number"}].map(f=>(
  <FormRow key={f.k} label={f.l}><input type={f.t||"text"} value={form[f.k]} onChange={e=>setForm({...form,[f.k]:e.target.value})} placeholder={f.ph||""} className="inp"/></FormRow>
@@ -1819,7 +1824,7 @@ function InvestissementsForm({ client, onUpdate }) {
  <div style={{display:"flex",justifyContent:"flex-end"}}><Btn variant="success" small onClick={()=>setShowAdd(!showAdd)}>+ Ajouter un investissement</Btn></div>
  {showAdd&&(
  <Card style={{border:`2px solid ${C.primary}`}}>
- <SectionHead title="Nouvel investissement" sub="TVA, TTC, amortissement et retour sur investissement calculés automatiquement"/>
+ <SectionHead title="Nouvel investissement" info="TVA, TTC, amortissement et retour sur investissement calculés automatiquement."/>
  <div style={{padding:20,display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14}}>
  {[{l:"Libellé",k:"libelle",ph:"Camion, four, machine..."},{l:"Date d'achat",k:"dateAchat",t:"date"},{l:"Date mise en service",k:"dateMEP",t:"date"},{l:"Montant HT (€)",k:"montantHT",ph:"12000",t:"number"},{l:"Taux TVA (%)",k:"tauxTVA",ph:"20",t:"number"},{l:"Durée amortissement (mois)",k:"duree",ph:"36",t:"number"},{l:"Gain mensuel estimé (€)",k:"gainMensuel",ph:"800",t:"number"}].map(f=>(
  <FormRow key={f.k} label={f.l}><input type={f.t||"text"} value={form[f.k]} onChange={e=>setForm({...form,[f.k]:e.target.value})} placeholder={f.ph||""} className="inp"/></FormRow>
@@ -1889,7 +1894,7 @@ function ROICalculator() {
  <div style={{fontSize:12,color:C.textLight,marginTop:2}}>Simulez la rentabilité d'un investissement (machine, camion, four...) avant de vous décider</div>
  </div>
  <Card>
- <SectionHead title="Votre investissement" sub="Renseignez les valeurs, le résultat se met à jour automatiquement"/>
+ <SectionHead title="Investissement" info="Le résultat se met à jour à chaque saisie."/>
  <div style={{padding:20,display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:14}}>
  <FormRow label="Montant de l'investissement HT (€)"><input type="number" value={montant} onChange={e=>setMontant(e.target.value)} placeholder="15000" className="inp"/></FormRow>
  <FormRow label="Gain mensuel estimé (€)">
@@ -1995,7 +2000,7 @@ function SimulateurEmbauche({ tauxMargeDefaut="" }) {
  <div style={{fontSize:12,color:C.textLight,marginTop:2}}>Calculez le coût réel d'un recrutement et le CA qu'il doit générer pour être rentable</div>
  </div>
  <Card>
- <SectionHead title="Le poste envisagé" sub="Renseignez le salaire brut, le résultat se met à jour automatiquement"/>
+ <SectionHead title="Poste envisagé" info="Saisissez le salaire brut : le coût employeur se met à jour à chaque saisie."/>
  <div style={{padding:20,display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14}}>
  <FormRow label="Salaire brut mensuel (€)"><input type="number" value={brut} onChange={e=>setBrut(e.target.value)} placeholder="2200" className="inp"/></FormRow>
  <FormRow label="Taux de marge sur CA (%)"><input type="number" value={tauxMarge} onChange={e=>setTauxMarge(e.target.value)} placeholder="40" className="inp"/></FormRow>
@@ -2019,7 +2024,7 @@ function SimulateurEmbauche({ tauxMargeDefaut="" }) {
  </Card>
  {hasInputs&&tm>0&&(
  <Card style={{marginTop:16}}>
- <SectionHead title="CA supplémentaire nécessaire" sub="Pour que ce poste s'autofinance, sans compter sa productivité indirecte"/>
+ <SectionHead title="CA supplémentaire nécessaire" info="CA HT à générer pour que le poste s'autofinance, hors productivité indirecte."/>
  <div style={{padding:20}}>
  <KpiCard label={`CA mensuel à générer (marge à ${tm}%)`} value={fmt(caNecessaire)} sub={`Soit ${fmt(caNecessaire*12)} sur l'année`} color={C.primary}/>
  </div>
@@ -2057,7 +2062,7 @@ function TresorerieForm({ client, onUpdate }) {
  <div style={{display:"flex",flexDirection:"column",gap:16}}>
  {saved&&<div style={{padding:"10px 16px",background:C.greenBg,border:`1px solid ${C.green}33`,borderRadius:8,fontSize:13,color:C.green,fontWeight:700}}>{saved}</div>}
  <Card>
- <SectionHead title="Solde initial & paramètres" sub="Calculé automatiquement : solde initial + encaissements – charges – salaires – emprunts"/>
+ <SectionHead title="Solde initial & paramètres" info="Trésorerie estimée = solde initial + encaissements − charges − salaires − emprunts."/>
  <div style={{padding:20,display:"grid",gridTemplateColumns:"1fr 2fr",gap:20}}>
  <div>
  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
@@ -2175,13 +2180,14 @@ function ClientSpaceContent({ client, view, moisIdx, setMoisIdx, setMoisKey, moi
  if (view==="alertes") return <PointsAttention {...pv} alertes={calcAlertes(client,moisIdx,moisYear)} onSaveDonnees={onSaveDonnees} setView={setView}/>;
  if (view==="actions") return <PlanActions client={client} onSaveDonnees={onSaveDonnees}/>;
  if (view==="prevision") return <PrevisionTresorerie {...pv} isAdminPreview={isAdminPreview} onSaveDonnees={onSaveDonnees} tresoOf={(mi,yr)=>calcTresoEstimee(client,mi,yr)}/>;
+ if (view==="previsionnel3") return <Previsionnel3Ans {...pv} onSaveDonnees={onSaveDonnees} tresoOf={(mi,yr)=>calcTresoEstimee(client,mi,yr)}/>;
  if (view==="resultat") return <CompteResultat {...pv}/>;
  if (view==="ventes"||view==="achats"||view==="charges"||view==="salaires") return <PosteView {...pv} vue={view}/>;
  if (view==="catalogue") return <RentabiliteProduits {...pv}/>;
- if (view==="tresorerie") return fec ? <TresorerieFec {...pv}/> : <TresorerieEstimee {...pv} isAdminPreview={isAdminPreview} tresoOf={(mi,yr)=>calcTresoEstimee(client,mi,yr)} fluxOf={(mi,yr)=>fluxTresoEstime(client,mi,yr)}/>;
+ if (view==="tresorerie") return fec ? <TresorerieFec {...pv} tresoOf={(mi,yr)=>calcTresoEstimee(client,mi,yr)}/> : <TresorerieEstimee {...pv} isAdminPreview={isAdminPreview} tresoOf={(mi,yr)=>calcTresoEstimee(client,mi,yr)} fluxOf={(mi,yr)=>fluxTresoEstime(client,mi,yr)}/>;
  if (view==="bilan") return fec ? <BilanView {...pv}/> : (
   <div style={{padding:"22px 24px 40px",maxWidth:1320,margin:"0 auto"}} className="fade-up">
-   <div style={{fontSize:21,fontWeight:900,color:C.text,marginBottom:14}}>Bilan et fonds de roulement</div>
+   <div style={{fontSize:21,fontWeight:900,color:C.text,marginBottom:14}}>Bilan de gestion</div>
    <Card><div style={{padding:"28px 24px",textAlign:"center"}}>
     <div style={{fontSize:16,fontWeight:900,color:C.text,marginBottom:8}}>Le bilan se construit à partir de la comptabilité</div>
     <div style={{fontSize:13.5,color:C.textMid,lineHeight:1.6,maxWidth:560,margin:"0 auto 16px"}}>Avec le fichier des écritures comptables (FEC), on reconstitue chaque mois votre bilan : fonds de roulement, besoin en fonds de roulement, endettement et ratios regardés par les banques, expliqués simplement.</div>
@@ -2400,6 +2406,8 @@ function PlanningListView({ employes, planning, moisNav, TC, empKey, fmtH, C }) 
  );
 }
 
+// Mise en page commune des outils de gestion (même gabarit que les vues de pilotage).
+const OUTIL_PAGE={padding:"22px 24px 40px",maxWidth:1320,margin:"0 auto"};
 function PlanningView({ client, isAdminPreview=false }) {
  const [vue,setVue]=useState("semaine");
  const [employes,setEmployes]=useState([]);
@@ -2670,25 +2678,28 @@ function PlanningView({ client, isAdminPreview=false }) {
   <div style={{display:"flex",flexDirection:"column",height:"100%",background:"#f8fffe",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif",minHeight:0}} className="fade-up">
 
    {/* ── TOP BAR ── */}
-   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 20px",background:"white",borderBottom:"1px solid #c8e8e5",flexShrink:0,gap:12,flexWrap:"wrap"}}>
-    <div style={{display:"flex",background:"#f0faf8",borderRadius:8,border:"1px solid #c8e8e5",overflow:"hidden"}}>
+   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 22px",background:"white",borderBottom:`1.5px solid ${C.text}`,flexShrink:0,gap:12,flexWrap:"wrap"}}>
+    <div style={{display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
+    <div style={{fontSize:19,fontWeight:900,color:C.text}}>Planning d'équipe</div>
+    <div style={{display:"inline-flex",background:C.bgLight,borderRadius:100,border:`1px solid ${C.borderLight}`,padding:3,gap:2}}>
      {[["semaine","Semaine"],["mois","Mois"],["liste","Liste"]].map(([id,label])=>(
-      <button key={id} onClick={()=>setVue(id)} style={{padding:"7px 18px",border:"none",cursor:"pointer",background:vue===id?"#005653":"transparent",color:vue===id?"#fff":C.textMid,fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif",fontSize:13,fontWeight:700,transition:"all .15s"}}>{label}</button>
+      <button key={id} onClick={()=>setVue(id)} style={{padding:"6px 16px",border:"none",borderRadius:100,cursor:"pointer",background:vue===id?C.primary:"transparent",color:vue===id?"#fff":C.textMid,fontFamily:"inherit",fontSize:12.5,fontWeight:800,transition:"all .15s"}}>{label}</button>
      ))}
     </div>
-    <div style={{display:"flex",alignItems:"center",gap:10}}>
-     <button onClick={navigatePrev} style={{background:"white",border:"1.5px solid #c8e8e5",borderRadius:8,width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.textMid} strokeWidth="2.5"><polyline points="15,18 9,12 15,6"/></svg>
+    </div>
+    <div style={{display:"inline-flex",alignItems:"center",gap:6,background:C.white,border:`1px solid ${C.border}`,borderRadius:100,padding:4}}>
+     <button aria-label="Période précédente" onClick={navigatePrev} style={{background:C.bg,border:"none",borderRadius:"50%",width:30,height:30,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.primary} strokeWidth="2.5"><polyline points="15,18 9,12 15,6"/></svg>
      </button>
-     <div style={{fontSize:14,fontWeight:800,color:C.text,minWidth:200,textAlign:"center"}}>{periodLabel()}</div>
-     <button onClick={navigateNext} style={{background:"white",border:"1.5px solid #c8e8e5",borderRadius:8,width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.textMid} strokeWidth="2.5"><polyline points="9,18 15,12 9,6"/></svg>
+     <div style={{fontSize:13.5,fontWeight:900,color:C.text,minWidth:180,textAlign:"center"}}>{periodLabel()}</div>
+     <button aria-label="Période suivante" onClick={navigateNext} style={{background:C.bg,border:"none",borderRadius:"50%",width:30,height:30,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.primary} strokeWidth="2.5"><polyline points="9,18 15,12 9,6"/></svg>
      </button>
-     <button onClick={navigateToday} style={{background:"white",border:"1.5px solid #c8e8e5",borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:700,color:C.textMid,cursor:"pointer",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif"}}>Aujourd'hui</button>
+     <button onClick={navigateToday} style={{background:"transparent",border:"none",padding:"0 10px",fontSize:12.5,fontWeight:800,color:C.primary,cursor:"pointer",fontFamily:"inherit"}}>Aujourd'hui</button>
     </div>
     <div style={{display:"flex",gap:8}}>
-     <button onClick={()=>openAddCreneau()} style={{padding:"8px 16px",borderRadius:8,border:"1.5px solid #005653",background:"white",color:"#005653",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif"}}>Ajouter un créneau</button>
-     <button onClick={()=>setPanelType("ia")} style={{padding:"8px 16px",borderRadius:8,border:"none",background:"#005653",color:"white",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'VAG Rounded Next','Baloo 2',sans-serif",display:"flex",alignItems:"center",gap:6}}>
+     <button onClick={()=>openAddCreneau()} style={{padding:"9px 18px",borderRadius:100,border:`1.5px solid ${C.border}`,background:"white",color:C.primary,fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>Ajouter un créneau</button>
+     <button onClick={()=>setPanelType("ia")} style={{padding:"9px 18px",borderRadius:100,border:"none",background:C.primary,color:"white",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6,boxShadow:"0 4px 14px rgba(0,86,83,.22)"}}>
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
       Générer avec l'IA
      </button>
@@ -3137,19 +3148,16 @@ function CongesView({ client, isAdminPreview=false }) {
   : <Pill color={C.orange} bg={C.orangeBg}>En attente</Pill>;
 
  return (
-  <div style={{padding:24}} className="fade-up">
-   <div style={{marginBottom:20}}>
-    <div style={{fontSize:18,fontWeight:900,color:C.text}}>Congés & absences</div>
-    <div style={{fontSize:12,color:C.textLight,marginTop:2}}>Demandes de congés de votre équipe, à valider ou refuser</div>
-   </div>
-   <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:20}}>
+  <div style={OUTIL_PAGE} className="fade-up">
+   <EnTetePage title="Congés & absences" info="Demandes de congés et d'absences de l'équipe, à valider ou refuser. Les congés validés sont repris dans le planning."/>
+   <div style={{...grilleAuto(200),marginBottom:20}}>
     <KpiCard label="Demandes en attente" value={enAttente.length} sub="à traiter" color={C.orange}/>
     <KpiCard label="Validés ce mois" value={joursValidesMois} sub={`${valideesMois.length} demande(s), jours cumulés`} color={C.green}/>
     <KpiCard label="Refusés" value={refusees.length} sub="depuis le début" color={C.red}/>
    </div>
    {!isAdminPreview&&(
-    <Card style={{padding:18,marginBottom:20}}>
-     <div style={{fontSize:14,fontWeight:800,color:C.text,marginBottom:12}}>Enregistrer une demande de congé</div>
+    <Card style={{padding:"18px 22px",marginBottom:20}}>
+     <div style={{fontSize:15,fontWeight:900,color:C.text,marginBottom:12}}>Enregistrer une demande de congé</div>
      {employes.length===0?(
       <div style={{fontSize:13,color:C.textLight}}>Ajoutez d'abord des employés dans le module Planning.</div>
      ):(
@@ -3271,19 +3279,16 @@ function NotesFraisView({ client, isAdminPreview=false }) {
   : <Pill color={C.orange} bg={C.orangeBg}>En attente</Pill>;
 
  return (
-  <div style={{padding:24}} className="fade-up">
-   <div style={{marginBottom:20}}>
-    <div style={{fontSize:18,fontWeight:900,color:C.text}}>Notes de frais</div>
-    <div style={{fontSize:12,color:C.textLight,marginTop:2}}>Soumission et validation des dépenses de votre équipe</div>
-   </div>
-   <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:20}}>
+  <div style={OUTIL_PAGE} className="fade-up">
+   <EnTetePage title="Notes de frais" info="Dépenses avancées par l'équipe, soumises puis validées ou refusées."/>
+   <div style={{...grilleAuto(200),marginBottom:20}}>
     <KpiCard label="En attente" value={enAttente.length} sub="à valider" color={C.orange}/>
     <KpiCard label="Validées ce mois" value={fmt(montantValideesMois)} sub={`${valideesMois.length} note(s)`} color={C.green}/>
     <KpiCard label="Refusées" value={refusees.length} sub="depuis le début" color={C.red}/>
    </div>
    {!isAdminPreview&&(
-    <Card style={{padding:18,marginBottom:20}}>
-     <div style={{fontSize:14,fontWeight:800,color:C.text,marginBottom:12}}>Déclarer une dépense</div>
+    <Card style={{padding:"18px 22px",marginBottom:20}}>
+     <div style={{fontSize:15,fontWeight:900,color:C.text,marginBottom:12}}>Déclarer une dépense</div>
      {employes.length===0?(
       <div style={{fontSize:13,color:C.textLight}}>Ajoutez d'abord des employés dans le module Planning.</div>
      ):(
@@ -3395,19 +3400,16 @@ function StockView({ client, isAdminPreview=false }) {
  };
 
  return (
-  <div style={{padding:24}} className="fade-up">
-   <div style={{marginBottom:20}}>
-    <div style={{fontSize:18,fontWeight:900,color:C.text}}>Mon stock</div>
-    <div style={{fontSize:12,color:C.textLight,marginTop:2}}>Suivi des quantités et alertes de réapprovisionnement</div>
-   </div>
-   <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:20}}>
+  <div style={OUTIL_PAGE} className="fade-up">
+   <EnTetePage title="Mon stock" info="Quantités en stock par référence, avec alerte dès qu'un produit passe sous son seuil de réapprovisionnement."/>
+   <div style={{...grilleAuto(200),marginBottom:20}}>
     <KpiCard label="Références suivies" value={references} color={C.primary}/>
     <KpiCard label="Sous le seuil d'alerte" value={sousSeuil} sub={sousSeuil>0?"à réapprovisionner":"tout est ok"} color={sousSeuil>0?C.red:C.green}/>
     <KpiCard label="Fournisseurs" value={fournisseurs} color={C.textMid}/>
    </div>
    {!isAdminPreview&&(
-    <Card style={{padding:18,marginBottom:20}}>
-     <div style={{fontSize:14,fontWeight:800,color:C.text,marginBottom:12}}>Ajouter une référence</div>
+    <Card style={{padding:"18px 22px",marginBottom:20}}>
+     <div style={{fontSize:15,fontWeight:900,color:C.text,marginBottom:12}}>Ajouter une référence</div>
      <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
       <FormRow label="Produit"><input value={form.produit} onChange={e=>setForm({...form,produit:e.target.value})} className="inp" placeholder="Ex: Farine T55" style={{width:180}}/></FormRow>
       <FormRow label="Catégorie"><select value={form.categorie} onChange={e=>setForm({...form,categorie:e.target.value})} className="inp">{STOCK_CATEGORIES.map(c=><option key={c}>{c}</option>)}</select></FormRow>
@@ -3582,18 +3584,12 @@ function TachesView({ client, isAdminPreview=false }) {
  };
 
  return (
-  <div style={{padding:24}} className="fade-up">
-   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12,marginBottom:20}}>
-    <div>
-     <div style={{fontSize:18,fontWeight:900,color:C.text}}>Tâches</div>
-     <div style={{fontSize:12,color:C.textLight,marginTop:2}}>Suivi des tâches de votre équipe</div>
-    </div>
-    {!isAdminPreview&&<Btn variant="ghost" onClick={()=>setShowForm(s=>!s)}>{showForm?"Fermer":"+ Nouvelle tâche"}</Btn>}
-   </div>
+  <div style={OUTIL_PAGE} className="fade-up">
+   <EnTetePage title="Tâches" info="Tâches ponctuelles de l'équipe : à faire, en cours, terminées. L'IA peut rédiger une tâche à partir d'une phrase." right={!isAdminPreview&&<Btn variant="ghost" onClick={()=>setShowForm(s=>!s)}>{showForm?"Fermer":"+ Nouvelle tâche"}</Btn>}/>
 
    {!isAdminPreview&&(
-    <Card style={{padding:18,marginBottom:20}}>
-     <div style={{fontSize:14,fontWeight:800,color:C.text,marginBottom:12}}>Créer avec l'IA</div>
+    <Card style={{padding:"18px 22px",marginBottom:20}}>
+     <div style={{fontSize:15,fontWeight:900,color:C.text,marginBottom:12}}>Créer avec l'IA</div>
      <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
       <FormRow label="Décrivez la tâche en une phrase"><input value={aiDesc} onChange={e=>setAiDesc(e.target.value)} className="inp" style={{width:340}} placeholder="Ex: réunion équipe vendredi pour préparer l'inventaire de rentrée"/></FormRow>
       <Btn variant="success" onClick={generateWithAI} disabled={aiLoading||!aiDesc.trim()}>{aiLoading?"Génération...":"Générer"}</Btn>
@@ -3604,7 +3600,7 @@ function TachesView({ client, isAdminPreview=false }) {
 
    {!isAdminPreview&&showForm&&(
     <Card style={{padding:18,marginBottom:20,border:`2px solid ${C.primary}`}}>
-     <div style={{fontSize:14,fontWeight:800,color:C.text,marginBottom:12}}>Nouvelle tâche</div>
+     <div style={{fontSize:15,fontWeight:900,color:C.text,marginBottom:12}}>Nouvelle tâche</div>
      <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
       <FormRow label="Titre"><input value={form.titre} onChange={e=>setForm({...form,titre:e.target.value})} className="inp" style={{width:220}}/></FormRow>
       <FormRow label="Description"><input value={form.description} onChange={e=>setForm({...form,description:e.target.value})} className="inp" style={{width:260}}/></FormRow>
@@ -3701,13 +3697,13 @@ function EquipeTachesDashboard({ sites, taches, employes, executions }) {
 
  return (
   <div className="fade-up">
-   <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:20}}>
+   <div style={{...grilleAuto(200),marginBottom:20}}>
     <KpiCard label="Sites actifs" value={sitesActifs.length} sub={`sur ${sites.length} au total`} color={C.primary}/>
     <KpiCard label="Taux de complétion" value={`${tauxCompletion}%`} sub="cette semaine" color={tauxCompletion>=80?C.green:tauxCompletion>=50?C.orange:C.red}/>
     <KpiCard label="Alertes actives" value={alertes.length} sub={alertes.length>0?"tâches en retard":"tout est à jour"} color={alertes.length>0?C.red:C.green}/>
    </div>
    <Card>
-    <SectionHead title="Tâches en retard" sub="Fenêtre des 14 derniers jours"/>
+    <SectionHead title="Tâches en retard" sub="14 derniers jours"/>
     {alertes.length===0?(
      <div style={{padding:24,textAlign:"center",color:C.textLight,fontSize:13}}>Aucune tâche en retard.</div>
     ):(
@@ -3870,7 +3866,7 @@ function EquipeTachesSites({ sites, isAdminPreview, onAdd, onUpdate, onDelete })
    {!isAdminPreview&&<div style={{display:"flex",justifyContent:"flex-end",marginBottom:16}}><Btn variant="success" onClick={startAdd}>+ Nouveau site</Btn></div>}
    {!isAdminPreview&&showForm&&(
     <Card style={{padding:18,marginBottom:20,border:`2px solid ${C.primary}`}}>
-     <div style={{fontSize:14,fontWeight:800,color:C.text,marginBottom:12}}>{editingId?"Modifier le site":"Nouveau site"}</div>
+     <div style={{fontSize:15,fontWeight:900,color:C.text,marginBottom:12}}>{editingId?"Modifier le site":"Nouveau site"}</div>
      <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
       <FormRow label="Nom du site"><input value={form.nom} onChange={e=>setForm({...form,nom:e.target.value})} className="inp" style={{width:200}}/></FormRow>
       <FormRow label="Adresse"><input value={form.adresse} onChange={e=>setForm({...form,adresse:e.target.value})} className="inp" style={{width:260}}/></FormRow>
@@ -3943,7 +3939,7 @@ function EquipeTachesEquipe({ employes, sites, employeSites, isAdminPreview, onA
    {!isAdminPreview&&<div style={{display:"flex",justifyContent:"flex-end",marginBottom:16}}><Btn variant="success" onClick={startAdd}>+ Nouvel employé</Btn></div>}
    {!isAdminPreview&&showForm&&(
     <Card style={{padding:18,marginBottom:20,border:`2px solid ${C.primary}`}}>
-     <div style={{fontSize:14,fontWeight:800,color:C.text,marginBottom:12}}>{editingId?"Modifier l'employé":"Nouvel employé"}</div>
+     <div style={{fontSize:15,fontWeight:900,color:C.text,marginBottom:12}}>{editingId?"Modifier l'employé":"Nouvel employé"}</div>
      <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
       <FormRow label="Prénom"><input value={form.prenom} onChange={e=>setForm({...form,prenom:e.target.value})} className="inp" style={{width:140}}/></FormRow>
       <FormRow label="Nom"><input value={form.nom} onChange={e=>setForm({...form,nom:e.target.value})} className="inp" style={{width:140}}/></FormRow>
@@ -3954,7 +3950,7 @@ function EquipeTachesEquipe({ employes, sites, employeSites, isAdminPreview, onA
     </Card>
    )}
    <Card>
-    <SectionHead title={`Équipe (${employes.length})`} sub="Cliquez sur « Sites » pour gérer les affectations"/>
+    <SectionHead title={`Équipe (${employes.length})`} info="Cliquez sur « Sites » pour gérer les affectations."/>
     {employes.length===0?(
      <div style={{padding:24,textAlign:"center",color:C.textLight,fontSize:13}}>Aucun employé pour l'instant.</div>
     ):(
@@ -3985,7 +3981,7 @@ function EquipeTachesEquipe({ employes, sites, employeSites, isAdminPreview, onA
    </Card>
    {expanded&&(
     <Card style={{padding:18,marginTop:16}}>
-     <div style={{fontSize:14,fontWeight:800,color:C.text,marginBottom:10}}>Sites affectés · {expanded.prenom} {expanded.nom}</div>
+     <div style={{fontSize:15,fontWeight:900,color:C.text,marginBottom:10}}>Sites affectés · {expanded.prenom} {expanded.nom}</div>
      <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
       {sites.map(s=>{
        const checked=sitesOf(expanded.id).includes(s.id);
@@ -4032,7 +4028,7 @@ function EquipeTachesTaches({ taches, sites, employes, tacheEmployes, isAdminPre
    {!isAdminPreview&&sites.length===0&&<div style={{fontSize:12,color:C.textLight,marginBottom:12}}>Ajoutez d'abord un site.</div>}
    {!isAdminPreview&&showForm&&(
     <Card style={{padding:18,marginBottom:20,border:`2px solid ${C.primary}`}}>
-     <div style={{fontSize:14,fontWeight:800,color:C.text,marginBottom:12}}>{editingId?"Modifier la tâche":"Nouvelle tâche récurrente"}</div>
+     <div style={{fontSize:15,fontWeight:900,color:C.text,marginBottom:12}}>{editingId?"Modifier la tâche":"Nouvelle tâche récurrente"}</div>
      <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
       <FormRow label="Titre"><input value={form.titre} onChange={e=>setForm({...form,titre:e.target.value})} className="inp" style={{width:200}} placeholder="Ex: Nettoyage sols"/></FormRow>
       <FormRow label="Site"><select value={form.site_id} onChange={e=>setForm({...form,site_id:e.target.value})} className="inp">{sites.map(s=><option key={s.id} value={s.id}>{s.nom}</option>)}</select></FormRow>
@@ -4046,7 +4042,7 @@ function EquipeTachesTaches({ taches, sites, employes, tacheEmployes, isAdminPre
     </Card>
    )}
    <Card>
-    <SectionHead title={`Tâches récurrentes (${taches.length})`} sub="Cliquez sur « Employés » pour gérer les affectations"/>
+    <SectionHead title={`Tâches récurrentes (${taches.length})`} info="Cliquez sur « Employés » pour gérer les affectations."/>
     {taches.length===0?(
      <div style={{padding:24,textAlign:"center",color:C.textLight,fontSize:13}}>Aucune tâche récurrente pour l'instant.</div>
     ):(
@@ -4078,7 +4074,7 @@ function EquipeTachesTaches({ taches, sites, employes, tacheEmployes, isAdminPre
    </Card>
    {expanded&&(
     <Card style={{padding:18,marginTop:16}}>
-     <div style={{fontSize:14,fontWeight:800,color:C.text,marginBottom:10}}>Employés assignés · {expanded.titre}</div>
+     <div style={{fontSize:15,fontWeight:900,color:C.text,marginBottom:10}}>Employés assignés · {expanded.titre}</div>
      <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
       {employes.map(e=>{
        const checked=employesOf(expanded.id).includes(e.id);
@@ -4280,11 +4276,8 @@ function EquipeTachesView({ client, isAdminPreview=false }) {
  ];
 
  return (
-  <div style={{padding:24}} className="fade-up">
-   <div style={{marginBottom:20}}>
-    <div style={{fontSize:18,fontWeight:900,color:C.text}}>Gestion d'équipe & Tâches</div>
-    <div style={{fontSize:12,color:C.textLight,marginTop:2}}>Sites, équipe et tâches récurrentes multi-sites</div>
-   </div>
+  <div style={OUTIL_PAGE} className="fade-up">
+   <EnTetePage title="Gestion d'équipe & Tâches" info="Sites, équipe et tâches récurrentes multi-sites, avec suivi des exécutions et historique."/>
    <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
     {ET_VUES.map(v=><Btn key={v.id} variant={vue===v.id?"primary":"ghost"} small onClick={()=>setVue(v.id)}>{v.label}</Btn>)}
    </div>
@@ -4380,26 +4373,22 @@ function PointageView({ client, isAdminPreview=false }) {
  };
 
  return (
-  <div style={{padding:24}} className="fade-up">
-   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12,marginBottom:20}}>
-    <div>
-     <div style={{fontSize:18,fontWeight:900,color:C.text}}>Pointage</div>
-     <div style={{fontSize:12,color:C.textLight,marginTop:2}}>Heures d'arrivée et de départ de votre équipe</div>
+  <div style={OUTIL_PAGE} className="fade-up">
+   <EnTetePage title="Pointage" info="Heures d'arrivée et de départ de l'équipe, comparées aux heures prévues au planning. Le pointage se fait le jour même." right={
+    <div style={{display:"inline-flex",alignItems:"center",gap:6,background:C.white,border:`1px solid ${C.border}`,borderRadius:100,padding:4}}>
+     <button aria-label="Semaine précédente" onClick={navigatePrev} style={{width:30,height:30,borderRadius:"50%",border:"none",background:C.bg,color:C.primary,fontWeight:900,cursor:"pointer"}}>‹</button>
+     <span style={{fontSize:13.5,fontWeight:900,color:C.text,minWidth:110,textAlign:"center"}}>{weekDays[0].getDate()}/{weekDays[0].getMonth()+1} – {weekEnd.getDate()}/{weekEnd.getMonth()+1}</span>
+     <button aria-label="Semaine suivante" onClick={navigateNext} style={{width:30,height:30,borderRadius:"50%",border:"none",background:C.bg,color:C.primary,fontWeight:900,cursor:"pointer"}}>›</button>
+     <button onClick={navigateToday} style={{border:"none",background:"transparent",color:C.primary,fontWeight:800,fontSize:12.5,cursor:"pointer",padding:"0 10px",fontFamily:"inherit"}}>Aujourd'hui</button>
     </div>
-    <div style={{display:"flex",alignItems:"center",gap:8}}>
-     <Btn variant="ghost" small onClick={navigatePrev}>‹</Btn>
-     <Btn variant="ghost" small onClick={navigateToday}>Aujourd'hui</Btn>
-     <span style={{fontSize:12,fontWeight:700,color:C.textMid}}>{weekDays[0].getDate()}/{weekDays[0].getMonth()+1} – {weekEnd.getDate()}/{weekEnd.getMonth()+1}</span>
-     <Btn variant="ghost" small onClick={navigateNext}>›</Btn>
-    </div>
-   </div>
-   <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:20}}>
+   }/>
+   <div style={{...grilleAuto(200),marginBottom:20}}>
     <KpiCard label="Heures cette semaine" value={`${Math.round(totalHeuresSemaine)}h`} sub={`sur ${heuresAttendues}h prévues`} color={C.primary}/>
     <KpiCard label="Pointés aujourd'hui" value={pointesAujourdhui} sub={`sur ${employes.length}`} color={C.green}/>
     <KpiCard label="Écart vs prévu" value={`${totalHeuresSemaine>=heuresAttendues?"+":""}${Math.round(totalHeuresSemaine-heuresAttendues)}h`} sub="cette semaine" color={totalHeuresSemaine>=heuresAttendues?C.green:C.orange}/>
    </div>
    <Card>
-    <SectionHead title="Semaine en cours" sub="Le pointage se fait le jour même · les autres jours affichent l'historique"/>
+    <SectionHead title="Semaine en cours" info="Le pointage se fait le jour même ; les autres jours affichent l'historique."/>
     {loading?(
      <div style={{padding:24,textAlign:"center",color:C.textLight,fontSize:13}}>Chargement...</div>
     ):employes.length===0?(
@@ -4488,15 +4477,15 @@ function calcAlertes(client, moisIdx, moisYear) {
 
   // ── Exploitation déficitaire (EBE) ou résultat négatif : une seule alerte pour un même problème
   if (kpis.ebe < 0) alerts.push({
-    level:"red", kpi:"Activité déficitaire ce mois-ci",
+    level:"red", kpi:"EBE négatif",
     current: fmt(kpis.ebe), threshold:"> 0 €",
-    msg:`Les achats, les charges et les salaires ont dépassé les ventes du mois (excédent d'exploitation : ${fmt(kpis.ebe)}, résultat : ${fmt(kpis.result)}).`,
+    msg:`Achats, charges externes et masse salariale dépassent le CA du mois (EBE : ${fmt(kpis.ebe)}, résultat net : ${fmt(kpis.result)}).`,
     action:"Deux leviers à regarder ensemble : la marge sur les ventes (prix, achats) et les charges. Un mois isolé peut venir de la saisonnalité ; c'est la répétition qui compte."
   });
   else if (kpis.result < 0) alerts.push({
-    level:"orange", kpi:"Résultat négatif",
+    level:"orange", kpi:"Résultat net négatif",
     current: fmt(kpis.result), threshold:"> 0 €",
-    msg:`L'activité dégage un excédent (${fmt(kpis.ebe)}), mais les amortissements, frais financiers ou éléments exceptionnels le font passer en perte (résultat : ${fmt(kpis.result)}).`,
+    msg:`EBE positif (${fmt(kpis.ebe)}), mais dotations, charges financières ou éléments exceptionnels font passer le résultat net en perte (${fmt(kpis.result)}).`,
     action:"Le poids des investissements et des emprunts est le point à examiner."
   });
 
@@ -4583,7 +4572,7 @@ function calcAlertes(client, moisIdx, moisYear) {
   if (tresoConfiguree && treso < 0) alerts.push({
     level:"red", kpi:"Trésorerie négative",
     current: fmt(treso), threshold:"> 0 €",
-    msg:`Votre trésorerie est négative (${fmt(treso)}) : les comptes sont à découvert.`,
+    msg:`Trésorerie nette négative (${fmt(treso)}) : comptes à découvert.`,
     action:`${client.advisorLabel||"NVM Finance"} peut vous aider à trouver un financement court terme : c'est à regarder ensemble sans attendre.`
   });
 
@@ -4592,7 +4581,7 @@ function calcAlertes(client, moisIdx, moisYear) {
   if (tresoConfiguree && treso >= 0 && treso < chargesMensuelles) alerts.push({
     level:"orange", kpi:"Trésorerie insuffisante",
     current: fmt(treso), threshold:`> ${fmt(Math.round(chargesMensuelles))} (1 mois)`,
-    msg:`Votre trésorerie (${fmt(treso)}) couvre moins d'un mois de charges (${fmt(Math.round(chargesMensuelles))}/mois). Marge de sécurité insuffisante.`,
+    msg:`Trésorerie (${fmt(treso)}) inférieure à un mois de charges décaissables (${fmt(Math.round(chargesMensuelles))}/mois).`,
     action:"Une réserve de 2 à 3 mois de charges donne de la marge face aux imprévus et aux décalages de paiement."
   });
 
@@ -4600,13 +4589,13 @@ function calcAlertes(client, moisIdx, moisYear) {
   if (chargeEmprunt > 0 && kpis.ca > 0) {
     const tauxEmp = chargeEmprunt/kpis.ca*100;
     if (tauxEmp > 35) alerts.push({
-      level:"red", kpi:"Charge d'emprunts critique",
+      level:"red", kpi:"Service de la dette critique",
       current: `${Math.round(tauxEmp)}% du CA`, threshold:"< 25% du CA",
       msg:`Vos remboursements d'emprunts représentent ${Math.round(tauxEmp)}% de votre CA mensuel. C'est un niveau critique.`,
       action:"Une renégociation ou un rééchelonnement des emprunts peut être étudié avec votre banque."
     });
     else if (tauxEmp > 25) alerts.push({
-      level:"orange", kpi:"Charge d'emprunts élevée",
+      level:"orange", kpi:"Service de la dette élevé",
       current: `${Math.round(tauxEmp)}% du CA`, threshold:"< 25% du CA",
       msg:`Vos remboursements d'emprunts représentent ${Math.round(tauxEmp)}% de votre CA mensuel.`,
       action:"Un ratio à suivre : au-delà de 35 %, il devient critique."
@@ -4885,7 +4874,7 @@ function RapportIA({ clients, moisIdx:moisIdxApp, moisYear:moisYearApp, onSaveIm
   return (
     <div style={{padding:24}} className="fade-up">
       <Card>
-        <SectionHead title="Generation de rapport IA" sub="Rapport de gestion mensuel genere automatiquement"/>
+        <SectionHead title="Génération du rapport IA" info="Rapport de gestion mensuel généré automatiquement à partir des chiffres du mois."/>
         <div style={{padding:16,display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
           <select value={selId} onChange={e=>{setSelId(Number(e.target.value));setText("");setPublie("");}} className="inp" style={{width:"auto"}}>{clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>
           <span style={{fontSize:13,color:C.textMid,fontWeight:700}}>{keyLabel(moisKeyR)}{contexteFec?" · comptabilité (FEC)":""}</span>
@@ -5395,7 +5384,7 @@ export default function App() {
 
   const visibleClients = previewCabinet ? clients.filter(c=>c.cabinet_id===previewCabinet.id) : clients;
   const ADMIN_TITLES={clients:`Portefeuille clients (${visibleClients.length})`,acces:"Accès & mots de passe clients",saisie:"Imports : comptabilité (FEC) et fichiers CSV",financier:"Donnees financieres",alertes:"Centre d'alertes",rapports:"Rapports IA",blog:"Blog",cabinets:"Cabinets partenaires"};
-  const CLIENT_TITLES={dashboard:"Synthèse du mois",import:"Importer mes données",alertes:"Points d'attention",ventes:"Ventes",achats:"Achats et marge",charges:"Charges",salaires:"Masse salariale",creances:"Créances clients",dettes:"Dettes fournisseurs",resultat:"Compte de résultat",bilan:"Bilan et BFR",tva:"TVA",tresorerie:"Trésorerie",emprunts:"Emprunts",investissements:"Investissements",roi:"Simulations",embauche:"Simulations",simulations:"Simulations",budget:"Budget",actions:"Plan d'actions",prevision:"Prévision de trésorerie",is:"Impôt sur les sociétés",catalogue:"Rentabilité par produit", comparaison:"Comparer deux périodes", previsionnel:"Budget", planning:"Planning & équipe", conges:"Congés & absences", notesfrais:"Notes de frais", taches:"Tâches", equipetaches:"Gestion d'équipe & Tâches", pointage:"Pointage", stock:"Mon stock"};
+  const CLIENT_TITLES={dashboard:"Synthèse du mois",import:"Importer mes données",alertes:"Points d'attention",ventes:"Chiffre d'affaires",achats:"Achats et marge brute",charges:"Frais généraux",salaires:"Masse salariale",creances:"Créances clients",dettes:"Dettes fournisseurs",resultat:"Compte de résultat · SIG",bilan:"Bilan de gestion",tva:"TVA",tresorerie:"Trésorerie",emprunts:"Emprunts",investissements:"Investissements",roi:"Simulations",embauche:"Simulations",simulations:"Simulations",budget:"Budget prévisionnel",actions:"Plan d'actions",prevision:"Plan de trésorerie",previsionnel3:"Prévisionnel à 3 ans",is:"Impôt sur les sociétés",catalogue:"Rentabilité par produit", comparaison:"Analyse des écarts", previsionnel:"Budget prévisionnel", planning:"Planning & équipe", conges:"Congés & absences", notesfrais:"Notes de frais", taches:"Tâches", equipetaches:"Gestion d'équipe & Tâches", pointage:"Pointage", stock:"Mon stock"};
 
   // Modal credentials nouveau client (admin)
   const CredentialsModal = newClientCredentials ? (

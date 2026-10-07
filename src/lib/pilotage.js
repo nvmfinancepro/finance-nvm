@@ -471,16 +471,16 @@ export function fecAlertes(client, key) {
     if (vieux > 1000 && part > 15) {
       const top = cli.list.map((t) => ({ l: t.l, v: t.items.filter((it) => it.age > 60).reduce((s, it) => s + it.m, 0) })).sort((a, b) => b.v - a.v)[0];
       out.push({
-        level: part > 30 ? "red" : "orange", kpi: "Factures clients anciennes", current: eurTxt(vieux), threshold: "< 15 % des sommes dues",
-        msg: `${eurTxt(vieux)} de factures clients ont plus de 60 jours, soit ${pctTxt(part)} de ce que vos clients vous doivent${top && top.v > 0 ? ` (dont ${top.l} : ${eurTxt(top.v)})` : ""}.`,
+        level: part > 30 ? "red" : "orange", kpi: "Créances échues > 60 jours", current: eurTxt(vieux), threshold: "< 15 % de l'encours",
+        msg: `${eurTxt(vieux)} de créances clients ont plus de 60 jours, soit ${pctTxt(part)} de l'encours${top && top.v > 0 ? ` (dont ${top.l} : ${eurTxt(top.v)})` : ""}.`,
         action: "Relancer en priorité les plus gros montants libère de la trésorerie sans rien changer à l'activité.",
       });
     }
   }
   const r = ratiosAt(client, key);
   if (r?.dso != null && r.dso > 60) out.push({
-    level: r.dso > 90 ? "red" : "orange", kpi: "Clients longs à payer", current: `${Math.round(r.dso)} jours`, threshold: "< 60 jours",
-    msg: `Vos clients vous paient en ${Math.round(r.dso)} jours en moyenne. Chaque jour gagné représente environ ${eurTxt(r.caAnnuel / 365)} de trésorerie en plus.`,
+    level: r.dso > 90 ? "red" : "orange", kpi: "DSO élevé", current: `${Math.round(r.dso)} jours`, threshold: "< 60 jours",
+    msg: `DSO de ${Math.round(r.dso)} jours. Chaque jour gagné libère environ ${eurTxt(r.caAnnuel / 365)} de trésorerie.`,
     action: "Des conditions de paiement plus courtes, un acompte à la commande ou une relance systématique à l'échéance font baisser ce délai.",
   });
   const ytd = ytdKeys(idx, key);
@@ -490,14 +490,14 @@ export function fecAlertes(client, key) {
     const pl = plOver(idx, ytd), pl1 = plOver(idx, n1);
     const evoCA = s1.ca > 0 ? (s.ca / s1.ca - 1) * 100 : null;
     if (evoCA != null && evoCA < -10) out.push({
-      level: evoCA < -20 ? "red" : "orange", kpi: "Activité en recul", current: pctTxt(evoCA), threshold: "vs l'an dernier",
-      msg: `Depuis le début de l'exercice, le chiffre d'affaires est inférieur de ${pctTxt(-evoCA)} à la même période l'an dernier (${eurTxt(s.ca)} contre ${eurTxt(s1.ca)}).`,
+      level: evoCA < -20 ? "red" : "orange", kpi: "CA en recul", current: pctTxt(evoCA), threshold: "vs N-1",
+      msg: `CA cumul exercice inférieur de ${pctTxt(-evoCA)} à N-1 sur la même période (${eurTxt(s.ca)} contre ${eurTxt(s1.ca)}).`,
       action: "Regarder ensemble quels clients ou quelles prestations expliquent l'écart permet de cibler les relances commerciales.",
     });
     const t = s.ca > 0 ? (s.margeBrute / s.ca) * 100 : null, t1 = s1.ca > 0 ? (s1.margeBrute / s1.ca) * 100 : null;
     if (t != null && t1 != null && t1 - t > 3) out.push({
-      level: t1 - t > 6 ? "red" : "orange", kpi: "Taux de marge en baisse", current: pctTxt(t), threshold: `${pctTxt(t1)} l'an dernier`,
-      msg: `Pour 100 € vendus, il reste ${Math.round(t)} € après les achats, contre ${Math.round(t1)} € l'an dernier. Sur l'exercice, cela représente environ ${eurTxt((t1 - t) / 100 * s.ca)}.`,
+      level: t1 - t > 6 ? "red" : "orange", kpi: "Taux de marge brute en baisse", current: pctTxt(t), threshold: `${pctTxt(t1)} en N-1`,
+      msg: `Taux de marge brute de ${pctTxt(t)} contre ${pctTxt(t1)} en N-1, soit environ ${eurTxt((t1 - t) / 100 * s.ca)} de marge en moins sur l'exercice.`,
       action: "Les prix d'achat ont peut-être augmenté plus vite que vos prix de vente : c'est le premier levier à vérifier.",
     });
     const evoExt = pl1.chargesExternes > 0 ? (pl.chargesExternes / pl1.chargesExternes - 1) * 100 : null;
@@ -506,7 +506,7 @@ export function fecAlertes(client, key) {
         .map((a) => ({ l: a.l, d: a.v - (pl1.accounts.get(a.c)?.v || 0) })).sort((a, b) => b.d - a.d)[0];
       out.push({
         level: "orange", kpi: "Charges externes en hausse", current: `+${pctTxt(evoExt)}`, threshold: `CA : ${evoCA >= 0 ? "+" : ""}${pctTxt(evoCA || 0)}`,
-        msg: `Vos charges externes ont augmenté de ${pctTxt(evoExt)} sur un an, plus vite que votre activité${hausse && hausse.d > 0 ? `. La plus forte hausse : ${hausse.l} (+${eurTxt(hausse.d)})` : ""}.`,
+        msg: `Charges externes en hausse de ${pctTxt(evoExt)} vs N-1, plus vite que le CA${hausse && hausse.d > 0 ? `. La plus forte hausse : ${hausse.l} (+${eurTxt(hausse.d)})` : ""}.`,
         action: "Une revue des contrats et abonnements (loyer, assurances, logiciels, sous-traitance) permet souvent de récupérer quelques points.",
       });
     }
@@ -527,19 +527,19 @@ export function fluxTresorerie(client, keys, debut, fin) {
     fournisseurs: d("fournisseurs"), fiscalSocial: d("fiscalSocial"), autresDettes: d("autresDettes") + d("pca"),
   };
   const lignes = [
-    { id: "rn", label: "Résultat de la période", v: s.rn, aide: "Le bénéfice (ou la perte) dégagé sur la période." },
-    { id: "amort", label: "Amortissements et provisions", v: amort, aide: "Des charges comptables qui ne sortent pas de la banque : on les rajoute." },
-    { id: "bfr", label: "Variation du besoin en fonds de roulement", v: -(fin.bfr - debut.bfr), aide: "L'argent pris (ou libéré) par les décalages de paiement : clients, fournisseurs, stocks, TVA, URSSAF.", detail: [
-      { label: "Clients (factures non encore payées)", v: bfr.clients },
+    { id: "rn", label: "Résultat net", v: s.rn, aide: "" },
+    { id: "amort", label: "Dotations nettes", v: amort, aide: "Charges calculées non décaissées, réintégrées pour obtenir la CAF." },
+    { id: "bfr", label: "Variation du BFR", v: -(fin.bfr - debut.bfr), aide: "Trésorerie consommée (ou libérée) par les décalages d'encaissement et de paiement.", detail: [
+      { label: "Créances clients", v: bfr.clients },
       { label: "Stocks", v: bfr.stocks },
-      { label: "Autres créances (TVA déductible, avances…)", v: bfr.autresCreances },
-      { label: "Fournisseurs", v: bfr.fournisseurs },
-      { label: "Dettes fiscales et sociales (TVA, URSSAF, salaires)", v: bfr.fiscalSocial },
+      { label: "Autres créances", v: bfr.autresCreances },
+      { label: "Dettes fournisseurs", v: bfr.fournisseurs },
+      { label: "Dettes fiscales et sociales", v: bfr.fiscalSocial },
       { label: "Autres dettes", v: bfr.autresDettes },
     ] },
-    { id: "invest", label: "Investissements", v: -(d("immoNet") + amort) + d("provisions"), aide: "Achats de matériel, véhicules, logiciels… nets des cessions." },
-    { id: "emprunts", label: "Emprunts et comptes courants", v: d("dettesFin") + d("associes"), aide: "Nouveaux emprunts et apports en compte courant, moins les remboursements." },
-    { id: "capitaux", label: "Capital et distributions", v: d("capitauxPropres") - s.rn, aide: "Augmentations de capital, moins les dividendes versés." },
+    { id: "invest", label: "Investissements nets", v: -(d("immoNet") + amort) + d("provisions"), aide: "Acquisitions d'immobilisations nettes des cessions." },
+    { id: "emprunts", label: "Financement externe", v: d("dettesFin") + d("associes"), aide: "Nouveaux emprunts et apports en compte courant, nets des remboursements." },
+    { id: "capitaux", label: "Capitaux propres", v: d("capitauxPropres") - s.rn, aide: "Augmentations de capital nettes des dividendes versés." },
   ];
   const variation = fin.tresoNette - debut.tresoNette;
   const ecart = variation - lignes.reduce((t, l) => t + l.v, 0);

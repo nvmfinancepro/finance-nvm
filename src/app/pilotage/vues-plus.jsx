@@ -4,13 +4,14 @@
 // rentabilité par produit, emprunts, investissements, trésorerie estimée et
 // points d'attention. Mêmes données pour tous les clients (src/lib/donnees.js).
 import { useState } from "react";
-import { C, Card, Btn } from "@/app/charte";
+import { C, Card, Btn, Info } from "@/app/charte";
 import * as P from "@/lib/pilotage";
 import { dataIndex, produitsSur } from "@/lib/donnees";
 import { LIGNES_BUDGET, ebeDe, lireBudget, budgetMois, realiseMois, proposerBudget, repartir } from "@/lib/budget";
 import { lireActions, sauverActions, nouvelleAction } from "@/lib/actions";
 import { mensualiteEmprunt, mensualiteHorsAssurance, capitalRestant, echeancesPayees, amortMensuel, moisAmortis, vnc } from "@/lib/estimations";
-import { VIZ, eur, pctFr, Courbe, Lignes, Variation, PastilleStatut, STATUT } from "@/app/pilotage/graphiques";
+import { VIZ, eur, pctFr, Courbe, Lignes, Variation, Legende, PastilleStatut, STATUT } from "@/app/pilotage/graphiques";
+import { prolongerTresorerie } from "@/lib/prevision";
 import { NavMois, Titre } from "@/app/pilotage/synthese";
 import { Page, EnTete, ChoixPeriode, CarteTitre, Chiffre, Th, grid, num, fmtDate, LIGNES_SIG, HorsPeriode, PRODUITS } from "@/app/pilotage/vues";
 
@@ -54,7 +55,7 @@ export function BudgetView({ client, moisIdx, moisYear, onSaveDonnees }) {
       <button aria-label="Année suivante" onClick={() => { setAnnee(annee + 1); setMode(null); setBrouillon(null); }} style={{ width: 30, height: 30, borderRadius: "50%", border: "none", background: C.bg, color: C.primary, fontWeight: 900, cursor: "pointer" }}>›</button>
     </div>
   );
-  const onglets = budget || brouillon ? <ChoixPeriode value={vue} onChange={(v) => { setMode(v); if (v === "saisie" && !brouillon) setBrouillon(budget); }} options={[["suivi", "Réel vs budget"], ["saisie", peutModifier ? "Construire le budget" : "Voir le budget"]]} /> : null;
+  const onglets = budget || brouillon ? <ChoixPeriode value={vue} onChange={(v) => { setMode(v); if (v === "saisie" && !brouillon) setBrouillon(budget); }} options={[["suivi", "Réalisé vs budget"], ["saisie", peutModifier ? "Saisie du budget" : "Budget détaillé"]]} /> : null;
 
   const enregistrer = async () => {
     const rows = [{ ...Object.fromEntries(LIGNES_BUDGET.map((l) => [l.id, brouillon[l.id]])), majLe: new Date().toLocaleDateString("fr-FR") }];
@@ -73,19 +74,18 @@ export function BudgetView({ client, moisIdx, moisYear, onSaveDonnees }) {
     const setTotal = (ligne, total) => setBrouillon((x) => ({ ...x, [ligne]: repartir(total, x[ligne].some((v) => v > 0) ? x[ligne] : x.ca) }));
     return (
       <Page>
-        <EnTete title={`Budget ${annee}`} sub="Vos objectifs mois par mois, du chiffre d'affaires à l'excédent d'exploitation. Ils servent ensuite à suivre le réel et à anticiper la fin d'année." nav={navAnnee} right={onglets} />
+        <EnTete title={`Budget prévisionnel ${annee}`} sub="Compte de résultat prévisionnel mensuel jusqu'à l'EBE. Sert au suivi du réalisé vs budget et au calcul de l'atterrissage." nav={navAnnee} right={onglets} />
         {peutModifier && (
           <Card style={{ padding: "18px 22px" }}>
-            <div style={{ fontSize: 15, fontWeight: 900, color: C.text, marginBottom: 4 }}>{b ? "Repartir d'une proposition" : "Construire le budget en un clic"}</div>
-            <div style={{ fontSize: 12.5, color: C.textMid, fontWeight: 600, marginBottom: 14, lineHeight: 1.55 }}>On part des mêmes mois de l'an dernier (pour garder la saisonnalité), on applique vos hypothèses, puis vous ajustez chaque case.</div>
+            <div style={{ fontSize: 15, fontWeight: 900, color: C.text, marginBottom: 14, display: "flex", alignItems: "center" }}>{b ? "Nouvelle proposition" : "Générer le budget"}<Info>Base : mêmes mois N-1 (saisonnalité conservée) ajustés des hypothèses, puis saisie libre case par case.</Info></div>
             <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "flex-end" }}>
-              {[["ca", "Évolution du chiffre d'affaires"], ["charges", "Évolution des charges"], ["salaires", "Évolution des salaires"]].map(([k, l]) => (
+              {[["ca", "Évolution CA"], ["charges", "Évolution charges externes"], ["salaires", "Évolution masse salariale"]].map(([k, l]) => (
                 <label key={k} style={{ display: "flex", flexDirection: "column", gap: 5, fontSize: 12, fontWeight: 800, color: C.textMid }}>
                   {l}
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><input type="number" step="1" value={hausses[k]} onChange={(e) => setHausses({ ...hausses, [k]: Number(e.target.value) })} className="inp" style={{ width: 90 }} /> %</span>
                 </label>
               ))}
-              <Btn onClick={proposer}>Proposer un budget</Btn>
+              <Btn onClick={proposer}>Générer</Btn>
             </div>
             {msg && <div style={{ fontSize: 12.5, fontWeight: 700, color: C.green, marginTop: 10 }}>{msg}</div>}
           </Card>
@@ -99,7 +99,7 @@ export function BudgetView({ client, moisIdx, moisYear, onSaveDonnees }) {
                 <tbody>
                   {LIGNES_BUDGET.map((l) => (
                     <tr key={l.id} style={{ borderTop: `1px solid ${C.borderLight}` }}>
-                      <td style={{ padding: "8px 12px" }}><div style={{ fontSize: 13, fontWeight: 800, color: C.text }}>{l.label}</div><div style={{ fontSize: 11, color: C.textLight, fontWeight: 600 }}>{l.aide}</div></td>
+                      <td style={{ padding: "8px 12px" }}><div style={{ fontSize: 13, fontWeight: 800, color: C.text, display: "flex", alignItems: "center", whiteSpace: "nowrap" }}>{l.label}<Info>{l.aide}</Info></div></td>
                       {b[l.id].map((v, i) => (
                         <td key={i} style={{ padding: "4px 3px" }}>
                           <input type="number" step="100" value={v} disabled={!peutModifier} onChange={(e) => setCase(l.id, i, Number(e.target.value) || 0)} aria-label={`${l.label} ${court(moisKeys[i])}`}
@@ -113,7 +113,7 @@ export function BudgetView({ client, moisIdx, moisYear, onSaveDonnees }) {
                     </tr>
                   ))}
                   <tr style={{ borderTop: `2px solid ${C.text}`, background: C.bgLight }}>
-                    <td style={{ padding: "10px 12px", fontSize: 13.5, fontWeight: 900, color: C.text }}>Excédent d'exploitation</td>
+                    <td style={{ padding: "10px 12px", fontSize: 13.5, fontWeight: 900, color: C.text }}>EBE</td>
                     {moisKeys.map((k, i) => { const v = ebeDe(budgetMois(b, i)); return <td key={k} style={td({ fontWeight: 900, color: v < 0 ? C.red : C.text, fontSize: 12.5 })}>{eur(v)}</td>; })}
                     <td style={td({ fontWeight: 900 })}>{eur(moisKeys.reduce((s, k, i) => s + ebeDe(budgetMois(b, i)), 0))}</td>
                   </tr>
@@ -124,7 +124,7 @@ export function BudgetView({ client, moisIdx, moisYear, onSaveDonnees }) {
               <div style={{ padding: "14px 22px", display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", borderTop: `1px solid ${C.borderLight}` }}>
                 <Btn onClick={enregistrer}>Enregistrer le budget</Btn>
                 {budget && <Btn variant="ghost" onClick={() => { setBrouillon(null); setMode("suivi"); }}>Annuler</Btn>}
-                <span style={{ fontSize: 12, color: C.textLight, fontWeight: 600 }}>Astuce : modifier le total de l'année le répartit sur les mois en gardant la saisonnalité.</span>
+                <span style={{ fontSize: 12, color: C.textLight, fontWeight: 600 }}>Le total annuel saisi est réparti selon la saisonnalité de la ligne.</span>
               </div>
             )}
           </Card>
@@ -147,27 +147,27 @@ export function BudgetView({ client, moisIdx, moisYear, onSaveDonnees }) {
   const ecartTon = (e, produit = true) => (Math.abs(e) < 1 ? C.textMid : (e > 0) === produit ? C.green : C.red);
   return (
     <Page>
-      <EnTete title={`Budget ${annee}`} sub={n ? `Le réel de ${n} mois (${court(moisKeys[0])} → ${court(moisKeys[n - 1])}) comparé à vos objectifs, et la projection de fin d'année.` : "Aucun mois réel pour cette année : le suivi commencera avec les premiers chiffres."} nav={navAnnee} right={onglets} />
+      <EnTete title={`Budget prévisionnel ${annee}`} detail={n ? `Réalisé ${court(moisKeys[0])} → ${court(moisKeys[n - 1])} (${n} mois)` : "Aucun mois réalisé sur l'année"} sub="Réalisé vs budget en cumul, et atterrissage = réalisé + budget des mois restants." nav={navAnnee} right={onglets} />
       {msg && <Encart>{msg}</Encart>}
       <div style={grid(210)}>
-        <Chiffre label="Chiffre d'affaires cumulé" value={eur(caR)} sub={`Budget sur la période : ${eur(caB)}`} delta={n > 0 && <Variation cur={caR} prev={caB} label="vs budget" />} />
-        <Chiffre label="Excédent d'exploitation cumulé" value={eur(ebeR)} sub={`Budget sur la période : ${eur(ebeB)}`} delta={n > 0 && <Variation cur={ebeR} prev={ebeB} label="vs budget" />} />
-        <Chiffre label="Atterrissage chiffre d'affaires" value={eur(attCA)} sub={`Objectif annuel : ${eur(caAn)}`} statut={!n ? null : attCA >= caAn ? "ok" : attCA >= caAn * 0.95 ? "warn" : "bad"} aide="Le réel des mois passés plus le budget des mois restants." />
-        <Chiffre label="Atterrissage excédent d'exploitation" value={eur(attEBE)} sub={`Objectif annuel : ${eur(ebeAn)}`} statut={!n ? null : attEBE >= ebeAn ? "ok" : attEBE >= ebeAn - Math.abs(ebeAn) * 0.1 ? "warn" : "bad"} aide="Ce que l'année dégagera si les mois restants tiennent le budget." />
+        <Chiffre label="CA réalisé · cumul" value={eur(caR)} sub={`Budget : ${eur(caB)}`} delta={n > 0 && <Variation cur={caR} prev={caB} label="vs budget" />} />
+        <Chiffre label="EBE réalisé · cumul" value={eur(ebeR)} sub={`Budget : ${eur(ebeB)}`} delta={n > 0 && <Variation cur={ebeR} prev={ebeB} label="vs budget" />} />
+        <Chiffre label="Atterrissage CA" value={eur(attCA)} sub={`Budget annuel : ${eur(caAn)}`} statut={!n ? null : attCA >= caAn ? "ok" : attCA >= caAn * 0.95 ? "warn" : "bad"} aide="Réalisé des mois écoulés + budget des mois restants." />
+        <Chiffre label="Atterrissage EBE" value={eur(attEBE)} sub={`Budget annuel : ${eur(ebeAn)}`} statut={!n ? null : attEBE >= ebeAn ? "ok" : attEBE >= ebeAn - Math.abs(ebeAn) * 0.1 ? "warn" : "bad"} aide="EBE réalisé + EBE budgété des mois restants." />
       </div>
       <Card>
-        <CarteTitre title="Chiffre d'affaires cumulé : réel et budget" sub="Quand la courbe du réel passe sous celle du budget, le retard se creuse." />
+        <CarteTitre title="CA cumulé · réalisé vs budget" />
         <div style={{ padding: "12px 18px 16px" }}>
-          <Lignes labels={moisKeys.map(court)} keys={moisKeys.map((k) => P.keyLabel(k))} series={[{ label: "Budget cumulé", color: VIZ.achats, values: cumulCA.map((x) => x.b) }, { label: "Réel cumulé", color: VIZ.serie, values: cumulCA.map((x) => x.r) }]} />
+          <Lignes labels={moisKeys.map(court)} keys={moisKeys.map((k) => P.keyLabel(k))} series={[{ label: "Budget", color: VIZ.achats, values: cumulCA.map((x) => x.b) }, { label: "Réalisé", color: VIZ.serie, values: cumulCA.map((x) => x.r) }]} />
         </div>
       </Card>
       <Card>
-        <CarteTitre title="Par poste, sur les mois écoulés" sub="Un écart vert est favorable au résultat, un écart rouge le pénalise." />
+        <CarteTitre title="Écarts par poste · cumul" sub="Écart favorable au résultat en vert, défavorable en rouge." />
         <div style={{ overflowX: "auto", padding: "8px 0 6px" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
-            <thead><tr><Th>&nbsp;</Th><Th right>Réel</Th><Th right>Budget</Th><Th right>Écart</Th><Th right>Atterrissage</Th><Th right>Budget annuel</Th></tr></thead>
+            <thead><tr><Th>&nbsp;</Th><Th right>Réalisé</Th><Th right>Budget</Th><Th right>Écart</Th><Th right>Atterrissage</Th><Th right>Budget annuel</Th></tr></thead>
             <tbody>
-              {[...LIGNES_BUDGET, { id: "ebe", label: "Excédent d'exploitation", produit: true, total: true }].map((l) => {
+              {[...LIGNES_BUDGET, { id: "ebe", label: "EBE", produit: true, total: true }].map((l) => {
                 const r = l.id === "ebe" ? ebeR : cumul(reelLigne(l.id), n);
                 const bb = l.id === "ebe" ? ebeB : cumul(budget[l.id], n);
                 const an = l.id === "ebe" ? ebeAn : cumul(budget[l.id], 12);
@@ -188,10 +188,10 @@ export function BudgetView({ client, moisIdx, moisYear, onSaveDonnees }) {
         </div>
       </Card>
       <Card>
-        <CarteTitre title="Mois par mois" sub="Chiffre d'affaires et excédent d'exploitation, réel face au budget." />
+        <CarteTitre title="Suivi mensuel" />
         <div style={{ overflowX: "auto", padding: "8px 0 6px" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
-            <thead><tr><Th>Mois</Th><Th right>CA réel</Th><Th right>CA budget</Th><Th right>Écart</Th><Th right>EBE réel</Th><Th right>EBE budget</Th><Th right>Écart</Th></tr></thead>
+            <thead><tr><Th>Mois</Th><Th right>CA réalisé</Th><Th right>CA budget</Th><Th right>Écart</Th><Th right>EBE réalisé</Th><Th right>EBE budget</Th><Th right>Écart</Th></tr></thead>
             <tbody>
               {moisKeys.map((k, i) => {
                 const r = reel[i];
@@ -224,7 +224,7 @@ export function Comparaison({ client, moisIdx, moisYear, setMoisIdx, setMoisKey 
   const idx = dataIndex(client);
   const key = P.monthKey(moisIdx, moisYear);
   const nav = <NavMois moisIdx={moisIdx} moisYear={moisYear} setMoisIdx={setMoisIdx} />;
-  if (!idx.months.has(key)) return <HorsPeriode title="Comparer deux périodes" idx={idx} keyM={key} setMoisKey={setMoisKey} nav={nav} />;
+  if (!idx.months.has(key)) return <HorsPeriode title="Analyse des écarts" idx={idx} keyM={key} setMoisKey={setMoisKey} nav={nav} />;
   const ytd = P.ytdKeys(idx, key);
   const trim = [P.shiftKey(key, -2), P.shiftKey(key, -1), key];
   const defs = {
@@ -251,19 +251,19 @@ export function Comparaison({ client, moisIdx, moisYear, setMoisIdx, setMoisKey 
   const ecartRN = sA.rn - sB.rn;
   return (
     <Page>
-      <EnTete title="Comparer deux périodes" sub="Ce qui a changé, et surtout pourquoi : l'écart de résultat décomposé poste par poste." nav={nav}
-        right={<ChoixPeriode value={preset} onChange={setPreset} options={[["mois_n1", "Mois vs l'an dernier"], ["mois_prec", "Mois vs mois précédent"], ["cumul_n1", "Exercice vs l'an dernier"], ["trimestre", "3 derniers mois vs 3 précédents"]]} />} />
+      <EnTete title="Analyse des écarts" detail={`${d.la} vs ${d.lb}`} sub="Comparaison de deux périodes et décomposition de l'écart de résultat par poste." nav={nav}
+        right={<ChoixPeriode value={preset} onChange={setPreset} options={[["mois_n1", "M vs N-1"], ["mois_prec", "M vs M-1"], ["cumul_n1", "Cumul vs N-1"], ["trimestre", "T vs T-1"]]} />} />
       {manque > 0 && <Encart ton="warn">{manque === d.b.length ? "Pas de données pour la période de comparaison." : `${manque} mois manquent dans la période de comparaison : l'écart est surévalué.`}</Encart>}
       <div style={grid(200)}>
-        {[["Chiffre d'affaires", sA.ca, sB.ca], ["Marge brute", sA.margeBrute, sB.margeBrute], ["Excédent d'exploitation", sA.ebe, sB.ebe], ["Résultat", sA.rn, sB.rn]].map(([l, a, b]) => (
-          <Chiffre key={l} label={l} value={eur(a)} sub={`${d.lb} : ${eur(b)}`} delta={<Variation cur={a} prev={b} label={`vs ${d.lb}`} />} />
+        {[["CA HT", sA.ca, sB.ca], ["Marge brute", sA.margeBrute, sB.margeBrute], ["EBE", sA.ebe, sB.ebe], ["Résultat net", sA.rn, sB.rn]].map(([l, a, b]) => (
+          <Chiffre key={l} label={l} value={eur(a)} sub={`Référence : ${eur(b)}`} delta={<Variation cur={a} prev={b} label="vs référence" />} />
         ))}
       </div>
       <div style={grid(440)}>
         <Card>
-          <CarteTitre title="Pourquoi le résultat a bougé" sub={`Résultat ${signe(ecartRN)} entre ${d.lb} et ${d.la}. Les postes qui expliquent l'écart :`} />
+          <CarteTitre title="Écarts de résultat par poste" detail={`Écart de résultat net : ${signe(ecartRN)}`} />
           <div style={{ padding: "12px 22px 18px", display: "flex", flexDirection: "column", gap: 14 }}>
-            {[["Ce qui a amélioré le résultat", plus, C.green], ["Ce qui l'a pénalisé", moins, C.red]].map(([t, list, col]) => list.length > 0 && (
+            {[["Écarts favorables", plus, C.green], ["Écarts défavorables", moins, C.red]].map(([t, list, col]) => list.length > 0 && (
               <div key={t}>
                 <div style={{ fontSize: 12.5, fontWeight: 900, color: C.text, marginBottom: 6 }}>{t}</div>
                 {list.map((x) => (
@@ -274,7 +274,7 @@ export function Comparaison({ client, moisIdx, moisYear, setMoisIdx, setMoisKey 
                 ))}
               </div>
             ))}
-            {!plus.length && !moins.length && <div style={{ fontSize: 13, color: C.textLight }}>Pas d'écart notable.</div>}
+            {!plus.length && !moins.length && <div style={{ fontSize: 13, color: C.textLight }}>Aucun écart significatif.</div>}
           </div>
         </Card>
         <Card>
@@ -309,10 +309,9 @@ function Curseur({ label, value, onChange, min, max, step, unite, aide }) {
   return (
     <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <span style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 13, fontWeight: 800, color: C.text }}>
-        {label}<span style={{ ...num, color: value === 0 ? C.textLight : value > 0 ? C.primary : C.orange }}>{value > 0 ? "+" : ""}{unite === "€" ? eur(value) : `${value} %`}{unite === "€" ? " / mois" : ""}</span>
+        <span style={{ display: "inline-flex", alignItems: "center" }}>{label}<Info>{aide}</Info></span><span style={{ ...num, color: value === 0 ? C.textLight : value > 0 ? C.primary : C.orange }}>{value > 0 ? "+" : ""}{unite === "€" ? eur(value) : `${value} %`}{unite === "€" ? " / mois" : ""}</span>
       </span>
       <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} style={{ accentColor: C.primary }} />
-      {aide && <span style={{ fontSize: 11.5, color: C.textLight, fontWeight: 600 }}>{aide}</span>}
     </label>
   );
 }
@@ -338,17 +337,17 @@ export function Simulations({ client, moisIdx, moisYear, roi, embauche }) {
   const pointMort = (x) => { const tx = x.ca > 0 ? 1 - x.achats / x.ca : 0; return tx > 0 ? (x.externes + x.personnel + x.autres) / tx : null; };
   const dE = ebe(sc) - ebe(base);
   const levier = (k) => { const x = { ...base, ca: base.ca * (k === "prix" || k === "volume" ? 1.01 : 1), achats: base.achats * (k === "volume" ? 1.01 : k === "achats" ? 0.99 : 1) }; return ebe(x) - ebe(base); };
-  const tabs = <ChoixPeriode value={onglet} onChange={setOnglet} options={[["etsi", "Et si…"], ["roi", "Un investissement"], ["embauche", "Une embauche"]]} />;
-  if (onglet === "roi") return <Page><EnTete title="Simulations" sub="Mesurer l'effet d'une décision avant de la prendre." right={tabs} />{roi}</Page>;
-  if (onglet === "embauche") return <Page><EnTete title="Simulations" sub="Mesurer l'effet d'une décision avant de la prendre." right={tabs} />{embauche}</Page>;
+  const tabs = <ChoixPeriode value={onglet} onChange={setOnglet} options={[["etsi", "Scénarios"], ["roi", "Investissement"], ["embauche", "Embauche"]]} />;
+  if (onglet === "roi") return <Page><EnTete title="Simulations" sub="Mesure de l'impact d'une décision avant de l'engager." right={tabs} />{roi}</Page>;
+  if (onglet === "embauche") return <Page><EnTete title="Simulations" sub="Mesure de l'impact d'une décision avant de l'engager." right={tabs} />{embauche}</Page>;
   return (
     <Page>
-      <EnTete title="Simulations" sub={ttm.length ? `Point de départ : vos ${ttm.length} derniers mois${ttm.length < 12 ? ", ramenés à l'année" : ""} (${court(ttm[0])} → ${court(fin)}). Bougez les curseurs : tout se recalcule.` : "Les simulations utilisent vos derniers mois d'activité : elles s'activent dès les premiers chiffres importés."} right={tabs} />
+      <EnTete title="Simulations" detail={ttm.length ? `Base : ${ttm.length} mois glissants${ttm.length < 12 ? " annualisés" : ""} (${court(ttm[0])} → ${court(fin)})` : "Base indisponible : aucun mois importé"} sub="Analyse de sensibilité : impact annuel des leviers sur l'EBE et le point mort." right={tabs} />
       {ttm.length > 0 && (
         <>
           <div style={grid(420)}>
             <Card style={{ padding: "18px 22px", display: "flex", flexDirection: "column", gap: 18 }}>
-              <div style={{ fontSize: 15, fontWeight: 900, color: C.text }}>Vos décisions</div>
+              <div style={{ fontSize: 15, fontWeight: 900, color: C.text }}>Leviers</div>
               <Curseur label="Prix de vente" value={lev.prix} min={-20} max={20} step={1} unite="%" onChange={(v) => setLev({ ...lev, prix: v })} aide="Même volume vendu, prix augmentés ou baissés." />
               <Curseur label="Volume vendu" value={lev.volume} min={-30} max={30} step={1} unite="%" onChange={(v) => setLev({ ...lev, volume: v })} aide="Plus ou moins de ventes, au même prix (les achats suivent)." />
               <Curseur label="Coût des achats" value={lev.achats} min={-20} max={20} step={1} unite="%" onChange={(v) => setLev({ ...lev, achats: v })} aide="Négociation fournisseurs ou hausse des prix d'achat." />
@@ -357,17 +356,17 @@ export function Simulations({ client, moisIdx, moisYear, roi, embauche }) {
               <div><Btn small variant="ghost" onClick={() => setLev({ prix: 0, volume: 0, achats: 0, charges: 0, embauche: 0 })}>Remettre à zéro</Btn></div>
             </Card>
             <Card>
-              <CarteTitre title="Résultat sur une année" sub="Aujourd'hui et avec vos décisions." />
+              <CarteTitre title="Impact annuel" />
               <div style={{ margin: "14px 22px 0", background: dE >= 0 ? C.greenBg : C.redBg, borderRadius: 14, padding: "14px 16px" }}>
-                <div style={{ fontSize: 12.5, fontWeight: 800, color: C.textMid }}>Excédent d'exploitation annuel</div>
+                <div style={{ fontSize: 12.5, fontWeight: 800, color: C.textMid }}>EBE annuel · scénario</div>
                 <div style={{ fontSize: 26, fontWeight: 900, color: C.text }}>{eur(ebe(sc))}</div>
-                <div style={{ fontSize: 13, fontWeight: 800, color: Math.abs(dE) < 1 ? C.textMid : dE > 0 ? C.green : C.red }}>{Math.abs(dE) < 1 ? "Identique à aujourd'hui" : `${signe(dE)} par an par rapport à aujourd'hui (${eur(ebe(base))})`}</div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: Math.abs(dE) < 1 ? C.textMid : dE > 0 ? C.green : C.red }}>{Math.abs(dE) < 1 ? "Identique à la base" : `${signe(dE)} vs base (${eur(ebe(base))})`}</div>
               </div>
               <div style={{ overflowX: "auto", padding: "10px 0 6px" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead><tr><Th>&nbsp;</Th><Th right>Aujourd'hui</Th><Th right>Avec vos décisions</Th></tr></thead>
+                  <thead><tr><Th>&nbsp;</Th><Th right>Base</Th><Th right>Scénario</Th></tr></thead>
                   <tbody>
-                    {[["Chiffre d'affaires", "ca"], ["Achats consommés", "achats"], ["Charges externes", "externes"], ["Salaires et charges", "personnel"], ["Impôts, taxes et autres", "autres"]].map(([l, k]) => (
+                    {[["CA HT", "ca"], ["Achats consommés", "achats"], ["Charges externes", "externes"], ["Charges de personnel", "personnel"], ["Impôts et taxes, autres", "autres"]].map(([l, k]) => (
                       <tr key={k} style={{ borderTop: `1px solid ${C.borderLight}` }}>
                         <td style={{ padding: "8px 12px", fontSize: 13, fontWeight: 700, color: C.text }}>{l}</td>
                         <td style={td({ color: C.textMid })}>{eur(base[k])}</td>
@@ -375,7 +374,7 @@ export function Simulations({ client, moisIdx, moisYear, roi, embauche }) {
                       </tr>
                     ))}
                     <tr style={{ borderTop: `2px solid ${C.text}`, background: C.bgLight }}>
-                      <td style={{ padding: "9px 12px", fontSize: 13, fontWeight: 900 }}>Point mort (CA minimum)</td>
+                      <td style={{ padding: "9px 12px", fontSize: 13, fontWeight: 900 }}>Point mort d'exploitation</td>
                       <td style={td({ color: C.textMid })}>{eur(pointMort(base))}</td>
                       <td style={td({ fontWeight: 900 })}>{eur(pointMort(sc))}</td>
                     </tr>
@@ -385,10 +384,9 @@ export function Simulations({ client, moisIdx, moisYear, roi, embauche }) {
             </Card>
           </div>
           <Card style={{ padding: "16px 22px" }}>
-            <div style={{ fontSize: 15, fontWeight: 900, color: C.text, marginBottom: 4 }}>Quel levier rapporte le plus ?</div>
-            <div style={{ fontSize: 12.5, color: C.textMid, fontWeight: 600, marginBottom: 12 }}>L'effet d'un petit 1 % sur votre excédent d'exploitation annuel.</div>
+            <div style={{ fontSize: 15, fontWeight: 900, color: C.text, marginBottom: 12, display: "flex", alignItems: "center" }}>Sensibilité de l'EBE<Info>Impact annuel sur l'EBE d'une variation de 1 % de chaque levier, toutes choses égales par ailleurs.</Info></div>
             <div style={grid(200)}>
-              {[["+1 % sur les prix", levier("prix"), "Tout le gain va dans la marge."], ["+1 % de volume", levier("volume"), "Le gain est diminué des achats nécessaires."], ["−1 % sur les achats", levier("achats"), "Une négociation fournisseur."]].map(([l, v, a]) => (
+              {[["Prix +1 %", levier("prix"), "100 % en marge"], ["Volume +1 %", levier("volume"), "Diminué des achats associés"], ["Coût d'achat −1 %", levier("achats"), "Négociation fournisseurs"]].map(([l, v, a]) => (
                 <div key={l} style={{ background: C.bgLight, borderRadius: 12, padding: "12px 14px" }}>
                   <div style={{ fontSize: 12.5, fontWeight: 800, color: C.textMid }}>{l}</div>
                   <div style={{ fontSize: 19, fontWeight: 900, color: C.text }}>{signe(v)}</div>
@@ -430,7 +428,7 @@ export function RentabiliteProduits({ client, moisIdx, moisYear }) {
   const faibles = lignes.filter((x) => x.taux != null && x.taux < 25);
   if (!lignes.length) return (
     <Page>
-      <EnTete title="Rentabilité par produit" sub="Ce que rapporte chaque produit ou prestation, une fois son coût déduit." />
+      <EnTete title="Rentabilité par produit" sub="Marge unitaire et marge totale par produit ou prestation." />
       <Vide titre="Pas encore de détail par produit" texte={`Il apparaît avec le catalogue (prix de vente et coût de chaque produit) ou les ventes détaillées par produit. ${client.advisorLabel || "Votre conseiller"} peut les importer pour vous.`} />
     </Page>
   );
@@ -439,11 +437,11 @@ export function RentabiliteProduits({ client, moisIdx, moisYear }) {
   const n80 = cumuls.findIndex((v) => v >= totalMarge * 0.8) + 1;
   return (
     <Page>
-      <EnTete title="Rentabilité par produit" sub={`Ce que rapporte chaque produit ou prestation${ytd.length ? ` sur l'exercice (${court(ytd[0])} → ${court(fin)})` : ""}, une fois son coût déduit.`} />
+      <EnTete title="Rentabilité par produit" detail={ytd.length ? `Cumul exercice · ${court(ytd[0])} → ${court(fin)}` : null} sub="Marge unitaire et marge totale par produit ou prestation." />
       <div style={grid(220)}>
         <Chiffre label="Produits suivis" value={String(lignes.length)} sub={catalogue.length ? "D'après le catalogue importé" : "D'après les ventes importées"} />
-        {totalMarge > 0 && n80 > 0 && <Chiffre label="Concentration de la marge" value={`${n80} produit${n80 > 1 ? "s" : ""}`} sub="font 80 % de votre marge" aide="Ce sont eux à protéger en priorité (stock, prix, mise en avant)." />}
-        <Chiffre label="Marge faible (moins de 25 %)" value={String(faibles.length)} statut={faibles.length ? "warn" : "ok"} subTon sub={faibles.length ? "À revoir : prix ou coût" : "Aucun produit concerné"} aide="Un prix trop bas ou un coût d'achat trop élevé." />
+        {totalMarge > 0 && n80 > 0 && <Chiffre label="Pareto marge" value={`${n80} produit${n80 > 1 ? "s" : ""}`} sub="= 80 % de la marge" aide="Produits contributeurs à protéger en priorité (prix, stock, mise en avant)." />}
+        <Chiffre label="Taux de marge < 25 %" value={String(faibles.length)} statut={faibles.length ? "warn" : "ok"} subTon sub={faibles.length ? "Prix ou coût à revoir" : "Aucun produit"} />
       </div>
       <Card>
         <div style={{ overflowX: "auto" }}>
@@ -496,7 +494,7 @@ export function EmpruntsView({ client, moisIdx, moisYear }) {
   const tot = (f) => lignes.reduce((s, x) => s + f(x), 0);
   return (
     <Page>
-      <EnTete title="Emprunts" sub="Ce qui reste à rembourser, ce que chaque mensualité coûte, et quand chaque prêt se termine." />
+      <EnTete title="Emprunts" sub="Capital restant dû, mensualités, coût du crédit et échéancier." />
       {bil && <Encart>D'après la comptabilité au {fmtDate(P.monthEnd(bil.key))} : <strong>{eur(bil.dettesFin)}</strong> d'emprunts restant dus{bil.associes ? `, et ${eur(bil.associes)} en comptes courants d'associés` : ""}.</Encart>}
       {!emprunts.length ? (
         <Vide titre="Aucun emprunt renseigné" texte={`${client.advisorLabel || "Votre conseiller"} ajoute vos prêts (capital, taux, durée) : l'échéancier, le capital restant et le coût des intérêts se calculent alors automatiquement.`} />
@@ -504,8 +502,8 @@ export function EmpruntsView({ client, moisIdx, moisYear }) {
         <>
           <div style={grid(210)}>
             <Chiffre label="Capital restant dû" value={eur(tot((x) => x.restant))} sub={`Sur ${eur(tot((x) => x.e.capital))} emprunté`} />
-            <Chiffre label="Mensualités en cours" value={eur(tot((x) => (x.actif ? x.mens : 0)))} sub="Assurance comprise" aide="Ce qui sort de la banque chaque mois pour les prêts." />
-            <Chiffre label="Intérêts restant à payer" value={eur(tot((x) => x.interetsRestants))} aide="Le coût qu'il reste à payer sur la durée des prêts." />
+            <Chiffre label="Mensualités" value={eur(tot((x) => (x.actif ? x.mens : 0)))} sub="Assurance comprise" />
+            <Chiffre label="Intérêts restant dus" value={eur(tot((x) => x.interetsRestants))} />
           </div>
           {lignes.map((x, i) => (
             <Card key={x.e.id || i}>
@@ -563,21 +561,21 @@ export function InvestissementsView({ client, moisIdx, moisYear }) {
   });
   return (
     <Page>
-      <EnTete title="Investissements" sub="Vos équipements et ce qu'ils valent encore : leur coût est étalé sur leur durée d'utilisation (amortissement)." />
+      <EnTete title="Investissements" sub="Immobilisations, amortissement linéaire et valeur nette comptable (VNC)." />
       {bil && <Encart>D'après la comptabilité au {fmtDate(P.monthEnd(bil.key))} : immobilisations achetées pour <strong>{eur(bil.immoBrut)}</strong>, valeur restante <strong>{eur(bil.immoNet)}</strong> après {eur(bil.amortImmo)} d'amortissements.</Encart>}
       {!invs.length ? (
         <Vide titre="Aucun investissement renseigné" texte={`${client.advisorLabel || "Votre conseiller"} ajoute vos équipements (montant, date de mise en service, durée) : l'amortissement et la valeur restante se calculent alors automatiquement.`} />
       ) : (
         <>
           <div style={grid(210)}>
-            <Chiffre label="Valeur d'achat" value={eur(lignes.reduce((s, x) => s + (x.inv.montantHT || 0), 0))} sub={`${invs.length} investissement${invs.length > 1 ? "s" : ""}`} />
-            <Chiffre label="Amortissement mensuel" value={eur(lignes.reduce((s, x) => s + (x.me < (x.inv.duree || 36) ? x.am : 0), 0))} aide="Une charge comptable qui ne sort pas de la banque." />
-            <Chiffre label="Valeur restante" value={eur(lignes.reduce((s, x) => s + x.v, 0))} aide="Ce que valent encore vos équipements en comptabilité." />
+            <Chiffre label="Valeur brute" value={eur(lignes.reduce((s, x) => s + (x.inv.montantHT || 0), 0))} sub={`${invs.length} investissement${invs.length > 1 ? "s" : ""}`} />
+            <Chiffre label="Dotation mensuelle" value={eur(lignes.reduce((s, x) => s + (x.me < (x.inv.duree || 36) ? x.am : 0), 0))} />
+            <Chiffre label="VNC" value={eur(lignes.reduce((s, x) => s + x.v, 0))} aide="Valeur nette comptable : valeur brute − amortissements cumulés." />
           </div>
           <Card>
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
-                <thead><tr><Th>Investissement</Th><Th right>Montant HT</Th><Th right>Amorti</Th><Th right>Par mois</Th><Th right>Valeur restante</Th><Th right>Remboursé par ses gains en</Th></tr></thead>
+                <thead><tr><Th>Immobilisation</Th><Th right>Valeur brute</Th><Th right>Amorti</Th><Th right>Dotation / mois</Th><Th right>VNC</Th><Th right>Retour sur investissement</Th></tr></thead>
                 <tbody>
                   {lignes.map((x, i) => (
                     <tr key={x.inv.id || i} style={{ borderTop: `1px solid ${C.borderLight}` }}>
@@ -608,26 +606,27 @@ export function TresorerieEstimee({ client, moisIdx, moisYear, setMoisIdx, treso
   const configuree = !!client.tresorerie?.dateSolde;
   if (!configuree) return (
     <Page>
-      <EnTete title="Trésorerie" sub="L'argent disponible sur vos comptes, mois après mois." nav={nav} />
+      <EnTete title="Trésorerie" nav={nav} />
       <Vide titre="Le solde bancaire de départ n'est pas encore renseigné" texte={isAdminPreview ? "Renseignez le solde et sa date dans l'admin, Données financières › Trésorerie : la courbe se calcule ensuite automatiquement. Avec le FEC, la trésorerie réelle s'affiche sans rien saisir." : `${client.advisorLabel || "Votre conseiller"} renseigne votre solde de départ, ou importe votre comptabilité pour afficher votre trésorerie réelle.`} />
     </Page>
   );
   const keys = Array.from({ length: 12 }, (_, i) => P.shiftKey(key, i - 11));
-  const data = keys.map((k) => { const [y, m] = k.split("-").map(Number); return { key: k, l: court(k), v: tresoOf(m - 1, y), current: k === key }; });
+  const projection = prolongerTresorerie(client, key, 6, tresoOf);
+  const data = [...keys.map((k) => { const [y, m] = k.split("-").map(Number); return { key: k, l: court(k), v: tresoOf(m - 1, y), current: k === key }; }), ...projection.map((x) => ({ key: x.key, l: court(x.key), p: x.solde }))];
   const solde = tresoOf(moisIdx, moisYear);
   const f = fluxOf(moisIdx, moisYear);
   return (
     <Page>
-      <EnTete title="Trésorerie" sub="Estimation à partir de votre solde de départ et de vos résultats mensuels. Pour le solde réel au centime, importez la comptabilité (FEC)." nav={nav} source="imports" />
+      <EnTete title="Trésorerie" sub="Estimation : solde de départ + résultat + dotations − capital remboursé + mouvements exceptionnels. Le FEC donne la trésorerie réelle." nav={nav} source="imports" />
       <div style={grid(210)}>
         <Chiffre label="Trésorerie estimée" value={solde == null ? "—" : eur(solde)} sub={`Fin ${P.keyLabel(key)}`} statut={solde == null ? null : solde < 0 ? "bad" : "ok"} />
-        <Chiffre label="Variation du mois" value={signe(f.total)} aide="Résultat, plus les amortissements, moins le capital d'emprunt remboursé." />
+        <Chiffre label="Variation M-1" value={signe(f.total)} />
       </div>
       <div style={grid(440)}>
         <Card>
-          <CarteTitre title="Ce qui a fait bouger la trésorerie" sub={P.keyLabel(key)} />
+          <CarteTitre title="Flux de trésorerie estimés" detail={P.keyLabel(key)} />
           <div style={{ padding: "12px 22px 18px" }}>
-            {[["Résultat du mois", f.resultat, "Le bénéfice (ou la perte) du mois."], ["Amortissements", f.amort, "Une charge qui ne sort pas de la banque : on la rajoute."], ["Capital d'emprunt remboursé", -f.capital, "Une sortie d'argent qui n'est pas une charge."], ...(f.ajustements.length ? [["Mouvements exceptionnels", f.ajust, f.ajustements.map((a) => a.libelle).filter(Boolean).join(", ")]] : [])].map(([l, v, a]) => (
+            {[["Résultat net", f.resultat, ""], ["Dotations aux amortissements", f.amort, ""], ["Remboursement du capital d'emprunt", -f.capital, ""], ...(f.ajustements.length ? [["Mouvements exceptionnels", f.ajust, f.ajustements.map((a) => a.libelle).filter(Boolean).join(", ")]] : [])].map(([l, v, a]) => (
               <div key={l} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "8px 0", borderTop: `1px solid ${C.borderLight}` }}>
                 <div><div style={{ fontSize: 13.5, fontWeight: 800, color: C.text }}>{l}</div><div style={{ fontSize: 11.5, color: C.textLight, fontWeight: 600 }}>{a}</div></div>
                 <span style={{ ...num, fontSize: 14, fontWeight: 900, color: v < 0 ? C.red : C.green }}>{signe(v)}</span>
@@ -637,8 +636,11 @@ export function TresorerieEstimee({ client, moisIdx, moisYear, setMoisIdx, treso
           </div>
         </Card>
         <Card>
-          <CarteTitre title="Trésorerie estimée en fin de mois" sub="12 derniers mois." />
-          <div style={{ padding: "12px 18px 16px" }}><Courbe data={data} height={200} tip={(x) => [P.keyLabel(x.key), `Trésorerie : ${eur(x.v)}`]} /></div>
+          <CarteTitre title="Trésorerie estimée · 12 mois" detail={projection.length ? `Puis prévision sur ${projection.length} mois` : null} sub={projection.length ? "Pointillés : prévision du plan de trésorerie (budget, sinon N-1, sinon tendance 3 mois ; échéances d'emprunt, acomptes d'IS et flux exceptionnels saisis)." : null} />
+          <div style={{ padding: "12px 18px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+            {projection.length > 0 && <Legende items={[{ label: "Estimé", color: VIZ.serie, line: true }, { label: "Prévision", color: VIZ.serie, dash: true }]} />}
+            <Courbe data={data} height={200} tip={(x) => [P.keyLabel(x.key), x.p != null ? `Prévision : ${eur(x.p)}` : `Trésorerie : ${eur(x.v)}`]} />
+          </div>
         </Card>
       </div>
     </Page>
@@ -691,7 +693,7 @@ export function PointsAttention({ client, moisIdx, moisYear, setMoisIdx, alertes
   );
   return (
     <Page>
-      <EnTete title="Points d'attention" sub={`Ce que ${client.advisorLabel || "votre conseiller"} surveille pour vous en ${P.keyLabel(P.monthKey(moisIdx, moisYear))}, avec une piste pour chacun.`} nav={nav} />
+      <EnTete title="Points d'attention" sub="Alertes de gestion du mois : seuils de rentabilité, marge, charges, trésorerie, encaissements, et échéances fiscales et sociales." nav={nav} />
       {!rouges.length && !oranges.length && (
         <Card style={{ padding: "20px 22px", display: "flex", gap: 12, alignItems: "center" }}>
           <PastilleStatut statut="ok" size={28} />

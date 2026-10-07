@@ -6,8 +6,8 @@ import { C, Card, Btn } from "@/app/charte";
 import * as P from "@/lib/pilotage";
 import { dataIndex } from "@/lib/donnees";
 import { lireActions, sauverActions, nouvelleAction, enRetard, STATUTS_ACTION, RESPONSABLES, lirePrevisions, sauverPrevisions } from "@/lib/actions";
-import { prevoirTresorerie, moisFuturs } from "@/lib/prevision";
-import { VIZ, eur, Lignes, PastilleStatut } from "@/app/pilotage/graphiques";
+import { prevoirTresorerie, moisFuturs, departPrevision } from "@/lib/prevision";
+import { VIZ, eur, Courbe, Legende, PastilleStatut } from "@/app/pilotage/graphiques";
 import { Page, EnTete, ChoixPeriode, CarteTitre, Chiffre, Th, grid, num, fmtDate } from "@/app/pilotage/vues";
 import { Titre } from "@/app/pilotage/synthese";
 
@@ -27,7 +27,7 @@ export function ValeurCreee({ client, compact = false }) {
         <div style={{ fontSize: 12.5, fontWeight: 600, opacity: 0.85 }}>{j.periode || "Depuis le début de l'accompagnement"}</div>
       </div>
       <Card style={{ gridColumn: compact ? "auto" : "span 2" }}>
-        <CarteTitre title="Ce que l'accompagnement a déjà apporté" sub={`Les actions mises en place avec ${client.advisorLabel || "votre conseiller"}.`} />
+        <CarteTitre title="Gains réalisés" sub={`Actions mises en place avec ${client.advisorLabel || "votre conseiller"} et leur impact.`} />
         <div style={{ padding: "8px 22px 16px" }}>
           {j.items.slice(0, compact ? 4 : 50).map((it, i) => (
             <div key={it.id || i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `1px solid ${C.borderLight}` }}>
@@ -65,13 +65,13 @@ export function PlanActions({ client, onSaveDonnees }) {
   const liste = (filtre === "ouvertes" ? ouvertes : filtre === "faites" ? faites : actions).slice().sort((a, b) => (a.echeance || "9999") < (b.echeance || "9999") ? -1 : 1);
   return (
     <Page>
-      <EnTete title="Plan d'actions" sub={`Les décisions prises ensemble avec ${client.advisorLabel || "votre conseiller"}, qui s'en occupe, pour quand, et ce qu'elles doivent rapporter.`}
+      <EnTete title="Plan d'actions" sub="Décisions de gestion suivies jusqu'à leur réalisation : responsable, échéance, gain attendu."
         right={peut && <Btn onClick={() => setForm(nouvelleAction())}>+ Nouvelle action</Btn>} />
       <ValeurCreee client={client} />
       <div style={grid(200)}>
         <Chiffre label="Actions en cours" value={String(ouvertes.length)} sub={`${faites.length} terminée${faites.length > 1 ? "s" : ""}`} />
-        <Chiffre label="En retard" value={String(retard.length)} statut={retard.length ? "warn" : "ok"} subTon sub={retard.length ? "Échéance dépassée" : "Tout est dans les temps"} />
-        <Chiffre label="Gain attendu" value={eur(impact)} sub="Par an, si tout est mené à bien" aide="La somme des impacts estimés de chaque action." />
+        <Chiffre label="En retard" value={String(retard.length)} statut={retard.length ? "warn" : "ok"} subTon sub={retard.length ? "Échéance dépassée" : "Dans les délais"} />
+        <Chiffre label="Gain attendu" value={eur(impact)} sub="Annuel, toutes actions" />
       </div>
       {form && (
         <Card style={{ padding: "18px 22px", borderColor: C.primary }}>
@@ -137,27 +137,32 @@ export function PlanActions({ client, onSaveDonnees }) {
 // ══════════════════════════════════════════════════════════════════════
 // PRÉVISION DE TRÉSORERIE
 // ══════════════════════════════════════════════════════════════════════
-const SOURCES = { budget: "budget", n1: "même mois l'an dernier", tendance: "moyenne des 3 derniers mois", aucune: "pas de données" };
+const SOURCES = { budget: "budget", n1: "N-1", tendance: "tendance 3 mois", aucune: "aucune donnée" };
 export function PrevisionTresorerie({ client, moisIdx, moisYear, tresoOf, onSaveDonnees, isAdminPreview }) {
   const [horizon, setHorizon] = useState(6);
   const [ligne, setLigne] = useState(null);
   const idx = dataIndex(client), fidx = P.fecIndex(client);
   const key = P.monthKey(moisIdx, moisYear);
-  const depart = [...idx.keys].reverse().find((k) => k <= key);
+  const dp = departPrevision(client, key, tresoOf);
+  const depart = dp?.depart || [...idx.keys].reverse().find((k) => k <= key);
   const peut = !!onSaveDonnees;
-  const configuree = fidx.has || !!client.tresorerie?.dateSolde;
-  if (!depart || !configuree) return (
+  if (!dp) return (
     <Page>
-      <EnTete title="Prévision de trésorerie" sub="Où en sera votre trésorerie dans les prochains mois." />
+      <EnTete title="Plan de trésorerie" />
       <Card style={{ padding: "28px 24px", textAlign: "center" }}>
         <div style={{ fontSize: 16, fontWeight: 900, color: C.text, marginBottom: 6 }}>Il faut un point de départ</div>
         <div style={{ fontSize: 13.5, color: C.textMid, lineHeight: 1.6, maxWidth: 580, margin: "0 auto" }}>{!depart ? "La prévision part du dernier mois connu : elle s'affiche dès les premiers chiffres importés." : isAdminPreview ? "Importez la comptabilité (FEC) ou renseignez le solde bancaire de départ dans Données financières › Trésorerie." : `${client.advisorLabel || "Votre conseiller"} importe votre comptabilité ou renseigne votre solde bancaire : la prévision s'affichera alors ici.`}</div>
       </Card>
     </Page>
   );
-  const [dy, dm] = depart.split("-").map(Number);
-  const soldeDepart = fidx.months.has(depart) ? P.bilanAt(client, depart).tresoNette : tresoOf(dm - 1, dy) || 0;
+  const soldeDepart = dp.solde;
   const mois = prevoirTresorerie(client, depart, horizon, soldeDepart);
+  // Historique (6 derniers mois) affiché en trait plein avant la prévision.
+  const histo = Array.from({ length: 6 }, (_, i) => P.shiftKey(depart, i - 5)).map((k) => {
+    const [y, m] = k.split("-").map(Number);
+    const v = k === depart ? soldeDepart : fidx.months.has(k) ? P.bilanAt(client, k).tresoNette : idx.months.has(k) ? tresoOf(m - 1, y) : null;
+    return { key: k, l: court(k), v, current: k === depart };
+  });
   const manuels = lirePrevisions(client);
   const fin = mois[mois.length - 1];
   const bas = mois.reduce((m, x) => (x.solde < m.solde ? x : m), mois[0]);
@@ -173,24 +178,25 @@ export function PrevisionTresorerie({ client, moisIdx, moisYear, tresoOf, onSave
   const futurs = moisFuturs(depart, 12);
   return (
     <Page>
-      <EnTete title="Prévision de trésorerie" sub={`Votre trésorerie mois par mois à partir de fin ${P.keyLabel(depart)} (${fidx.months.has(depart) ? "solde réel" : "solde estimé"} : ${eur(soldeDepart)}). Activité prévue d'après : ${sources}.`}
+      <EnTete title="Plan de trésorerie" detail={`Départ fin ${P.keyLabel(depart)} : ${eur(soldeDepart)} (${fidx.months.has(depart) ? "réel" : "estimé"}) · base d'activité : ${sources}`} sub="Activité mensuelle selon le budget, à défaut N-1 (saisonnalité), à défaut la moyenne des 3 derniers mois ; déduction des échéances d'emprunt et des acomptes d'IS ; mouvements exceptionnels saisis. BFR supposé stable."
         right={<ChoixPeriode value={horizon} onChange={setHorizon} options={[[3, "3 mois"], [6, "6 mois"], [12, "12 mois"]]} />} />
       <div style={grid(210)}>
         <Chiffre label={`Trésorerie fin ${P.keyLabel(fin.key)}`} value={eur(fin.solde)} sub={`Scénario prudent : ${eur(fin.soldeP)}`} statut={fin.solde < 0 ? "bad" : fin.soldeP < 0 ? "warn" : "ok"} />
-        <Chiffre label="Point le plus bas" value={eur(bas.solde)} sub={`En ${P.keyLabel(bas.key)}`} statut={bas.solde < 0 ? "bad" : "ok"} aide="Le moment où la trésorerie sera la plus tendue." />
-        <Chiffre label="Besoin de financement" value={besoin < 0 ? eur(-besoin) : "Aucun"} statut={besoin < 0 ? "bad" : "ok"} subTon sub={besoin < 0 ? `Dans le scénario prudent, en ${P.keyLabel(basP.key)}` : "Même dans le scénario prudent"} aide="À anticiper avec la banque plusieurs semaines avant." />
+        <Chiffre label="Point le plus bas" value={eur(bas.solde)} sub={`En ${P.keyLabel(bas.key)}`} statut={bas.solde < 0 ? "bad" : "ok"} />
+        <Chiffre label="Besoin de financement" value={besoin < 0 ? eur(-besoin) : "Aucun"} statut={besoin < 0 ? "bad" : "ok"} subTon sub={besoin < 0 ? `Scénario prudent · ${P.keyLabel(basP.key)}` : "Y compris scénario prudent"} aide="Point bas négatif du scénario prudent : montant à couvrir (découvert autorisé, crédit court terme)." />
       </div>
       <Card>
-        <CarteTitre title="Trésorerie prévue en fin de mois" sub="Scénario réaliste et scénario prudent (chiffre d'affaires inférieur de 10 %, coûts inchangés)." />
-        <div style={{ padding: "12px 18px 16px" }}>
-          <Lignes labels={[court(depart), ...mois.map((x) => court(x.key))]} keys={[P.keyLabel(depart), ...mois.map((x) => P.keyLabel(x.key))]}
-            series={[{ label: "Réaliste", color: VIZ.serie, values: [soldeDepart, ...mois.map((x) => x.solde)] }, { label: "Prudent", color: VIZ.achats, values: [soldeDepart, ...mois.map((x) => x.soldeP)] }]} />
+        <CarteTitre title="Trésorerie nette fin de mois" detail={`Réel jusqu'à ${P.keyLabel(depart)}, prévision sur ${horizon} mois`} sub="Trait plein : trésorerie constatée. Pointillés : scénario central et scénario prudent (CA −10 % à charges fixes inchangées)." />
+        <div style={{ padding: "12px 18px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+          <Legende items={[{ label: dp.reel ? "Réel" : "Estimé", color: VIZ.serie, line: true }, { label: "Prévision centrale", color: VIZ.serie, dash: true }, { label: "Scénario prudent", color: VIZ.achats, dash: true }]} />
+          <Courbe data={[...histo, ...mois.map((x) => ({ key: x.key, l: court(x.key), p: x.solde, pp: x.soldeP }))]} height={220}
+            tip={(x) => x.p != null ? [P.keyLabel(x.key), `Central : ${eur(x.p)}`, `Prudent : ${eur(x.pp)}`] : [P.keyLabel(x.key), `Trésorerie : ${eur(x.v)}`]} />
         </div>
       </Card>
       <Card>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
-            <thead><tr><Th>Mois</Th><Th right>Activité</Th><Th right>Emprunts</Th><Th right>Impôt</Th><Th right>Exceptionnel</Th><Th right>Variation</Th><Th right>Trésorerie</Th><Th right>Prudent</Th></tr></thead>
+            <thead><tr><Th>Mois</Th><Th right>EBE</Th><Th right>Emprunts</Th><Th right>IS</Th><Th right>Exceptionnel</Th><Th right>Flux net</Th><Th right>Trésorerie</Th><Th right>Prudent</Th></tr></thead>
             <tbody>
               {mois.map((x) => (
                 <tr key={x.key} style={{ borderTop: `1px solid ${C.borderLight}` }}>
@@ -209,7 +215,7 @@ export function PrevisionTresorerie({ client, moisIdx, moisYear, tresoOf, onSave
         </div>
       </Card>
       <Card>
-        <CarteTitre title="Encaissements et dépenses exceptionnels" sub="Un investissement, un prêt, une subvention, un dividende… tout ce qui ne fait pas partie de l'activité courante."
+        <CarteTitre title="Flux exceptionnels" sub="Investissements, emprunts, subventions, apports, dividendes : flux hors activité courante."
           right={peut && !ligne && <Btn small onClick={() => setLigne({ mois: futurs[0], libelle: "", montant: "", sens: "sortie" })}>+ Ajouter</Btn>} />
         <div style={{ padding: "10px 22px 18px", display: "flex", flexDirection: "column", gap: 8 }}>
           {ligne && (
@@ -222,7 +228,7 @@ export function PrevisionTresorerie({ client, moisIdx, moisYear, tresoOf, onSave
               <Btn small variant="ghost" onClick={() => setLigne(null)}>Annuler</Btn>
             </div>
           )}
-          {!manuels.length && !ligne && <div style={{ fontSize: 13, color: C.textLight }}>Aucun mouvement exceptionnel prévu.</div>}
+          {!manuels.length && !ligne && <div style={{ fontSize: 13, color: C.textLight }}>Aucun flux exceptionnel saisi.</div>}
           {manuels.slice().sort((a, b) => (a.mois < b.mois ? -1 : 1)).map((l) => (
             <div key={l.id} style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${C.borderLight}` }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}><span style={{ color: C.textMid, textTransform: "capitalize" }}>{P.keyLabel(l.mois)}</span> · {l.libelle}</span>
@@ -234,9 +240,6 @@ export function PrevisionTresorerie({ client, moisIdx, moisYear, tresoOf, onSave
           ))}
         </div>
       </Card>
-      <div style={{ fontSize: 11.5, color: C.textLight, fontWeight: 600, lineHeight: 1.6 }}>
-        Hypothèses : l'activité de chaque mois suit le budget s'il existe, sinon le même mois de l'an dernier, sinon la moyenne des 3 derniers mois ; les délais de paiement clients et fournisseurs et la TVA restent stables ; les échéances d'emprunt et les acomptes d'impôt sont déduits à leur date.
-      </div>
     </Page>
   );
 }

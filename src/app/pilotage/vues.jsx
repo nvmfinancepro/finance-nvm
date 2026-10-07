@@ -4,11 +4,12 @@
 // réelle, clients et fournisseurs, ventes / achats / charges / salaires, TVA, IS.
 // Chaque chiffre est accompagné d'une explication en français courant.
 import { useState } from "react";
-import { C, Card, Btn } from "@/app/charte";
+import { C, Card, Btn, Info } from "@/app/charte";
 import * as P from "@/lib/pilotage";
-import { VIZ, eur, pctFr, Colonnes, Courbe, Lignes, Repartition, Variation, PastilleStatut, STATUT } from "@/app/pilotage/graphiques";
+import { VIZ, eur, pctFr, Colonnes, Courbe, Lignes, Repartition, Variation, Legende, PastilleStatut, STATUT } from "@/app/pilotage/graphiques";
 import { NavMois, Titre } from "@/app/pilotage/synthese";
 import { dataIndex, tiersPour, produitsSur, salariesSur } from "@/lib/donnees";
+import { prolongerTresorerie } from "@/lib/prevision";
 
 export const fmtDate = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : "");
 export const grid = (min) => ({ display: "grid", gridTemplateColumns: `repeat(auto-fit,minmax(min(100%,${min}px),1fr))`, gap: 16 });
@@ -25,16 +26,17 @@ export function Source({ source, fin }) {
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: fec ? C.greenBg : C.orangeBg, border: `1px solid ${fec ? C.green + "33" : C.orange + "44"}`, color: fec ? C.green : C.orange, borderRadius: 100, padding: "3px 11px", fontSize: 11.5, fontWeight: 800, marginTop: 8 }}>
       <span style={{ width: 7, height: 7, borderRadius: "50%", background: fec ? C.green : C.orange }} />
-      {fec ? `Comptabilité${fin ? ` à jour au ${fmtDate(fin)}` : ""}` : "Estimations à partir de vos imports (relevé bancaire, fichiers)"}
+      {fec ? `FEC · comptabilité au ${fin ? fmtDate(fin) : ""}` : "Estimations (relevé bancaire, fichiers)"}
     </span>
   );
 }
-export function EnTete({ title, sub, nav, right, source, fin }) {
+// sub : explication (affichée au clic sur « i ») ; detail : information factuelle visible.
+export function EnTete({ title, sub, detail, nav, right, source, fin }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
       <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 21, fontWeight: 900, color: C.text }}>{title}</div>
-        {sub && <div style={{ fontSize: 13, color: C.textMid, fontWeight: 600, marginTop: 3, lineHeight: 1.55, maxWidth: 760 }}>{sub}</div>}
+        <div style={{ fontSize: 21, fontWeight: 900, color: C.text, display: "flex", alignItems: "center" }}>{title}<Info>{sub}</Info></div>
+        {detail && <div style={{ fontSize: 13, color: C.textMid, fontWeight: 700, marginTop: 3 }}>{detail}</div>}
         <Source source={source} fin={fin} />
       </div>
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>{right}{nav}</div>
@@ -51,10 +53,10 @@ export function ChoixPeriode({ value, onChange, options }) {
     </div>
   );
 }
-export function CarteTitre({ title, sub, right }) {
+export function CarteTitre({ title, sub, detail, right }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, padding: "18px 22px 0", flexWrap: "wrap" }}>
-      <div><div style={{ fontSize: 15, fontWeight: 900, color: C.text }}>{title}</div>{sub && <div style={{ fontSize: 12, color: C.textLight, fontWeight: 600, marginTop: 2, lineHeight: 1.5 }}>{sub}</div>}</div>
+      <div><div style={{ fontSize: 15, fontWeight: 900, color: C.text, display: "flex", alignItems: "center" }}>{title}<Info>{sub}</Info></div>{detail && <div style={{ fontSize: 12, color: C.textMid, fontWeight: 700, marginTop: 2 }}>{detail}</div>}</div>
       {right}
     </div>
   );
@@ -63,13 +65,12 @@ export function Chiffre({ label, value, sub, aide, statut, delta, subTon }) {
   return (
     <div style={{ background: C.white, border: `1.5px solid ${C.text}`, borderRadius: 20, padding: "16px 18px", boxShadow: "0 16px 36px rgba(0,86,83,.06)", display: "flex", flexDirection: "column", gap: 5, minWidth: 0 }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
-        <div style={{ fontSize: 11, color: C.textMid, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</div>
+        <div style={{ fontSize: 11, color: C.textMid, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", display: "flex", alignItems: "center" }}>{label}<Info>{aide}</Info></div>
         {statut && <PastilleStatut statut={statut} size={20} />}
       </div>
       <div style={{ fontSize: 23, fontWeight: 900, color: C.text, lineHeight: 1.15 }}>{value}</div>
       {sub && <div style={{ fontSize: 12.5, fontWeight: 700, color: subTon && statut ? STATUT[statut].color : C.textMid }}>{sub}</div>}
       {delta}
-      {aide && <div style={{ fontSize: 11.5, color: C.textLight, fontWeight: 600, lineHeight: 1.45, marginTop: "auto", paddingTop: 3 }}>{aide}</div>}
     </div>
   );
 }
@@ -97,7 +98,7 @@ export function HorsPeriode({ title, idx, keyM, setMoisKey, nav }) {
     <Page>
       <EnTete title={title} nav={nav} />
       <Card style={{ padding: "30px 26px", textAlign: "center" }}>
-        <div style={{ fontSize: 16, fontWeight: 900, color: C.text, marginBottom: 6 }}>Pas encore de chiffres pour {P.keyLabel(keyM)}</div>
+        <div style={{ fontSize: 16, fontWeight: 900, color: C.text, marginBottom: 6 }}>Aucune donnée pour {P.keyLabel(keyM)}</div>
         <div style={{ fontSize: 13.5, color: C.textMid, marginBottom: 16 }}>{idx.has ? `Les données disponibles vont de ${P.keyLabel(idx.first)} à ${P.keyLabel(idx.last)}. Le prochain import mensuel ajoutera les mois suivants.` : "Dès que les données de l'entreprise sont importées, cette page se remplit automatiquement."}</div>
         {setMoisKey && idx.has && <Btn onClick={() => setMoisKey(keyM > idx.last ? idx.last : idx.first)}>Voir {P.keyLabel(keyM > idx.last ? idx.last : idx.first)}</Btn>}
       </Card>
@@ -110,23 +111,23 @@ const evo = (a, b) => (b == null || Math.abs(b) < 1 ? null : ((a - b) / Math.abs
 // COMPTE DE RÉSULTAT (soldes intermédiaires de gestion)
 // ══════════════════════════════════════════════════════════════════════
 export const LIGNES_SIG = [
-  { id: "ca", label: "Chiffre d'affaires", f: (p, s) => s.ca, postes: ["ventesMarch", "prodVendue"], total: true, aide: "Ventes et prestations facturées, hors taxes." },
+  { id: "ca", label: "Chiffre d'affaires HT", f: (p, s) => s.ca, postes: ["ventesMarch", "prodVendue"], total: true, aide: "Ventes de marchandises et production vendue (comptes 70)." },
   { id: "prod", label: "Production stockée et immobilisée", f: (p) => p.prodStockee + p.prodImmo, postes: ["prodStockee", "prodImmo"] },
-  { id: "conso", label: "Achats consommés", f: (p, s) => -s.consommations, postes: ["achatsMarch", "varStockMarch", "achatsMat", "varStockMat"], aide: "Marchandises et matières achetées, corrigées de la variation des stocks." },
-  { id: "mb", label: "Marge brute", f: (p, s) => s.margeBrute, total: true, aide: "Ce qu'il reste une fois payés les achats nécessaires aux ventes." },
-  { id: "ext", label: "Charges externes", f: (p) => -p.chargesExternes, postes: ["chargesExternes"], aide: "Loyer, sous-traitance, honoraires, publicité, énergie, assurances…" },
-  { id: "va", label: "Valeur ajoutée", f: (p, s) => s.valeurAjoutee, total: true, aide: "La richesse créée par l'entreprise, avant de rémunérer les équipes." },
+  { id: "conso", label: "Achats consommés", f: (p, s) => -s.consommations, postes: ["achatsMarch", "varStockMarch", "achatsMat", "varStockMat"], aide: "Achats de marchandises et matières, corrigés de la variation des stocks (60, 603)." },
+  { id: "mb", label: "Marge brute", f: (p, s) => s.margeBrute, total: true, aide: "CA + production stockée et immobilisée − achats consommés." },
+  { id: "ext", label: "Charges externes", f: (p) => -p.chargesExternes, postes: ["chargesExternes"], aide: "Autres achats et charges externes (60 hors achats consommés, 61, 62) : loyer, sous-traitance, honoraires, publicité, énergie…" },
+  { id: "va", label: "Valeur ajoutée", f: (p, s) => s.valeurAjoutee, total: true, aide: "Marge brute − charges externes : la richesse créée, avant rémunération du personnel." },
   { id: "subv", label: "Subventions d'exploitation", f: (p) => p.subventions, postes: ["subventions"] },
-  { id: "imp", label: "Impôts et taxes", f: (p) => -p.impotsTaxes, postes: ["impotsTaxes"], aide: "CFE, taxe foncière, taxes sur les salaires (hors impôt sur les bénéfices)." },
-  { id: "pers", label: "Salaires et charges sociales", f: (p, s) => -s.personnel, postes: ["salaires", "chargesSociales"] },
-  { id: "ebe", label: "Excédent brut d'exploitation (EBE)", f: (p, s) => s.ebe, total: true, aide: "Ce que l'activité dégage avant amortissements, frais financiers et impôt : l'indicateur clé de rentabilité." },
-  { id: "dot", label: "Amortissements et provisions", f: (p) => -p.dotations + p.reprises, postes: ["dotations", "reprises"], aide: "L'usure des investissements, étalée sur leur durée de vie. Souvent comptabilisée en fin d'exercice." },
-  { id: "gest", label: "Autres produits et charges de gestion", f: (p) => p.autresProduits - p.autresCharges, postes: ["autresProduits", "autresCharges"] },
-  { id: "rex", label: "Résultat d'exploitation", f: (p, s) => s.rex, total: true, aide: "Ce que rapporte le métier lui-même, investissements compris." },
-  { id: "fin", label: "Résultat financier", f: (p, s) => s.resFin, postes: ["prodFin", "chargesFin"], aide: "Intérêts d'emprunt et produits de placement." },
-  { id: "exc", label: "Résultat exceptionnel", f: (p, s) => s.resExc, postes: ["prodExc", "chargesExc"], aide: "Opérations hors activité courante : cessions, pénalités, régularisations." },
-  { id: "is", label: "Impôt sur les sociétés et participation", f: (p) => -(p.is + p.participation), postes: ["is", "participation"] },
-  { id: "rn", label: "Résultat net", f: (p, s) => s.rn, total: true, aide: "Le bénéfice ou la perte comptable de la période." },
+  { id: "imp", label: "Impôts et taxes", f: (p) => -p.impotsTaxes, postes: ["impotsTaxes"], aide: "CFE, taxe foncière, taxes sur salaires (63), hors IS." },
+  { id: "pers", label: "Charges de personnel", f: (p, s) => -s.personnel, postes: ["salaires", "chargesSociales"], aide: "Salaires bruts et charges sociales (64)." },
+  { id: "ebe", label: "EBE", f: (p, s) => s.ebe, total: true, aide: "Excédent brut d'exploitation : ce que l'activité dégage avant amortissements, frais financiers et IS. L'indicateur clé de la rentabilité opérationnelle." },
+  { id: "dot", label: "Dotations nettes aux amortissements et provisions", f: (p) => -p.dotations + p.reprises, postes: ["dotations", "reprises"], aide: "Dotations (68) moins reprises et transferts de charges (78, 79). Souvent comptabilisées en fin d'exercice." },
+  { id: "gest", label: "Autres produits et charges de gestion", f: (p) => p.autresProduits - p.autresCharges, postes: ["autresProduits", "autresCharges"], aide: "Comptes 65 et 75 : redevances, pertes sur créances, produits divers." },
+  { id: "rex", label: "Résultat d'exploitation (REX)", f: (p, s) => s.rex, total: true, aide: "EBE − dotations nettes ± autres produits et charges de gestion." },
+  { id: "fin", label: "Résultat financier", f: (p, s) => s.resFin, postes: ["prodFin", "chargesFin"], aide: "Produits financiers (76) − charges financières (66), dont intérêts d'emprunt." },
+  { id: "exc", label: "Résultat exceptionnel", f: (p, s) => s.resExc, postes: ["prodExc", "chargesExc"], aide: "Comptes 67 et 77 : cessions d'immobilisations, pénalités, régularisations." },
+  { id: "is", label: "IS et participation", f: (p) => -(p.is + p.participation), postes: ["is", "participation"], aide: "Impôt sur les sociétés (695) et participation des salariés (691)." },
+  { id: "rn", label: "Résultat net", f: (p, s) => s.rn, total: true, aide: "Bénéfice ou perte comptable de la période." },
 ];
 
 export function CompteResultat({ client, moisIdx, moisYear, setMoisIdx, setMoisKey }) {
@@ -150,30 +151,30 @@ export function CompteResultat({ client, moisIdx, moisYear, setMoisIdx, setMoisK
   const moisEx = ytd.map((k) => ({ k, s: P.sigOf(P.monthPL(idx, k)), p: P.monthPL(idx, k) }));
   const sEx = P.sigOf(P.plOver(idx, ytd));
   const LIGNES_MOIS = [
-    { l: "Chiffre d'affaires", f: (x) => x.s.ca, bold: true },
+    { l: "CA HT", f: (x) => x.s.ca, bold: true },
     { l: "Marge brute", f: (x) => x.s.margeBrute },
     { l: "  taux de marge", f: (x) => (x.s.ca ? (x.s.margeBrute / x.s.ca) * 100 : null), pct: true },
     { l: "Charges externes", f: (x) => x.p.chargesExternes },
-    { l: "Salaires et charges", f: (x) => x.s.personnel },
+    { l: "Charges de personnel", f: (x) => x.s.personnel },
     { l: "EBE", f: (x) => x.s.ebe, bold: true, signe: true },
     { l: "  EBE / CA", f: (x) => (x.s.ca ? (x.s.ebe / x.s.ca) * 100 : null), pct: true },
     { l: "Résultat net", f: (x) => x.s.rn, bold: true, signe: true },
   ];
   return (
     <Page>
-      <EnTete title="Compte de résultat" sub="Du chiffre d'affaires au résultat, étape par étape. Cliquez sur une ligne pour voir le détail." source={source} fin={fin}
-        nav={nav} right={<ChoixPeriode value={periode} onChange={setPeriode} options={[["mois", "Le mois"], ["exercice", "Depuis le début de l'exercice"], ["12m", "12 derniers mois"]]} />} />
+      <EnTete title="Compte de résultat · SIG" sub="Soldes intermédiaires de gestion, du CA au résultat net. Cliquez sur une ligne pour le détail par compte." source={source} fin={fin}
+        nav={nav} right={<ChoixPeriode value={periode} onChange={setPeriode} options={[["mois", "Mois"], ["exercice", "Cumul exercice"], ["12m", "12 mois glissants"]]} />} />
       <div style={grid(200)}>
-        <Chiffre label="Chiffre d'affaires" value={eur(s.ca)} sub={libPeriode} delta={s1 && <Variation cur={s.ca} prev={s1.ca} label="sur un an" />} />
-        <Chiffre label="Marge brute" value={pctFr(s.ca ? (s.margeBrute / s.ca) * 100 : null, 1)} sub={`${eur(s.margeBrute)} sur la période`} delta={s1 && s1.ca > 0 && s.ca > 0 && <Variation cur={(s.margeBrute / s.ca) * 100} prev={(s1.margeBrute / s1.ca) * 100} points label="sur un an" />} />
-        <Chiffre label="EBE" value={eur(s.ebe)} sub={s.ca ? `${pctFr((s.ebe / s.ca) * 100, 1)} du chiffre d'affaires` : null} delta={s1 && <Variation cur={s.ebe} prev={s1.ebe} label="sur un an" />} />
-        <Chiffre label="Résultat net" value={eur(s.rn)} sub={s.rn >= 0 ? "Bénéfice" : "Perte"} delta={s1 && <Variation cur={s.rn} prev={s1.rn} label="sur un an" />} />
-        {pm && <Chiffre label="Point mort annuel" value={eur(pm.seuil)} statut={pm.marge >= 0.1 * pm.ca ? "ok" : pm.marge >= 0 ? "warn" : "bad"} subTon sub={pm.marge >= 0 ? `Dépassé de ${eur(pm.marge)} sur 12 mois` : `Il manque ${eur(-pm.marge)} de CA sur 12 mois`} aide="Le chiffre d'affaires annuel à partir duquel l'entreprise ne perd plus d'argent." />}
+        <Chiffre label="CA HT" value={eur(s.ca)} sub={libPeriode} delta={s1 && <Variation cur={s.ca} prev={s1.ca} label="vs N-1" />} />
+        <Chiffre label="Taux de marge brute" value={pctFr(s.ca ? (s.margeBrute / s.ca) * 100 : null, 1)} sub={`Marge brute ${eur(s.margeBrute)}`} delta={s1 && s1.ca > 0 && s.ca > 0 && <Variation cur={(s.margeBrute / s.ca) * 100} prev={(s1.margeBrute / s1.ca) * 100} points label="vs N-1" />} />
+        <Chiffre label="EBE" value={eur(s.ebe)} sub={s.ca ? `${pctFr((s.ebe / s.ca) * 100, 1)} du CA` : null} delta={s1 && <Variation cur={s.ebe} prev={s1.ebe} label="vs N-1" />} />
+        <Chiffre label="Résultat net" value={eur(s.rn)} sub={s.ca ? `${pctFr((s.rn / s.ca) * 100, 1)} du CA` : null} delta={s1 && <Variation cur={s.rn} prev={s1.rn} label="vs N-1" />} />
+        {pm && <Chiffre label="Point mort annuel" value={eur(pm.seuil)} statut={pm.marge >= 0.1 * pm.ca ? "ok" : pm.marge >= 0 ? "warn" : "bad"} subTon sub={pm.marge >= 0 ? `Marge de sécurité ${eur(pm.marge)}` : `Manque ${eur(-pm.marge)} de CA`} aide="Seuil de rentabilité : CA annuel (12 mois glissants) qui couvre l'ensemble des charges fixes. Charges variables retenues : achats consommés et sous-traitance." />}
       </div>
       <Card>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
-            <thead><tr><Th>{libPeriode}</Th><Th right>Montant</Th><Th right>% du CA</Th>{hasN1 && <Th right>Un an plus tôt</Th>}{hasN1 && <Th right>Évolution</Th>}</tr></thead>
+            <thead><tr><Th>{libPeriode}</Th><Th right>Réalisé</Th><Th right>% CA</Th>{hasN1 && <Th right>N-1</Th>}{hasN1 && <Th right>Écart</Th>}</tr></thead>
             <tbody>
               {lignes.map((l) => {
                 const v = l.f(pl, s), v1 = s1 ? l.f(pl1, s1) : null;
@@ -182,8 +183,7 @@ export function CompteResultat({ client, moisIdx, moisYear, setMoisIdx, setMoisK
                   <tr key={l.id} onClick={() => l.postes && setOuvert((o) => ({ ...o, [l.id]: !o[l.id] }))}
                     style={{ borderTop: `1px solid ${C.borderLight}`, background: l.total ? C.bgLight : "white", cursor: l.postes ? "pointer" : "default" }}>
                     <td style={{ padding: "10px 12px" }}>
-                      <div style={{ fontSize: l.total ? 14 : 13, fontWeight: l.total ? 900 : 700, color: C.text }}>{l.postes && <span style={{ display: "inline-block", width: 14, color: C.textLight }}>{open ? "▾" : "▸"}</span>}{l.label}</div>
-                      {l.aide && <div style={{ fontSize: 11.5, color: C.textLight, fontWeight: 600, marginLeft: l.postes ? 14 : 0 }}>{l.aide}</div>}
+                      <div style={{ fontSize: l.total ? 14 : 13, fontWeight: l.total ? 900 : 700, color: C.text, display: "flex", alignItems: "center" }}>{l.postes && <span style={{ display: "inline-block", width: 14, color: C.textLight }}>{open ? "▾" : "▸"}</span>}{l.label}<Info>{l.aide}</Info></div>
                     </td>
                     <td style={{ ...num, padding: "10px 12px", fontSize: l.total ? 14.5 : 13.5, fontWeight: l.total ? 900 : 700, color: l.total && v < 0 ? C.red : C.text }}>{eur(v)}</td>
                     <td style={{ ...num, padding: "10px 12px", fontSize: 12.5, color: C.textMid, fontWeight: 700 }}>{s.ca ? pctFr((v / s.ca) * 100, 1) : "—"}</td>
@@ -206,10 +206,10 @@ export function CompteResultat({ client, moisIdx, moisYear, setMoisIdx, setMoisK
         </div>
       </Card>
       <Card>
-        <CarteTitre title="Mois par mois sur l'exercice" sub="Pour repérer d'un coup d'œil les mois forts, les mois faibles et les dérives." />
+        <CarteTitre title="Évolution mensuelle · exercice" />
         <div style={{ overflowX: "auto", padding: "12px 0 6px" }}>
           <table style={{ borderCollapse: "collapse", minWidth: "100%" }}>
-            <thead><tr><Th>&nbsp;</Th>{moisEx.map((x) => <Th key={x.k} right>{P.keyLabel(x.k, false).replace(/ \d+$/, "")}</Th>)}<Th right>Exercice</Th></tr></thead>
+            <thead><tr><Th>&nbsp;</Th>{moisEx.map((x) => <Th key={x.k} right>{P.keyLabel(x.k, false).replace(/ \d+$/, "")}</Th>)}<Th right>Cumul</Th></tr></thead>
             <tbody>
               {LIGNES_MOIS.map((l) => {
                 const tot = l.f({ s: sEx, p: P.plOver(idx, ytd) });
@@ -240,8 +240,7 @@ function LigneBilan({ label, v, total, detail, aide }) {
     <div style={{ borderTop: `1px solid ${C.borderLight}`, padding: "9px 0" }}>
       <div onClick={() => detail?.length && setOpen(!open)} style={{ display: "flex", justifyContent: "space-between", gap: 10, cursor: detail?.length ? "pointer" : "default" }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 800, color: C.text }}>{detail?.length ? <span style={{ color: C.textLight, display: "inline-block", width: 14 }}>{open ? "▾" : "▸"}</span> : null}{label}</div>
-          {aide && <div style={{ fontSize: 11.5, color: C.textLight, fontWeight: 600, marginLeft: detail?.length ? 14 : 0 }}>{aide}</div>}
+          <div style={{ fontSize: 13.5, fontWeight: 800, color: C.text, display: "flex", alignItems: "center" }}>{detail?.length ? <span style={{ color: C.textLight, display: "inline-block", width: 14 }}>{open ? "▾" : "▸"}</span> : null}{label}<Info>{aide}</Info></div>
         </div>
         <div style={{ ...num, fontSize: 14, fontWeight: 900, color: v < 0 ? C.red : C.text }}>{eur(v)}</div>
       </div>
@@ -271,28 +270,27 @@ export function BilanView({ client, moisIdx, moisYear, setMoisIdx, setMoisKey })
   const hist = last12.map((k) => P.bilanAt(client, k));
   const d = b.detail;
   const ratios = [
-    { label: "Délai de paiement clients", v: r.dso, f: (v) => `${Math.round(v)} jours`, statut: statutDe(r.dso, 45, 75, false), aide: "Le temps moyen entre la facture et l'encaissement. Chaque jour gagné, c'est de la trésorerie en plus." },
-    { label: "Délai de paiement fournisseurs", v: r.dpo, f: (v) => `${Math.round(v)} jours`, statut: r.dpo == null ? "na" : r.dpo > 60 ? "warn" : "ok", aide: "Le temps moyen pour régler vos fournisseurs (60 jours maximum par la loi, en général)." },
-    { label: "Rotation des stocks", v: r.dio, f: (v) => `${Math.round(v)} jours`, statut: r.dio == null ? "na" : r.dio > 120 ? "warn" : "ok", aide: "Le nombre de jours d'achats immobilisés en stock." },
-    { label: "Autonomie financière", v: r.autonomieFinanciere, f: (v) => pctFr(v * 100), statut: statutDe(r.autonomieFinanciere, 0.3, 0.15), aide: "La part du bilan financée par les fonds propres. Au-dessus de 30 %, les banques sont rassurées." },
-    { label: "Endettement net", v: r.endettement, f: (v) => `${v.toFixed(2).replace(".", ",")} × les fonds propres`, statut: r.endettement == null ? (b.capitauxPropres <= 0 ? "bad" : "na") : statutDe(r.endettement, 1, 2, false), aide: "Dettes bancaires moins trésorerie, rapportées aux fonds propres. Au-delà de 1, la marge de manœuvre se réduit." },
-    { label: "Capacité de remboursement", v: r.capaciteRemboursement, f: (v) => `${v.toFixed(1).replace(".", ",")} ans`, statut: r.capaciteRemboursement == null ? "na" : statutDe(r.capaciteRemboursement, 3, 5, false), aide: "Le nombre d'années d'autofinancement pour rembourser les emprunts. Les banques regardent le seuil de 3 à 4 ans." },
-    { label: "Point mort annuel", v: r.pointMort, f: (v) => eur(v), statut: r.margeSecurite == null ? "na" : r.margeSecurite > 0.1 * r.caAnnuel ? "ok" : r.margeSecurite > 0 ? "warn" : "bad", sub: r.margeSecurite != null ? `${r.margeSecurite >= 0 ? "Marge de sécurité" : "Il manque"} : ${eur(Math.abs(r.margeSecurite))}` : null, aide: "Le chiffre d'affaires annuel à partir duquel l'entreprise ne perd plus d'argent." },
-    { label: "Besoin en fonds de roulement", v: r.bfrJoursCA, f: (v) => `${Math.round(v)} jours de CA`, statut: "na", aide: "L'argent immobilisé par l'activité, exprimé en jours de chiffre d'affaires." },
+    { label: "DSO · délai clients", v: r.dso, f: (v) => `${Math.round(v)} jours`, statut: statutDe(r.dso, 45, 75, false), aide: "Créances clients TTC / CA TTC × 365, sur 12 mois glissants. Repère : moins de 45 jours." },
+    { label: "DPO · délai fournisseurs", v: r.dpo, f: (v) => `${Math.round(v)} jours`, statut: r.dpo == null ? "na" : r.dpo > 60 ? "warn" : "ok", aide: "Dettes fournisseurs TTC / achats TTC × 365. Plafond légal (LME) : 60 jours date de facture." },
+    { label: "DIO · rotation des stocks", v: r.dio, f: (v) => `${Math.round(v)} jours`, statut: r.dio == null ? "na" : r.dio > 120 ? "warn" : "ok", aide: "Stocks / achats consommés × 365." },
+    { label: "Autonomie financière", v: r.autonomieFinanciere, f: (v) => pctFr(v * 100), statut: statutDe(r.autonomieFinanciere, 0.3, 0.15), aide: "Capitaux propres / total bilan. Repère bancaire : au moins 30 %." },
+    { label: "Gearing", v: r.endettement, f: (v) => v.toFixed(2).replace(".", ","), statut: r.endettement == null ? (b.capitauxPropres <= 0 ? "bad" : "na") : statutDe(r.endettement, 1, 2, false), aide: "Endettement net (dettes financières − trésorerie) / capitaux propres. Repère : inférieur à 1." },
+    { label: "Capacité de remboursement", v: r.capaciteRemboursement, f: (v) => `${v.toFixed(1).replace(".", ",")} ans`, statut: r.capaciteRemboursement == null ? "na" : statutDe(r.capaciteRemboursement, 3, 5, false), aide: "Dettes financières / CAF annuelle. Repère bancaire : 3 à 4 ans maximum." },
+    { label: "Point mort", v: r.pointMort, f: (v) => eur(v), statut: r.margeSecurite == null ? "na" : r.margeSecurite > 0.1 * r.caAnnuel ? "ok" : r.margeSecurite > 0 ? "warn" : "bad", sub: r.margeSecurite != null ? `${r.margeSecurite >= 0 ? "Marge de sécurité" : "Manque"} ${eur(Math.abs(r.margeSecurite))}` : null, aide: "Seuil de rentabilité annuel : charges fixes / taux de marge sur coûts variables." },
+    { label: "BFR", v: r.bfrJoursCA, f: (v) => `${Math.round(v)} jours de CA`, statut: "na", aide: "BFR / CA HT annuel × 365." },
   ];
   return (
     <Page>
-      <EnTete title="Bilan et fonds de roulement" sub={`Situation au ${fmtDate(P.monthEnd(b.key))} reconstituée à partir de la comptabilité (bilan de gestion, non certifié). Cliquez sur une ligne pour voir les comptes.`} nav={nav} />
+      <EnTete title="Bilan de gestion" detail={`Situation au ${fmtDate(P.monthEnd(b.key))}`} sub="Bilan reconstitué chaque mois à partir du FEC (non certifié). Cliquez sur une ligne pour le détail par compte." nav={nav} />
       <Card style={{ padding: "18px 22px" }}>
-        <div style={{ fontSize: 15, fontWeight: 900, color: C.text, marginBottom: 4 }}>La trésorerie s'explique en une ligne</div>
-        <div style={{ fontSize: 12.5, color: C.textMid, fontWeight: 600, marginBottom: 14 }}>Les ressources stables de l'entreprise (fonds de roulement) financent l'argent immobilisé par l'activité (besoin en fonds de roulement). Ce qui reste, c'est la trésorerie.</div>
+        <div style={{ fontSize: 15, fontWeight: 900, color: C.text, marginBottom: 14, display: "flex", alignItems: "center" }}>FR − BFR = Trésorerie nette<Info>Les ressources stables (fonds de roulement) financent le besoin né du cycle d'exploitation (BFR) ; le solde constitue la trésorerie nette.</Info></div>
         <div style={{ display: "flex", alignItems: "stretch", gap: 10, flexWrap: "wrap" }}>
           {[
-            { l: "Fonds de roulement", v: b.fr, a: "Capitaux, emprunts et comptes courants, moins les immobilisations" },
+            { l: "Fonds de roulement (FR)", v: b.fr, a: "Capitaux permanents − actif immobilisé net" },
             { op: "−" },
-            { l: "Besoin en fonds de roulement", v: b.bfr, a: "Stocks et clients, moins fournisseurs et dettes fiscales et sociales" },
+            { l: "BFR", v: b.bfr, a: "Actif circulant − dettes d'exploitation" },
             { op: "=" },
-            { l: "Trésorerie nette", v: b.tresoNette, a: "Banques et caisse, moins les découverts", accent: true },
+            { l: "Trésorerie nette", v: b.tresoNette, a: "Disponibilités − concours bancaires", accent: true },
           ].map((x, i) => x.op ? <div key={i} style={{ fontSize: 26, fontWeight: 900, color: C.textLight, alignSelf: "center", padding: "0 4px" }}>{x.op}</div> : (
             <div key={i} style={{ flex: "1 1 200px", background: x.accent ? C.primary : C.bgLight, color: x.accent ? "white" : C.text, borderRadius: 16, padding: "14px 16px" }}>
               <div style={{ fontSize: 12, fontWeight: 800, opacity: 0.85 }}>{x.l}</div>
@@ -304,42 +302,42 @@ export function BilanView({ client, moisIdx, moisYear, setMoisIdx, setMoisKey })
       </Card>
       <div style={grid(420)}>
         <Card style={{ padding: "16px 22px 12px" }}>
-          <div style={{ fontSize: 15, fontWeight: 900, color: C.text }}>Ce que possède l'entreprise</div>
-          <div style={{ fontSize: 12, color: C.textLight, fontWeight: 600, marginBottom: 6 }}>Actif · total {eur(b.actif)}</div>
-          <LigneBilan label="Immobilisations (valeur nette)" v={b.immoNet} total={b.actif} detail={d.immoNet} aide={`Valeur d'achat ${eur(b.immoBrut)}, déjà amortie de ${eur(b.amortImmo)}`} />
+          <div style={{ fontSize: 15, fontWeight: 900, color: C.text }}>Actif</div>
+          <div style={{ fontSize: 12, color: C.textMid, fontWeight: 700, marginBottom: 6 }}>Total {eur(b.actif)}</div>
+          <LigneBilan label="Immobilisations (valeur nette)" v={b.immoNet} total={b.actif} detail={d.immoNet} aide={`Valeur brute ${eur(b.immoBrut)}, amortissements cumulés ${eur(b.amortImmo)}.`} />
           <LigneBilan label="Stocks" v={b.stocks} total={b.actif} detail={d.stocks} />
-          <LigneBilan label="Créances clients" v={b.clients} total={b.actif} detail={d.clients} aide="Factures émises, pas encore payées" />
-          <LigneBilan label="Autres créances" v={b.autresCreances} total={b.actif} detail={d.autresCreances} aide="TVA à récupérer, avances versées…" />
-          <LigneBilan label="Charges payées d'avance" v={b.cca} total={b.actif} detail={d.cca} />
-          <LigneBilan label="Disponibilités" v={b.dispo} total={b.actif} detail={d.dispo} aide="Banques et caisse" />
+          <LigneBilan label="Créances clients" v={b.clients} total={b.actif} detail={d.clients} aide="Factures émises non encore encaissées (411, 416, 418)." />
+          <LigneBilan label="Autres créances" v={b.autresCreances} total={b.actif} detail={d.autresCreances} aide="TVA déductible, crédit de TVA, avances et acomptes versés…" />
+          <LigneBilan label="Charges constatées d'avance" v={b.cca} total={b.actif} detail={d.cca} />
+          <LigneBilan label="Disponibilités" v={b.dispo} total={b.actif} detail={d.dispo} aide="Banques (512) et caisse (53)." />
         </Card>
         <Card style={{ padding: "16px 22px 12px" }}>
-          <div style={{ fontSize: 15, fontWeight: 900, color: C.text }}>Comment c'est financé</div>
-          <div style={{ fontSize: 12, color: C.textLight, fontWeight: 600, marginBottom: 6 }}>Passif · total {eur(b.passif)}</div>
-          <LigneBilan label="Fonds propres" v={b.capitauxPropres} total={b.passif} detail={[...d.capitaux, ...d.resultat]} aide={`Dont résultat de l'exercice en cours : ${eur(b.resultat)}`} />
+          <div style={{ fontSize: 15, fontWeight: 900, color: C.text }}>Passif</div>
+          <div style={{ fontSize: 12, color: C.textMid, fontWeight: 700, marginBottom: 6 }}>Total {eur(b.passif)}</div>
+          <LigneBilan label="Capitaux propres" v={b.capitauxPropres} total={b.passif} detail={[...d.capitaux, ...d.resultat]} aide={`Dont résultat de l'exercice en cours : ${eur(b.resultat)}.`} />
           <LigneBilan label="Provisions" v={b.provisions} total={b.passif} detail={d.provisions} />
-          <LigneBilan label="Emprunts bancaires" v={b.dettesFin} total={b.passif} detail={d.dettesFin} />
-          <LigneBilan label="Comptes courants d'associés" v={b.associes} total={b.passif} detail={d.associes} aide="Argent prêté à l'entreprise par les associés" />
-          <LigneBilan label="Découverts bancaires" v={b.concours} total={b.passif} detail={d.concours} />
+          <LigneBilan label="Dettes financières" v={b.dettesFin} total={b.passif} detail={d.dettesFin} aide="Emprunts auprès des établissements de crédit (16, 17)." />
+          <LigneBilan label="Comptes courants d'associés" v={b.associes} total={b.passif} detail={d.associes} aide="Sommes prêtées par les associés (455)." />
+          <LigneBilan label="Concours bancaires courants" v={b.concours} total={b.passif} detail={d.concours} aide="Découverts et soldes créditeurs de banque (519)." />
           <LigneBilan label="Dettes fournisseurs" v={b.fournisseurs} total={b.passif} detail={d.fournisseurs} />
-          <LigneBilan label="Dettes fiscales et sociales" v={b.fiscalSocial} total={b.passif} detail={d.fiscalSocial} aide="TVA, URSSAF, salaires, impôts à payer" />
-          <LigneBilan label="Autres dettes" v={b.autresDettes + b.pca} total={b.passif} detail={[...d.autresDettes, ...d.pca]} />
+          <LigneBilan label="Dettes fiscales et sociales" v={b.fiscalSocial} total={b.passif} detail={d.fiscalSocial} aide="TVA, URSSAF, salaires et impôts à payer (42, 43, 44)." />
+          <LigneBilan label="Autres dettes et produits constatés d'avance" v={b.autresDettes + b.pca} total={b.passif} detail={[...d.autresDettes, ...d.pca]} />
         </Card>
       </div>
       {Math.abs(b.ecart) >= 1 && <div style={{ fontSize: 12, color: C.orange, fontWeight: 700 }}>Écart actif / passif de {eur(b.ecart)} : la comptabilité importée contient probablement des écritures déséquilibrées ou une reprise d'à-nouveaux incomplète.</div>}
       <div>
-        <Titre>Les ratios que regardent les banques et les investisseurs</Titre>
+        <Titre>Ratios financiers</Titre>
         <div style={grid(230)}>
           {ratios.map((x) => <Chiffre key={x.label} label={x.label} value={x.v == null ? "—" : x.f(x.v)} statut={x.statut === "na" ? null : x.statut} subTon sub={x.sub || (x.statut !== "na" ? STATUT[x.statut].mot : null)} aide={x.aide} />)}
         </div>
-        <div style={{ fontSize: 11.5, color: C.textLight, fontWeight: 600, marginTop: 8 }}>Calculés sur les {r.mois} derniers mois{r.mois < 12 ? " (ramenés à l'année)" : ""}. Délais exprimés toutes taxes comprises.</div>
+        <div style={{ fontSize: 11.5, color: C.textLight, fontWeight: 600, marginTop: 8 }}>{r.mois} mois glissants{r.mois < 12 ? ", annualisés" : ""} · délais TTC</div>
       </div>
       {hist.length > 1 && (
         <Card>
-          <CarteTitre title="Besoin en fonds de roulement et trésorerie" sub="Quand le besoin monte (clients qui paient plus tard, stock qui gonfle), la trésorerie baisse d'autant." />
+          <CarteTitre title="FR, BFR et trésorerie nette · 12 mois" sub="Quand le BFR augmente (clients plus lents, stock qui gonfle), la trésorerie baisse d'autant à FR constant." />
           <div style={{ padding: "12px 18px 16px" }}>
             <Lignes labels={last12.map((k) => P.keyLabel(k, false).replace(/ \d+$/, ""))} keys={last12.map((k) => P.keyLabel(k))}
-              series={[{ label: "Besoin en fonds de roulement", color: VIZ.externes, values: hist.map((h) => h.bfr) }, { label: "Trésorerie nette", color: VIZ.serie, values: hist.map((h) => h.tresoNette) }, { label: "Fonds de roulement", color: VIZ.achats, values: hist.map((h) => h.fr) }]} />
+              series={[{ label: "BFR", color: VIZ.externes, values: hist.map((h) => h.bfr) }, { label: "Trésorerie nette", color: VIZ.serie, values: hist.map((h) => h.tresoNette) }, { label: "FR", color: VIZ.achats, values: hist.map((h) => h.fr) }]} />
           </div>
         </Card>
       )}
@@ -350,7 +348,7 @@ export function BilanView({ client, moisIdx, moisYear, setMoisIdx, setMoisKey })
 // ══════════════════════════════════════════════════════════════════════
 // TRÉSORERIE RÉELLE
 // ══════════════════════════════════════════════════════════════════════
-export function TresorerieFec({ client, moisIdx, moisYear, setMoisIdx, setMoisKey }) {
+export function TresorerieFec({ client, moisIdx, moisYear, setMoisIdx, setMoisKey, tresoOf }) {
   const [periode, setPeriode] = useState("mois");
   const [ouvert, setOuvert] = useState(false);
   const { idx, key, covered } = contexte(client, moisIdx, moisYear, { fec: true });
@@ -365,6 +363,8 @@ export function TresorerieFec({ client, moisIdx, moisYear, setMoisIdx, setMoisKe
   const flux = debut ? P.fluxTresorerie(client, keys, debut, fin) : null;
   const r = P.ratiosAt(client, key);
   const histKeys = idx.keys.filter((k) => k <= key).slice(-24);
+  // Prolongement en pointillés : 6 mois du plan de trésorerie, si le mois consulté est le dernier connu.
+  const projection = prolongerTresorerie(client, key, 6, tresoOf);
   const cli = P.tiersAt(client, key, "C");
   // Ce qui va sortir prochainement : dettes à court terme connues
   const somme = (list, pref) => list.filter((a) => pref.some((p) => a.c.startsWith(p))).reduce((t, a) => t + a.v, 0);
@@ -374,35 +374,34 @@ export function TresorerieFec({ client, moisIdx, moisYear, setMoisIdx, setMoisKe
   const is = somme(fin.detail.fiscalSocial, ["444"]);
   const autresFisc = fin.fiscalSocial - somme(fin.detail.fiscalSocial, ["445", "43", "42", "444"]);
   const sorties = [
-    { l: "Fournisseurs", v: fin.fournisseurs, a: "Factures reçues, pas encore payées" },
-    { l: "TVA", v: Math.max(0, tva), a: "À reverser à la prochaine déclaration" },
-    { l: "URSSAF et caisses sociales", v: social, a: "Cotisations du mois, prélevées le mois suivant" },
-    { l: "Salaires", v: salaires, a: "Rémunérations restant à verser" },
-    { l: "Impôt sur les sociétés", v: is, a: "Solde ou acompte à payer" },
-    { l: "Autres impôts et taxes", v: autresFisc, a: "" },
+    { l: "Fournisseurs", v: fin.fournisseurs },
+    { l: "TVA à décaisser", v: Math.max(0, tva) },
+    { l: "URSSAF et organismes sociaux", v: social },
+    { l: "Rémunérations dues", v: salaires },
+    { l: "IS", v: is },
+    { l: "Autres impôts et taxes", v: autresFisc },
   ].filter((x) => x.v >= 1);
   const totalSorties = sorties.reduce((t, x) => t + x.v, 0);
   const entrees = cli ? cli.total : 0;
   return (
     <Page>
-      <EnTete title="Trésorerie" sub="L'argent réellement disponible, d'après vos comptes bancaires en comptabilité, et ce qui l'a fait bouger." nav={nav} />
+      <EnTete title="Trésorerie" sub="Trésorerie nette réelle d'après les comptes de banque et de caisse du FEC." nav={nav} />
       <div style={grid(200)}>
-        <Chiffre label="Trésorerie nette" value={eur(fin.tresoNette)} sub={`Au ${fmtDate(P.monthEnd(key))}`} statut={fin.tresoNette < 0 ? "bad" : r.autonomieTreso >= 1.5 ? "ok" : r.autonomieTreso >= 0.7 ? "warn" : "bad"} aide="Banques et caisse, moins les découverts." />
-        <Chiffre label="Sur le mois" value={idx.months.has(prevKey) ? `${fin.tresoNette - P.bilanAt(client, prevKey).tresoNette >= 0 ? "+" : "−"}${eur(Math.abs(fin.tresoNette - P.bilanAt(client, prevKey).tresoNette))}` : "—"} aide="Variation depuis la fin du mois précédent." />
-        <Chiffre label="Mois de dépenses couverts" value={r.autonomieTreso == null ? "—" : r.autonomieTreso.toFixed(1).replace(".", ",")} sub={r.depensesMois ? `Dépenses courantes : ${eur(r.depensesMois)} par mois` : null} aide="Combien de mois l'entreprise tiendrait avec sa trésorerie actuelle, sans aucune rentrée." />
-        <Chiffre label="Besoin en fonds de roulement" value={eur(fin.bfr)} sub={r.bfrJoursCA != null ? `${Math.round(r.bfrJoursCA)} jours de chiffre d'affaires` : null} aide="L'argent avancé par l'entreprise le temps que ses clients paient." />
+        <Chiffre label="Trésorerie nette" value={eur(fin.tresoNette)} sub={`Au ${fmtDate(P.monthEnd(key))}`} statut={fin.tresoNette < 0 ? "bad" : r.autonomieTreso >= 1.5 ? "ok" : r.autonomieTreso >= 0.7 ? "warn" : "bad"} aide="Disponibilités − concours bancaires courants." />
+        <Chiffre label="Variation M-1" value={idx.months.has(prevKey) ? `${fin.tresoNette - P.bilanAt(client, prevKey).tresoNette >= 0 ? "+" : "−"}${eur(Math.abs(fin.tresoNette - P.bilanAt(client, prevKey).tresoNette))}` : "—"} />
+        <Chiffre label="Couverture" value={r.autonomieTreso == null ? "—" : `${r.autonomieTreso.toFixed(1).replace(".", ",")} mois`} sub={r.depensesMois ? `Charges décaissables : ${eur(r.depensesMois)}/mois` : null} aide="Trésorerie nette / charges décaissables mensuelles moyennes (3 derniers mois) : nombre de mois tenus sans encaissement." />
+        <Chiffre label="BFR" value={eur(fin.bfr)} sub={r.bfrJoursCA != null ? `${Math.round(r.bfrJoursCA)} jours de CA` : null} aide="Besoin en fonds de roulement : stocks + créances − dettes d'exploitation." />
       </div>
       <div style={grid(440)}>
         <Card>
-          <CarteTitre title="Pourquoi votre trésorerie a bougé" sub={flux ? `De ${eur(flux.debut)} à ${eur(flux.fin)} : ${flux.variation >= 0 ? "+" : "−"}${eur(Math.abs(flux.variation))}.` : "Le point de départ n'est pas disponible."}
-            right={<ChoixPeriode value={periode} onChange={setPeriode} options={[["mois", "Le mois"], ["exercice", "L'exercice"]]} />} />
+          <CarteTitre title="Tableau de flux de trésorerie" detail={flux ? `${eur(flux.debut)} → ${eur(flux.fin)} (${flux.variation >= 0 ? "+" : "−"}${eur(Math.abs(flux.variation))})` : "Point de départ indisponible"} sub="De la variation du résultat à la variation de trésorerie : CAF, variation du BFR, investissements, financement."
+            right={<ChoixPeriode value={periode} onChange={setPeriode} options={[["mois", "Mois"], ["exercice", "Cumul exercice"]]} />} />
           <div style={{ padding: "12px 22px 18px" }}>
             {flux ? flux.lignes.filter((l) => Math.abs(l.v) >= 1 || l.id === "rn").map((l) => (
               <div key={l.id} style={{ borderTop: `1px solid ${C.borderLight}`, padding: "9px 0" }}>
                 <div onClick={() => l.detail && setOuvert(!ouvert)} style={{ display: "flex", justifyContent: "space-between", gap: 10, cursor: l.detail ? "pointer" : "default" }}>
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 800, color: C.text }}>{l.detail && <span style={{ color: C.textLight, display: "inline-block", width: 14 }}>{ouvert ? "▾" : "▸"}</span>}{l.label}</div>
-                    {l.aide && <div style={{ fontSize: 11.5, color: C.textLight, fontWeight: 600, marginLeft: l.detail ? 14 : 0 }}>{l.aide}</div>}
+                    <div style={{ fontSize: 13.5, fontWeight: 800, color: C.text, display: "flex", alignItems: "center" }}>{l.detail && <span style={{ color: C.textLight, display: "inline-block", width: 14 }}>{ouvert ? "▾" : "▸"}</span>}{l.label}<Info>{l.aide}</Info></div>
                   </div>
                   <div style={{ ...num, fontSize: 14, fontWeight: 900, color: l.v < 0 ? C.red : C.green }}>{l.v >= 0 ? "+" : "−"}{eur(Math.abs(l.v))}</div>
                 </div>
@@ -417,28 +416,30 @@ export function TresorerieFec({ client, moisIdx, moisYear, setMoisIdx, setMoisKe
           </div>
         </Card>
         <Card>
-          <CarteTitre title="Ce qui doit rentrer et sortir" sub={`D'après la comptabilité au ${fmtDate(P.monthEnd(key))}. Les échéances d'emprunt et les charges du mois suivant s'y ajoutent.`} />
+          <CarteTitre title="Encaissements et décaissements à venir" detail={`Au ${fmtDate(P.monthEnd(key))}`} sub="Créances et dettes d'exploitation inscrites en comptabilité. S'y ajoutent les échéances d'emprunt et les charges des mois suivants." />
           <div style={{ padding: "12px 22px 18px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", fontSize: 13.5, fontWeight: 900, color: C.text }}><span>À encaisser auprès des clients</span><span style={{ ...num, color: C.green }}>+{eur(entrees)}</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", fontSize: 13.5, fontWeight: 900, color: C.text }}><span>Créances clients</span><span style={{ ...num, color: C.green }}>+{eur(entrees)}</span></div>
             {cli && entrees > 0 && <div style={{ fontSize: 12, color: C.textMid, fontWeight: 600, marginBottom: 8 }}>dont {eur(cli.buckets[0].v)} facturés il y a moins de 30 jours</div>}
-            <div style={{ fontSize: 13.5, fontWeight: 900, color: C.text, padding: "8px 0 2px", borderTop: `1px solid ${C.borderLight}` }}>À payer</div>
+            <div style={{ fontSize: 13.5, fontWeight: 900, color: C.text, padding: "8px 0 2px", borderTop: `1px solid ${C.borderLight}` }}>Dettes d'exploitation</div>
             {sorties.map((x) => (
               <div key={x.l} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "5px 0" }}>
-                <div><div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{x.l}</div>{x.a && <div style={{ fontSize: 11.5, color: C.textLight, fontWeight: 600 }}>{x.a}</div>}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{x.l}</div>
                 <span style={{ ...num, fontSize: 13, fontWeight: 800, color: C.red }}>−{eur(x.v)}</span>
               </div>
             ))}
             <div style={{ display: "flex", justifyContent: "space-between", borderTop: `2px solid ${C.text}`, paddingTop: 10, marginTop: 6 }}>
-              <span style={{ fontSize: 13.5, fontWeight: 900, color: C.text }}>Trésorerie + encaissements − paiements</span>
+              <span style={{ fontSize: 13.5, fontWeight: 900, color: C.text }}>Trésorerie nette après dénouement</span>
               <span style={{ ...num, fontSize: 15, fontWeight: 900, color: fin.tresoNette + entrees - totalSorties < 0 ? C.red : C.text }}>{eur(fin.tresoNette + entrees - totalSorties)}</span>
             </div>
           </div>
         </Card>
       </div>
       <Card>
-        <CarteTitre title="Trésorerie en fin de mois" sub="Solde réel des comptes bancaires et de la caisse, découverts déduits." />
-        <div style={{ padding: "12px 18px 16px" }}>
-          <Courbe data={histKeys.map((k) => ({ key: k, l: P.keyLabel(k, false).replace(/ \d+$/, ""), v: P.bilanAt(client, k).tresoNette, current: k === key }))} height={210} tip={(x) => [P.keyLabel(x.key), `Trésorerie : ${eur(x.v)}`]} />
+        <CarteTitre title="Trésorerie nette fin de mois" detail={projection.length ? `Réel puis prévision sur ${projection.length} mois` : null} sub={projection.length ? "Pointillés : prévision du plan de trésorerie (budget, sinon N-1, sinon tendance 3 mois ; échéances d'emprunt, acomptes d'IS et flux exceptionnels saisis)." : null} />
+        <div style={{ padding: "12px 18px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+          {projection.length > 0 && <Legende items={[{ label: "Réel", color: VIZ.serie, line: true }, { label: "Prévision", color: VIZ.serie, dash: true }]} />}
+          <Courbe data={[...histKeys.map((k) => ({ key: k, l: P.keyLabel(k, false).replace(/ \d+$/, ""), v: P.bilanAt(client, k).tresoNette, current: k === key })), ...projection.map((x) => ({ key: x.key, l: P.keyLabel(x.key, false).replace(/ \d+$/, ""), p: x.solde }))]} height={210}
+            tip={(x) => [P.keyLabel(x.key), x.p != null ? `Prévision : ${eur(x.p)}` : `Trésorerie : ${eur(x.v)}`]} />
         </div>
         {(fin.detail.dispo.length > 0 || fin.detail.concours.length > 0) && (
           <div style={{ padding: "0 22px 18px", display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -495,21 +496,21 @@ export function TiersView({ client, moisIdx, moisYear, setMoisIdx, setMoisKey, s
   const retardMoyen = retards.length ? retards.reduce((s2, it) => s2 + it.retard, 0) / retards.length : null;
   return (
     <Page>
-      <EnTete title={title} sub={`${isC ? "Ce que vos clients vous doivent" : "Ce que vous devez à vos fournisseurs"} au ${fmtDate(t.date)}, facture par facture.${fec ? " Les règlements sont imputés sur les factures les plus anciennes." : ""}`} nav={nav} source={t.source} fin={fec ? t.date : null} />
+      <EnTete title={title} detail={`Situation au ${fmtDate(t.date)}`} sub={fec ? "Encours par tiers, facture par facture. Les règlements sont imputés sur les factures les plus anciennes (FIFO)." : "Encours par tiers d'après le fichier importé."} nav={nav} source={t.source} fin={fec ? t.date : null} />
       <div style={grid(200)}>
-        <Chiffre label={isC ? "À encaisser" : "À payer"} value={eur(t.total)} sub={`${t.list.length} ${isC ? "client" : "fournisseur"}${t.list.length > 1 ? "s" : ""}`} />
-        {fec ? <Chiffre label={isC ? "Délai moyen d'encaissement" : "Délai moyen de paiement"} value={delai == null ? "—" : `${Math.round(delai)} jours`} statut={isC ? statutDe(delai, 45, 75, false) : null} sub={isC ? null : "60 jours maximum en règle générale"} aide={isC ? "Entre la facture et l'encaissement, sur les 12 derniers mois." : "Entre la facture fournisseur et son règlement."} />
-          : <Chiffre label="Retard moyen" value={retardMoyen == null ? "—" : `${Math.round(retardMoyen)} jours`} statut={isC && retardMoyen != null ? statutDe(retardMoyen, 15, 45, false) : null} aide="Au-delà de l'échéance, d'après le fichier importé." />}
-        <Chiffre label="Factures de plus de 60 jours" value={eur(vieux)} statut={isC ? (vieux > 0.3 * t.total ? "bad" : vieux > 0.15 * t.total ? "warn" : "ok") : null} sub={t.total ? `${pctFr((vieux / t.total) * 100)} du total` : null} aide={isC ? "Les plus difficiles à encaisser : à relancer en priorité." : "Un retard prolongé peut tendre la relation fournisseur."} />
+        <Chiffre label={isC ? "Encours clients" : "Encours fournisseurs"} value={eur(t.total)} sub={`${t.list.length} ${isC ? "client" : "fournisseur"}${t.list.length > 1 ? "s" : ""}`} />
+        {fec ? <Chiffre label={isC ? "DSO" : "DPO"} value={delai == null ? "—" : `${Math.round(delai)} jours`} statut={isC ? statutDe(delai, 45, 75, false) : null} aide={isC ? "Délai moyen de paiement clients : créances TTC / CA TTC × 365 (12 mois glissants)." : "Délai moyen de paiement fournisseurs : dettes TTC / achats TTC × 365. Plafond légal : 60 jours."} />
+          : <Chiffre label="Retard moyen" value={retardMoyen == null ? "—" : `${Math.round(retardMoyen)} jours`} statut={isC && retardMoyen != null ? statutDe(retardMoyen, 15, 45, false) : null} aide="Retard moyen au-delà de l'échéance, d'après le fichier importé." />}
+        <Chiffre label="Encours > 60 jours" value={eur(vieux)} statut={isC ? (vieux > 0.3 * t.total ? "bad" : vieux > 0.15 * t.total ? "warn" : "ok") : null} sub={t.total ? `${pctFr((vieux / t.total) * 100)} de l'encours` : null} aide={isC ? "Créances les plus exposées au risque d'impayé : à relancer en priorité." : "Dettes anciennes : risque de tension avec les fournisseurs."} />
       </div>
       <Card style={{ padding: "16px 22px 18px" }}>
-        <div style={{ fontSize: 15, fontWeight: 900, color: C.text, marginBottom: 10 }}>Âge des factures non réglées</div>
+        <div style={{ fontSize: 15, fontWeight: 900, color: C.text, marginBottom: 10 }}>Balance âgée</div>
         <Repartition segments={t.buckets.map((b, i) => ({ id: b.id, label: b.label, v: b.v, color: VIZ.age[i] }))} />
       </Card>
       <Card>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 560 }}>
-            <thead><tr><Th>{isC ? "Client" : "Fournisseur"}</Th><Th right>Solde dû</Th><Th right>Plus de 60 jours</Th><Th right>Plus ancienne facture</Th>{isC && <Th right>Relance</Th>}</tr></thead>
+            <thead><tr><Th>{isC ? "Client" : "Fournisseur"}</Th><Th right>Solde</Th><Th right>&gt; 60 j</Th><Th right>Antériorité</Th>{isC && <Th right>Relance</Th>}</tr></thead>
             <tbody>
               {t.list.map((x) => {
                 const v60 = x.items.filter((it) => it.age > 60).reduce((s, it) => s + it.m, 0);
@@ -544,7 +545,7 @@ export function TiersView({ client, moisIdx, moisYear, setMoisIdx, setMoisKey, s
       </Card>
       {top.length > 0 && (
         <Card>
-          <CarteTitre title={isC ? "Vos meilleurs clients sur l'exercice" : "Vos principaux fournisseurs sur l'exercice"} sub={isC ? "Chiffre d'affaires HT facturé depuis le début de l'exercice : attention si un seul client pèse plus de 30 %." : "Achats et charges HT facturés depuis le début de l'exercice."} />
+          <CarteTitre title={isC ? "Top clients · CA cumul exercice" : "Top fournisseurs · achats cumul exercice"} sub={isC ? "CA HT facturé depuis l'ouverture de l'exercice. Risque de dépendance au-delà de 30 % du CA sur un seul client." : "Achats et charges HT facturés depuis l'ouverture de l'exercice."} />
           <div style={{ padding: "10px 22px 18px" }}>
             {top.slice(0, 10).map((x) => {
               const base = isC ? caYtd : totalTop;
@@ -570,10 +571,10 @@ export function TiersView({ client, moisIdx, moisYear, setMoisIdx, setMoisKey, s
 // VENTES · ACHATS · CHARGES · SALAIRES (même gabarit)
 // ══════════════════════════════════════════════════════════════════════
 const VUES_POSTES = {
-  ventes: { title: "Ventes", sub: "Votre chiffre d'affaires par nature de vente, comparé à l'an dernier.", postes: ["ventesMarch", "prodVendue", "prodStockee", "prodImmo"], tiers: "c", produit: true },
-  achats: { title: "Achats et marge", sub: "Ce que coûtent les achats nécessaires à vos ventes, et la marge qu'il vous reste.", postes: ["achatsMarch", "varStockMarch", "achatsMat", "varStockMat"], tiers: "f" },
-  charges: { title: "Charges", sub: "Tous vos frais de fonctionnement, regroupés par nature et comparés à l'an dernier. Une forte hausse est signalée en orange.", postes: ["chargesExternes", "impotsTaxes", "autresCharges"], regroupe: true, tiers: "f" },
-  salaires: { title: "Masse salariale", sub: "Salaires et cotisations sociales, tels qu'enregistrés en comptabilité.", postes: ["salaires", "chargesSociales"] },
+  ventes: { title: "Chiffre d'affaires", sub: "CA HT par nature de vente (comptes 70), comparé à N-1.", postes: ["ventesMarch", "prodVendue", "prodStockee", "prodImmo"], tiers: "c", produit: true },
+  achats: { title: "Achats et marge brute", sub: "Achats consommés (60, variation de stocks) et taux de marge brute.", postes: ["achatsMarch", "varStockMarch", "achatsMat", "varStockMat"], tiers: "f" },
+  charges: { title: "Frais généraux", sub: "Charges externes, impôts et taxes et autres charges de gestion, par nature. Hausse supérieure à 15 % vs N-1 signalée en orange.", postes: ["chargesExternes", "impotsTaxes", "autresCharges"], regroupe: true, tiers: "f" },
+  salaires: { title: "Masse salariale", sub: "Salaires bruts et charges sociales (comptes 64).", postes: ["salaires", "chargesSociales"] },
 };
 export function PosteView({ client, moisIdx, moisYear, setMoisIdx, setMoisKey, vue }) {
   const cfg = VUES_POSTES[vue];
@@ -610,22 +611,22 @@ export function PosteView({ client, moisIdx, moisYear, setMoisIdx, setMoisKey, v
     <Page>
       <EnTete title={cfg.title} sub={cfg.sub} nav={nav} source={source} fin={fin} />
       <div style={grid(200)}>
-        <Chiffre label={P.keyLabel(key)} value={eur(tM)} delta={tM1 != null && <Variation cur={tM} prev={tM1} goodUp={!!cfg.produit} label={`vs ${P.keyLabel(key1, false)}`} />} />
-        <Chiffre label="Depuis le début de l'exercice" value={eur(tY)} sub={exLib} delta={tY1 != null && <Variation cur={tY} prev={tY1} goodUp={!!cfg.produit} label="sur un an" />} />
-        {!cfg.produit && <Chiffre label="Poids dans le chiffre d'affaires" value={sY.ca > 0 ? pctFr((tY / sY.ca) * 100, 1) : "—"} sub="Sur l'exercice" delta={sY1 && sY1.ca > 0 && sY.ca > 0 && <Variation cur={(tY / sY.ca) * 100} prev={(tY1 / sY1.ca) * 100} points goodUp={false} label="sur un an" />} aide={`Pour 100 € vendus, ${sY.ca > 0 ? eur((tY / sY.ca) * 100) : "—"} partent ${vue === "salaires" ? "dans les salaires" : vue === "achats" ? "dans les achats" : "en charges"}.`} />}
-        {vue === "achats" && <Chiffre label="Taux de marge brute" value={pctFr(tauxMarge(sY), 1)} sub="Sur l'exercice" delta={sY1 && <Variation cur={tauxMarge(sY)} prev={tauxMarge(sY1)} points label="sur un an" />} aide={`Ce mois-ci : ${pctFr(tauxMarge(sM), 1)}${sM1 ? ` (${pctFr(tauxMarge(sM1), 1)} un an plus tôt)` : ""}.`} />}
-        {vue === "salaires" && <Chiffre label="Charges sociales / salaires" value={plY.salaires > 0 ? pctFr((plY.chargesSociales / plY.salaires) * 100) : "—"} sub="Sur l'exercice" aide="Pour 100 € de salaire brut, ce que l'entreprise verse en plus en cotisations." />}
-        {vue === "ventes" && <Chiffre label="Moyenne mensuelle" value={eur(tY / ytd.length)} sub={`Sur ${ytd.length} mois`} />}
+        <Chiffre label={P.keyLabel(key)} value={eur(tM)} delta={tM1 != null && <Variation cur={tM} prev={tM1} goodUp={!!cfg.produit} label="vs N-1" />} />
+        <Chiffre label="Cumul exercice" value={eur(tY)} sub={exLib} delta={tY1 != null && <Variation cur={tY} prev={tY1} goodUp={!!cfg.produit} label="vs N-1" />} />
+        {!cfg.produit && <Chiffre label="% du CA" value={sY.ca > 0 ? pctFr((tY / sY.ca) * 100, 1) : "—"} sub="Cumul exercice" delta={sY1 && sY1.ca > 0 && sY.ca > 0 && <Variation cur={(tY / sY.ca) * 100} prev={(tY1 / sY1.ca) * 100} points goodUp={false} label="vs N-1" />} />}
+        {vue === "achats" && <Chiffre label="Taux de marge brute" value={pctFr(tauxMarge(sY), 1)} sub={`Mois : ${pctFr(tauxMarge(sM), 1)}${sM1 ? ` · N-1 : ${pctFr(tauxMarge(sM1), 1)}` : ""}`} delta={sY1 && <Variation cur={tauxMarge(sY)} prev={tauxMarge(sY1)} points label="vs N-1 (cumul)" />} />}
+        {vue === "salaires" && <Chiffre label="Taux de charges sociales" value={plY.salaires > 0 ? pctFr((plY.chargesSociales / plY.salaires) * 100) : "—"} sub="Charges sociales / salaires bruts" />}
+        {vue === "ventes" && <Chiffre label="CA moyen mensuel" value={eur(tY / ytd.length)} sub={`${ytd.length} mois`} />}
       </div>
       <Card>
-        <CarteTitre title={`${cfg.title}, 12 derniers mois`} sub="Chaque mois comparé au même mois de l'année précédente." />
+        <CarteTitre title={`${cfg.title} · 12 mois glissants`} />
         <div style={{ padding: "10px 22px 0" }}><Legendes /></div>
-        <div style={{ padding: "8px 18px 14px" }}><Colonnes data={series} n1 tip={(x) => [P.keyLabel(x.key), `${eur(x.v)}`, `Un an plus tôt : ${eur(x.n1)}`]} /></div>
+        <div style={{ padding: "8px 18px 14px" }}><Colonnes data={series} n1 tip={(x) => [P.keyLabel(x.key), `N : ${eur(x.v)}`, `N-1 : ${eur(x.n1)}`]} /></div>
       </Card>
       <Card>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
-            <thead><tr><Th>{cfg.regroupe ? "Nature" : source === "fec" ? "Compte" : "Poste"}</Th><Th right>{P.keyLabel(key, false)}</Th>{plM1 && <Th right>{P.keyLabel(key1, false)}</Th>}<Th right>Exercice</Th>{hasN1 && <Th right>Un an plus tôt</Th>}{hasN1 && <Th right>Évolution</Th>}<Th right>% du CA</Th></tr></thead>
+            <thead><tr><Th>{cfg.regroupe ? "Nature" : source === "fec" ? "Compte" : "Poste"}</Th><Th right>{P.keyLabel(key, false)}</Th>{plM1 && <Th right>{P.keyLabel(key1, false)}</Th>}<Th right>Cumul N</Th>{hasN1 && <Th right>Cumul N-1</Th>}{hasN1 && <Th right>Écart</Th>}<Th right>% CA</Th></tr></thead>
             <tbody>
               {list.map((x) => {
                 const e = hasN1 ? evo(x.y, x.y1) : null;
@@ -658,12 +659,12 @@ export function PosteView({ client, moisIdx, moisYear, setMoisIdx, setMoisKey, v
       {vue === "ventes" && prodY.produits.length > 0 && (
         <div style={grid(420)}>
           <Card>
-            <CarteTitre title="Par produit ou prestation" sub={`Ce qui fait votre chiffre d'affaires sur l'exercice (${exLib}).`} />
+            <CarteTitre title="CA par produit" detail={`Cumul exercice · ${exLib}`} />
             <TableProduits produits={prodY.produits} total={prodY.produits.reduce((t, x) => t + x.ca, 0)} mois={prodM.produits} />
           </Card>
           {prodY.canaux.length > 1 && (
             <Card>
-              <CarteTitre title="Par canal de vente" sub="D'où vient votre chiffre d'affaires sur l'exercice." />
+              <CarteTitre title="CA par canal" detail="Cumul exercice" />
               <div style={{ padding: "14px 22px 20px" }}>
                 <Repartition segments={prodY.canaux.slice(0, 5).map((c2, i) => ({ id: c2.l, label: c2.l, v: c2.v, color: [VIZ.serie, VIZ.externes, VIZ.achats, VIZ.personnel, VIZ.autres][i] }))} />
               </div>
@@ -673,7 +674,7 @@ export function PosteView({ client, moisIdx, moisYear, setMoisIdx, setMoisKey, v
       )}
       {vue === "achats" && prodY.produits.some((x) => x.ca !== x.marge) && (
         <Card>
-          <CarteTitre title="Marge par produit ou prestation" sub="Les produits qui rapportent le plus, et ceux dont la marge est trop faible (en orange sous 25 %)." />
+          <CarteTitre title="Marge par produit" detail="Cumul exercice" sub="Taux de marge inférieur à 25 % signalé en orange." />
           <div style={{ overflowX: "auto", padding: "8px 0 6px" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 560 }}>
               <thead><tr><Th>Produit</Th><Th right>Chiffre d'affaires</Th><Th right>Coût</Th><Th right>Marge</Th><Th right>Taux</Th></tr></thead>
@@ -699,7 +700,7 @@ export function PosteView({ client, moisIdx, moisYear, setMoisIdx, setMoisKey, v
         <div style={grid(420)}>
           {salaries.length > 0 && (
             <Card>
-              <CarteTitre title={`Par salarié · ${P.keyLabel(key)}`} sub="D'après les bulletins de paie importés." />
+              <CarteTitre title={`Détail par salarié · ${P.keyLabel(key)}`} sub="D'après les bulletins de paie importés." />
               <div style={{ overflowX: "auto", padding: "8px 0 6px" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 520 }}>
                   <thead><tr><Th>Salarié</Th><Th right>Brut</Th><Th right>Net versé</Th><Th right>Coût employeur</Th></tr></thead>
@@ -718,12 +719,12 @@ export function PosteView({ client, moisIdx, moisYear, setMoisIdx, setMoisKey, v
             </Card>
           )}
           <Card>
-            <CarteTitre title="Quand l'argent sort de la banque" sub="Le coût d'un salaire ne sort pas en une fois." />
+            <CarteTitre title="Calendrier de décaissement" />
             <div style={{ padding: "12px 22px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
               {[
-                { t: "Fin du mois", d: "Le salaire net est versé au salarié." },
-                { t: "Le 5 ou le 15 du mois suivant", d: "Les cotisations salariales et patronales sont prélevées par l'URSSAF (déclaration sociale nominative)." },
-                { t: "Au total", d: `Pour 100 € de salaire brut, l'entreprise débourse environ ${plY.salaires > 0 ? Math.round(100 + (plY.chargesSociales / plY.salaires) * 100) : 142} € sur l'exercice.` },
+                { t: "M · fin de mois", d: "Versement des salaires nets." },
+                { t: "M+1 · le 5 ou le 15", d: "Prélèvement URSSAF des cotisations salariales et patronales (DSN)." },
+                { t: "Coût employeur", d: `${plY.salaires > 0 ? Math.round(100 + (plY.chargesSociales / plY.salaires) * 100) : 142} € pour 100 € de brut (cumul exercice).` },
               ].map((x) => (
                 <div key={x.t} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
                   <span style={{ minWidth: 8, height: 8, borderRadius: "50%", background: VIZ.personnel, marginTop: 6 }} />
@@ -736,7 +737,7 @@ export function PosteView({ client, moisIdx, moisYear, setMoisIdx, setMoisKey, v
       )}
       {top.length > 0 && (
         <Card>
-          <CarteTitre title={cfg.tiers === "c" ? "Par client, sur l'exercice" : "Par fournisseur, sur l'exercice"} sub={cfg.tiers === "c" ? "Quand un client dépasse 30 % du chiffre d'affaires, sa perte mettrait l'entreprise en difficulté." : "Ce que vous avez dépensé chez chaque fournisseur depuis le début de l'exercice (HT)."} />
+          <CarteTitre title={cfg.tiers === "c" ? "Top clients · cumul exercice" : "Top fournisseurs · cumul exercice"} sub={cfg.tiers === "c" ? "Risque de dépendance au-delà de 30 % du CA sur un seul client." : "Montants HT facturés depuis l'ouverture de l'exercice."} />
           <div style={{ padding: "10px 22px 18px" }}>
             {top.slice(0, 10).map((x) => {
               const part = cfg.tiers === "c" ? (sY.ca > 0 ? (x.v / sY.ca) * 100 : 0) : (x.v / (top.reduce((s, y) => s + y.v, 0) || 1)) * 100;
@@ -761,10 +762,10 @@ function TableProduits({ produits, total, mois }) {
   const n80 = cumul.findIndex((v) => v >= total * 0.8) + 1;
   return (
     <div style={{ padding: "8px 0 14px" }}>
-      {produits.length >= 5 && n80 > 0 && <div style={{ margin: "4px 22px 10px", fontSize: 12.5, fontWeight: 700, color: C.textMid, background: C.bgLight, borderRadius: 10, padding: "8px 12px" }}>{n80} produit{n80 > 1 ? "s" : ""} sur {produits.length} font 80 % de votre chiffre d'affaires.</div>}
+      {produits.length >= 5 && n80 > 0 && <div style={{ margin: "4px 22px 10px", fontSize: 12.5, fontWeight: 700, color: C.textMid, background: C.bgLight, borderRadius: 10, padding: "8px 12px" }}>Pareto : {n80} produit{n80 > 1 ? "s" : ""} sur {produits.length} = 80 % du CA</div>}
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 480 }}>
-          <thead><tr><Th>Produit</Th><Th right>Ce mois</Th><Th right>Exercice</Th><Th right>Part</Th></tr></thead>
+          <thead><tr><Th>Produit</Th><Th right>Mois</Th><Th right>Cumul</Th><Th right>% CA</Th></tr></thead>
           <tbody>
             {produits.slice(0, 12).map((x) => (
               <tr key={x.l} style={{ borderTop: `1px solid ${C.borderLight}` }}>
@@ -783,8 +784,8 @@ function TableProduits({ produits, total, mois }) {
 function Legendes() {
   return (
     <div style={{ display: "flex", gap: 16, fontSize: 12, fontWeight: 700, color: C.textMid }}>
-      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: VIZ.serie }} />Cette année</span>
-      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: VIZ.serieN1 }} />Un an plus tôt</span>
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: VIZ.serie }} />N</span>
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: VIZ.serieN1 }} />N-1</span>
     </div>
   );
 }
@@ -808,18 +809,18 @@ export function TvaFec({ client, moisIdx, moisYear, setMoisIdx, setMoisKey }) {
   }
   return (
     <Page>
-      <EnTete title="TVA" sub="La TVA encaissée sur vos ventes ne vous appartient pas : elle est reversée à l'État, moins celle payée sur vos achats." nav={nav} source={source} fin={fin} />
+      <EnTete title="TVA" sub="TVA collectée − TVA déductible = TVA à décaisser, versée à la déclaration suivante." nav={nav} source={source} fin={fin} />
       <div style={grid(200)}>
-        <Chiffre label={due >= 0 ? "TVA à reverser" : "Crédit de TVA"} value={eur(Math.abs(due))} sub={source === "fec" ? `Au ${fmtDate(P.monthEnd(key))}` : `À la déclaration de ${P.keyLabel(P.shiftKey(key, 1))}`} aide={due >= 0 ? "Somme due à l'État à la prochaine déclaration : à garder de côté." : "L'État vous doit cette somme (remboursement ou imputation)."} />
-        <Chiffre label="TVA collectée du mois" value={eur(m.collectee)} aide="Facturée à vos clients sur vos ventes." />
-        <Chiffre label="TVA déductible du mois" value={eur(m.deductible)} aide="Payée à vos fournisseurs, récupérable." />
-        {source === "fec" && <Chiffre label="TVA payée dans le mois" value={eur(m.payee)} aide="Versée à l'État au titre de la déclaration précédente." />}
+        <Chiffre label={due >= 0 ? "TVA à décaisser" : "Crédit de TVA"} value={eur(Math.abs(due))} sub={source === "fec" ? `Au ${fmtDate(P.monthEnd(key))}` : `Déclaration de ${P.keyLabel(P.shiftKey(key, 1))}`} aide={due >= 0 ? "Solde des comptes de TVA dû à la prochaine déclaration (CA3)." : "Crédit imputable sur les prochaines déclarations ou remboursable."} />
+        <Chiffre label="TVA collectée" value={eur(m.collectee)} sub={P.keyLabel(key)} />
+        <Chiffre label="TVA déductible" value={eur(m.deductible)} sub={P.keyLabel(key)} />
+        {source === "fec" && <Chiffre label="TVA décaissée" value={eur(m.payee)} sub={P.keyLabel(key)} />}
       </div>
       <Card>
-        <CarteTitre title="Mois par mois" sub="Collectée moins déductible = ce qui est dû pour le mois (versé le mois suivant)." />
+        <CarteTitre title="Historique 12 mois" />
         <div style={{ overflowX: "auto", padding: "8px 0 6px" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 560 }}>
-            <thead><tr><Th>Mois</Th><Th right>Collectée</Th><Th right>Déductible</Th><Th right>Due pour le mois</Th>{source === "fec" && <Th right>Payée dans le mois</Th>}</tr></thead>
+            <thead><tr><Th>Mois</Th><Th right>Collectée</Th><Th right>Déductible</Th><Th right>Solde du mois</Th>{source === "fec" && <Th right>Décaissée</Th>}</tr></thead>
             <tbody>
               {rows.map((x) => (
                 <tr key={x.k} style={{ borderTop: `1px solid ${C.borderLight}`, background: x.k === key ? C.bg : "white" }}>
@@ -864,16 +865,16 @@ export function ImpotFec({ client, moisIdx, moisYear, setMoisIdx, setMoisKey }) 
   const acomptes = isN1 != null && isN1 > 3000 ? [3, 6, 9, 12].map((n) => ({ k: P.shiftKey(ytd[0], n - 1), v: isN1 / 4 })) : [];
   return (
     <Page>
-      <EnTete title="Impôt sur les sociétés" sub="Une estimation pour anticiper : le montant définitif est calculé par votre expert-comptable à la clôture, après retraitements fiscaux." nav={nav} source={source} fin={fin} />
+      <EnTete title="Impôt sur les sociétés" sub="Estimation de gestion : le montant définitif est déterminé à la clôture par l'expert-comptable, après réintégrations et déductions fiscales." nav={nav} source={source} fin={fin} />
       <div style={grid(210)}>
-        <Chiffre label="Résultat avant impôt" value={eur(avantIS)} sub={`${P.keyLabel(ytd[0], false)} → ${P.keyLabel(key, false)}`} aide="Le bénéfice comptable de l'exercice à ce jour, avant impôt." />
-        <Chiffre label="Projection sur l'exercice" value={eur(projection)} sub={rest.length ? (saison ? `${rest.length} mois restants estimés d'après l'an dernier` : `${rest.length} mois restants au rythme actuel`) : "Exercice complet"} aide="Si la fin d'exercice ressemble à l'an dernier (ou au rythme actuel)." />
-        <Chiffre label="Impôt estimé" value={eur(isEstime)} sub={projection > 0 ? `Taux moyen ${pctFr((isEstime / projection) * 100, 1)}` : "Pas de bénéfice imposable estimé"} aide={tauxReduit ? "15 % jusqu'à 42 500 € de bénéfice, 25 % au-delà (taux réduit PME)." : "25 % du bénéfice."} />
-        {isDejaCompta > 0 && <Chiffre label="Déjà comptabilisé" value={eur(isDejaCompta)} aide="Impôt déjà enregistré en comptabilité sur l'exercice." />}
+        <Chiffre label="Résultat avant IS · cumul" value={eur(avantIS)} sub={`${P.keyLabel(ytd[0], false)} → ${P.keyLabel(key, false)}`} />
+        <Chiffre label="Atterrissage" value={eur(projection)} sub={rest.length ? `${rest.length} mois projetés (${saison ? "base N-1" : "tendance"})` : "Exercice complet"} aide="Résultat avant IS projeté à la clôture : réalisé + mois restants d'après N-1 (ou la tendance)." />
+        <Chiffre label="IS estimé" value={eur(isEstime)} sub={projection > 0 ? `Taux effectif ${pctFr((isEstime / projection) * 100, 1)}` : "Pas de bénéfice imposable"} aide={tauxReduit ? "Taux réduit PME 15 % jusqu'à 42 500 €, puis 25 %." : "Taux normal 25 %."} />
+        {isDejaCompta > 0 && <Chiffre label="IS comptabilisé" value={eur(isDejaCompta)} />}
       </div>
       {acomptes.length > 0 && (
         <Card>
-          <CarteTitre title="Acomptes à prévoir" sub={`Calculés sur l'impôt de l'exercice précédent (${eur(isN1)}) : un quart à chaque échéance, le 15 du mois. À confirmer avec ${client.advisorLabel || "votre conseiller"}.`} />
+          <CarteTitre title="Acomptes d'IS" detail={`Base : IS N-1 ${eur(isN1)}`} sub="Quatre acomptes de 25 % de l'IS N-1, le 15 des 3e, 6e, 9e et 12e mois de l'exercice. Solde à la liquidation." />
           <div style={{ padding: "10px 22px 18px", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
             {acomptes.map((a) => (
               <div key={a.k} style={{ background: a.k < key ? C.bg : C.bgLight, borderRadius: 12, padding: "10px 12px", opacity: a.k < key ? 0.7 : 1 }}>

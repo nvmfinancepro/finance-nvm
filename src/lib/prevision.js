@@ -5,7 +5,7 @@
 // et dépenses exceptionnels saisis. Hypothèse : délais clients / fournisseurs et
 // TVA stables (le besoin en fonds de roulement ne bouge pas).
 
-import { shiftKey, plOver, ytdKeys } from "./pilotage.js";
+import { shiftKey, plOver, ytdKeys, fecIndex, bilanAt } from "./pilotage.js";
 import { dataIndex } from "./donnees.js";
 import { lireBudget, budgetMois, ebeDe, realiseMois } from "./budget.js";
 import { chargeEmprunts } from "./estimations.js";
@@ -58,3 +58,23 @@ export function prevoirTresorerie(client, depart, horizon, soldeDepart) {
 }
 
 export const moisFuturs = (depart, horizon) => Array.from({ length: horizon }, (_, i) => shiftKey(depart, i + 1));
+
+// Point de départ d'une prévision : dernier mois connu jusqu'au mois consulté, avec la
+// trésorerie réelle (FEC) ou estimée (solde de départ renseigné). null sinon.
+// tresoOf(moisIdx, année) : trésorerie estimée d'un mois (calcTresoEstimee).
+export function departPrevision(client, key, tresoOf) {
+  const idx = dataIndex(client), fidx = fecIndex(client);
+  const depart = [...idx.keys].reverse().find((k) => k <= key);
+  if (!depart || !(fidx.has || client.tresorerie?.dateSolde)) return null;
+  const [dy, dm] = depart.split("-").map(Number);
+  const reel = fidx.months.has(depart);
+  return { depart, reel, solde: reel ? bilanAt(client, depart).tresoNette : (tresoOf ? tresoOf(dm - 1, dy) : 0) || 0 };
+}
+
+// Prolongement en pointillés d'une courbe de trésorerie : seulement quand le mois
+// consulté est le dernier mois connu (au-delà, c'est le réel qui s'affiche).
+export function prolongerTresorerie(client, key, horizon, tresoOf) {
+  if (dataIndex(client).last !== key) return [];
+  const d = departPrevision(client, key, tresoOf);
+  return d ? prevoirTresorerie(client, d.depart, horizon, d.solde) : [];
+}
