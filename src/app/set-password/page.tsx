@@ -28,6 +28,11 @@ function SetPasswordForm() {
     setLoading(true); setError("");
     const { error } = await supabase.auth.updateUser({ password });
     if (error) { setError(error.message); setLoading(false); return; }
+    // Prévient le conseiller que le compte vient d'être activé (une seule fois, sans bloquer).
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      await fetch("/api/compte-active", { method: "POST", headers: { Authorization: `Bearer ${session.access_token}` } }).catch(() => {});
+    }
     setSuccess(true);
     await supabase.auth.signOut();
     setTimeout(() => { window.location.href = "/auth/login?success=1"; }, 2000);
