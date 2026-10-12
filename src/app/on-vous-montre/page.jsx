@@ -2,7 +2,7 @@ import DemoVideoClient from "./DemoVideoClient";
 
 const title = "Démo : découvrez NVM Finance en vidéo | Pilotage financier PME";
 const description =
-  "Regardez en 2 minutes comment NVM Finance centralise vos finances, votre analyse mensuelle et vos outils de gestion dans un seul tableau de bord.";
+  "Regardez en 2 minutes comment NVM Finance vous apporte la visibilité sur vos finances et une analyse mensuelle, dans un seul tableau de bord.";
 
 export const metadata = {
   title,

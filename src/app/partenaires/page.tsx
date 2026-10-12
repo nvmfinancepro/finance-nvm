@@ -7,7 +7,7 @@ const C = { primary: "#005653", green: "#21C45D", bg: "#ecfdf5", text: "#002e2c"
 
 const title = "Nos partenaires | NVM Finance";
 const description =
-  "Nos deux services pour vos clients : pilotage financier mensuel et outils de gestion sur mesure, sous votre marque.";
+  "Notre service pour vos clients : de la visibilité financière et une analyse mensuelle pour gagner en performance, sécuriser et développer leur entreprise, sous votre marque.";
 
 export const metadata: Metadata = {
   title,
@@ -38,25 +38,6 @@ function Tag({ children, color = C.mid, bg = C.bg }: { children: React.ReactNode
   return <span style={{ fontSize: 11, fontWeight: 800, color, background: bg, padding: "4px 10px", borderRadius: 100 }}>{children}</span>;
 }
 
-function FlowStep({ icon, label, color }: { icon: React.ReactNode; label: string; color: string }) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-      <div style={{ width: 46, height: 46, borderRadius: "50%", background: color, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 8px 18px ${color}55`, flexShrink: 0 }}>
-        {icon}
-      </div>
-      <div style={{ fontSize: 12.5, fontWeight: 700, color: C.text, textAlign: "center", maxWidth: 140, lineHeight: 1.35 }}>{label}</div>
-    </div>
-  );
-}
-
-function FlowArrow() {
-  return (
-    <svg width="16" height="30" viewBox="0 0 16 30" fill="none" style={{ flexShrink: 0 }}>
-      <path d="M8 1v22M8 23l-5-5M8 23l5-5" stroke={C.border} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 const statTiles = [
   { l: "Trésorerie", v: "18 240 €", status: "ok", trend: "up" },
   { l: "Marge brute", v: "34,2 %", status: "ok", trend: "up" },
@@ -79,10 +60,8 @@ export default function Page() {
       <WhatsAppWidget/>
       <style>{`
         .pf-grid9{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-        .pf-compare{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
         @media(max-width:640px){
           .pf-grid9{ grid-template-columns:repeat(2,1fr); }
-          .pf-compare{ grid-template-columns:1fr; }
         }
       `}</style>
 
@@ -158,8 +137,7 @@ export default function Page() {
             </div>
           </div>
 
-          {/* ── SERVICE 1 ── */}
-          <p style={{ fontSize: 12, fontWeight: 800, color: C.green, letterSpacing: "0.08em", textTransform: "uppercase", marginTop: 56, marginBottom: 8 }}>Service 1</p>
+          <p style={{ fontSize: 12, fontWeight: 800, color: C.green, letterSpacing: "0.08em", textTransform: "uppercase", marginTop: 56, marginBottom: 8 }}>Notre service</p>
           <h2 style={{ ...h2Style, marginTop: 0 }}>Pilotage financier</h2>
           <p style={pStyle}>
             Nous sommes une entreprise de contrôle de gestion externalisé. On regroupe tout le visuel financier de l&apos;entreprise,
@@ -208,9 +186,9 @@ export default function Page() {
           <p style={captionStyle}>Chiffres, courbes, comparatifs, prévisionnel et alertes : tout le pilotage financier, au même endroit.</p>
 
           <p style={{ ...pStyle, marginTop: 40 }}>
-            Ensuite, le conseiller analyse la situation en continu, que tout aille bien ou non. L&apos;objectif :
-            aller chercher la meilleure rentabilité, anticiper les situations critiques avant qu&apos;elles
-            n&apos;arrivent, et proposer des solutions concrètes.
+            Ensuite, le conseiller analyse la situation chaque mois, que tout aille bien ou non. L&apos;objectif :
+            aller chercher plus de performance, sécuriser l&apos;entreprise en anticipant les situations critiques
+            avant qu&apos;elles n&apos;arrivent, et la développer avec des solutions concrètes.
           </p>
 
           <Frame urlLabel="app.nvm-finance.fr · alertes">
@@ -224,7 +202,7 @@ export default function Page() {
             <div style={{ marginTop: 16, padding: "14px 16px", background: C.bg, borderRadius: 12, border: `1px solid ${C.border}` }}>
               <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: C.light }}>Solutions proposées par le conseiller</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
-                {["Négociation fournisseurs", "Ajustement des prix", "Automatisation d'une tâche répétitive", "Suppression d'un abonnement inutile"].map((s, i) => (
+                {["Négociation fournisseurs", "Ajustement des prix", "Relance des factures impayées", "Suppression d'un abonnement inutile"].map((s, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, fontWeight: 700, color: C.text }}>
                     <span style={{ width: 16, height: 16, borderRadius: "50%", background: C.green, color: "#fff", fontSize: 9, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>✓</span>
                     {s}
@@ -235,115 +213,6 @@ export default function Page() {
             </div>
           </Frame>
           <p style={captionStyle}>Le conseiller cherche la meilleure performance en continu, pas seulement quand un problème apparaît.</p>
-
-          {/* ── SERVICE 2 ── */}
-          <p style={{ fontSize: 12, fontWeight: 800, color: C.green, letterSpacing: "0.08em", textTransform: "uppercase", marginTop: 64, marginBottom: 8 }}>Service 2</p>
-          <h2 style={{ ...h2Style, marginTop: 0 }}>Outils de gestion sur mesure</h2>
-          <p style={pStyle}>
-            Même logique, appliquée à l&apos;organisation de l&apos;entreprise. On crée un logiciel sur mesure,
-            avec uniquement les modules dont le client a besoin.
-          </p>
-
-          <div style={{ marginTop: 28, background: "#fff", borderRadius: 24, boxShadow: "0 32px 80px rgba(0,86,83,.14), 0 0 0 1px rgba(0,86,83,.06)", padding: "24px 20px", position: "relative" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-              <div>
-                <div style={{ fontSize: 10, fontWeight: 800, color: "#6aaca8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3 }}>Module Gestion</div>
-                <div style={{ fontSize: 15, fontWeight: 900, color: C.text }}>Votre plateforme de gestion</div>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, background: C.bg, padding: "5px 12px", borderRadius: 100, border: `1px solid ${C.border}` }}>
-                <div style={{ width: 7, height: 7, borderRadius: "50%", background: C.green }} />
-                <span style={{ fontSize: 10, fontWeight: 800, color: C.primary }}>En direct</span>
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 14 }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
-                {[
-                  <path key="a" d="M2.5 6.5L9 3l6.5 3.5M2.5 6.5v6L9 16l6.5-3.5v-6M2.5 6.5L9 10m0 0l6.5-3.5M9 10v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
-                  <g key="b"><rect x="2.5" y="4" width="13" height="11" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="M2.5 7.5h13M6 2.5v3M12 2.5v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></g>,
-                  <path key="c" d="M9 2.5c-2.2 0-4 1.8-4 4v2.5c0 .8-.3 1.6-.9 2.2L3 12.5h12l-1.1-1.3c-.6-.6-.9-1.4-.9-2.2V6.5c0-2.2-1.8-4-4-4z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
-                  <path key="d" d="M2.5 5a1 1 0 011-1h3.5l1.5 1.5H14a1 1 0 011 1v7a1 1 0 01-1 1H3.5a1 1 0 01-1-1V5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
-                  <g key="e"><path d="M3 15V9.5M9 15V3M15 15v-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /><path d="M2.5 15.5h13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></g>,
-                ].map((icon, ii) => (
-                  <div key={ii} style={{ width: 38, height: 38, borderRadius: 11, background: "#f8fffe", border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", color: "#6aaca8" }}>
-                    <svg width="16" height="16" viewBox="0 0 18 18" fill="none">{icon}</svg>
-                  </div>
-                ))}
-                <div style={{ width: 38, height: 38, borderRadius: 11, background: C.primary, boxShadow: "0 6px 16px rgba(0,86,83,.35)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
-                  <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M9 3.5v11M3.5 9h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
-                </div>
-              </div>
-              <div style={{ flex: 1, background: C.bg, borderRadius: 14, border: `1.5px dashed ${C.light}`, padding: "18px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-                <div style={{ fontSize: 9, fontWeight: 800, color: C.primary, textTransform: "uppercase", letterSpacing: "0.06em" }}>Nouveau module</div>
-                <div style={{ fontSize: 14, fontWeight: 900, color: C.text, lineHeight: 1.3 }}>Votre outil, sur mesure</div>
-                <div style={{ fontSize: 10.5, fontWeight: 600, color: C.mid, lineHeight: 1.5 }}>Décrivez la tâche à automatiser, on la construit dans votre plateforme.</div>
-                <div style={{ background: "#fff", borderRadius: 9, border: `1px dashed ${C.border}`, padding: "9px 11px", fontSize: 10, fontWeight: 600, color: "#9db8b5", fontStyle: "italic" }}>
-                  Ex : suivi de mes commandes fournisseurs...
-                </div>
-                <div style={{ alignSelf: "flex-start", background: C.primary, color: "#fff", fontSize: 10, fontWeight: 800, padding: "7px 14px", borderRadius: 100, boxShadow: "0 4px 14px rgba(0,86,83,.25)" }}>
-                  Construire mon outil →
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 2 }}>
-                  <svg width="12" height="12" viewBox="0 0 18 18" fill="none" style={{ flexShrink: 0 }}>
-                    <path d="M9 2.5v2M9 13.5v2M15.5 9h-2M4.5 9h-2M13.5 4.5l-1.4 1.4M5.9 12.1l-1.4 1.4M13.5 13.5l-1.4-1.4M5.9 5.9L4.5 4.5" stroke={C.primary} strokeWidth="1.5" strokeLinecap="round" />
-                    <circle cx="9" cy="9" r="2.5" stroke={C.primary} strokeWidth="1.5" />
-                  </svg>
-                  <span style={{ fontSize: 9.5, fontWeight: 700, color: C.primary }}>Tâche automatisée en continu</span>
-                </div>
-              </div>
-            </div>
-            <div style={{ marginTop: 16, background: "#fff", borderRadius: 14, boxShadow: "0 8px 28px rgba(0,86,83,.12), 0 0 0 1px rgba(0,86,83,.06)", padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 28, height: 28, borderRadius: 8, background: "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l3 3 7-7" stroke="#059669" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              </div>
-              <div><div style={{ fontSize: 10, fontWeight: 800, color: C.primary }}>Chaque entreprise est différente</div><div style={{ fontSize: 9, fontWeight: 600, color: "#6aaca8" }}>On construit l&apos;outil qui va avec</div></div>
-            </div>
-          </div>
-          <p style={captionStyle}>Chaque client a sa propre plateforme, avec les modules dont il a besoin.</p>
-
-          <p style={{ ...pStyle, marginTop: 40 }}>
-            Enfin, chaque tâche répétitive peut être automatisée, avec ou sans intelligence artificielle selon ce qui
-            est le plus pertinent.
-          </p>
-
-          <Frame urlLabel="app.nvm-finance.fr · automatisations">
-            <div className="pf-compare">
-              <div style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: "22px 16px", background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-                <Tag color={C.mid} bg="#fff">Sans IA</Tag>
-                <FlowStep
-                  color={C.primary}
-                  label="Une condition simple"
-                  icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="6" cy="6" r="3" stroke="#fff" strokeWidth="1.7" /><path d="M9 6h6M6 9v6M9 15h6" stroke="#fff" strokeWidth="1.7" strokeLinecap="round" /><circle cx="14" cy="15" r="2.2" fill="#fff" /></svg>}
-                />
-                <FlowArrow />
-                <FlowStep
-                  color={C.primary}
-                  label="Déclenche une action automatique"
-                  icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M11 2 4 12h5l-1 6 7-10h-5l1-6z" fill="#fff" /></svg>}
-                />
-              </div>
-              <div style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: "22px 16px", background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-                <Tag color={C.green} bg="#fff">Avec IA</Tag>
-                <FlowStep
-                  color={C.green}
-                  label="Une situation qui varie"
-                  icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2l1.6 5.4L17 9l-5.4 1.6L10 16l-1.6-5.4L3 9l5.4-1.6L10 2z" fill="#fff" /></svg>}
-                />
-                <FlowArrow />
-                <FlowStep
-                  color={C.green}
-                  label="Une solution est proposée"
-                  icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M6 3h8l2 2v10a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z" stroke="#fff" strokeWidth="1.6" strokeLinejoin="round" /><path d="M7 9h6M7 12h6M7 6h3" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" /></svg>}
-                />
-                <FlowArrow />
-                <FlowStep
-                  color={C.green}
-                  label="Vous validez ou ajustez"
-                  icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 10.5l4 4 8-9" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-                />
-              </div>
-            </div>
-          </Frame>
-          <p style={captionStyle}>Automatisé, avec ou sans intelligence artificielle selon le besoin.</p>
 
           <h2 style={h2Style}>Comment démarre une collaboration</h2>
           <p style={pStyle}>

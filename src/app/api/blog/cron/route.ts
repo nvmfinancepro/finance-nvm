@@ -10,7 +10,7 @@ const BLOG_THEMES = [
   "Gestion de trésorerie PME",
   "Comptabilité & facturation",
   "Pilotage financier PME",
-  "Automatisation & outils de gestion",
+  "Rentabilité & performance",
 ];
 
 function isoWeek(d: Date) {

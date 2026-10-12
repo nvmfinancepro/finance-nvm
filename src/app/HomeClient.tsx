@@ -271,7 +271,6 @@ export default function SitePage() {
         @keyframes alert-in{0%{opacity:0;transform:translateY(14px)}100%{opacity:1;transform:translateY(0)}}
         @keyframes bar-grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
         @keyframes chart-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
-        @keyframes spin-slow{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
         .demo-tab{background:none;border:1.5px solid #c8e8e5;border-radius:100px;padding:9px 20px;font-family:inherit;font-size:13px;font-weight:800;color:#6aaca8;cursor:pointer;transition:all .2s;}
         .demo-tab.on{background:#005653;border-color:#005653;color:#fff;box-shadow:0 4px 16px rgba(0,86,83,.25);}
         .demo-tab:hover:not(.on){background:#f0faf8;color:#005653;}
@@ -383,7 +382,7 @@ export default function SitePage() {
               <a href="/on-vous-montre" className="cta-outline" style={{background:"#fff",color:C.primary,padding:"15px 32px",borderRadius:100,fontSize:15,fontWeight:800,textDecoration:"none",border:`2px solid ${C.light}`,transition:"all .2s"}}>On vous montre →</a>
             </div>
             <div className="stats-row" style={{...a(.4),display:"flex",gap:0,paddingTop:28,borderTop:`1px solid ${C.border}`}}>
-              {[{n:"+40%",l:"Gain de rentabilité moyen constaté"},{n:"−3h",l:"Gagnées par semaine sur la gestion financière"},{n:"0 €",l:"Pour votre tableau de bord financier"}].map((t,i)=>(
+              {[{n:"+40%",l:"Gain de rentabilité moyen constaté"},{n:"12 mois",l:"De trésorerie anticipés"},{n:"0 €",l:"Pour votre tableau de bord financier"}].map((t,i)=>(
                 <div key={i} style={{flex:1,paddingRight:24,borderRight:i<2?`1px solid ${C.border}`:"none",marginRight:i<2?24:0}}>
                   <div style={{fontSize:28,fontWeight:900,color:C.primary}}>{t.n}</div>
                   <div style={{fontSize:11,fontWeight:700,color:"#6aaca8",marginTop:4,lineHeight:1.4}}>{t.l}</div>
@@ -456,7 +455,7 @@ export default function SitePage() {
           <div style={{textAlign:"center",marginBottom:64}}>
             <div style={{display:"inline-block",background:C.bg,color:C.primary,fontSize:11,fontWeight:800,padding:"5px 14px",borderRadius:100,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:14,border:`1px solid ${C.border}`}}>Ce qu&apos;on vous apporte</div>
             <h2 style={{fontSize:"clamp(28px,3.5vw,44px)",fontWeight:900,color:C.text,marginBottom:12,lineHeight:1.12}}>
-              Voyez clair. Gagnez plus.<br/><em style={{color:C.primary,fontStyle:"normal"}}>Sécurisez.</em>
+              Voyez clair. Gagnez en performance.<br/><em style={{color:C.primary,fontStyle:"normal"}}>Sécurisez et développez.</em>
             </h2>
             <p style={{fontSize:16,fontWeight:600,color:C.mid,maxWidth:560,margin:"0 auto",lineHeight:1.7}}>
               On rend vos chiffres lisibles, un conseiller les analyse chaque mois, et on actionne trois leviers.
@@ -464,7 +463,7 @@ export default function SitePage() {
           </div>
           <div className="levers-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:24}}>
             {[
-              {ic:<LeverMoney/>,titre:"Gagnez plus",desc:"On repère ce qui vous coûte trop cher et ce qui rapporte le plus : prix, marges, fournisseurs, abonnements, tâches à automatiser avec des outils de gestion."},
+              {ic:<LeverMoney/>,titre:"Gagnez plus",desc:"On repère ce qui vous coûte trop cher et ce qui rapporte le plus : prix, marges, fournisseurs, abonnements, charges qui dérivent."},
               {ic:<LeverGrowth/>,titre:"Développez",desc:"Vous savez où investir, quand recruter et quels produits ou clients pousser, chiffres à l'appui."},
               {ic:<LeverShield/>,titre:"Sécurisez",desc:"Trésorerie, impayés clients, échéances fiscales : les problèmes sont anticipés avant d'arriver. Pas de mauvaise surprise."},
             ].map((s,i)=>(
@@ -478,84 +477,85 @@ export default function SitePage() {
         </div>
       </section>
 
-      {/* OUTILS DE GESTION */}
+      {/* NOTRE MÉTHODE */}
       <section className="section-pad" style={{padding:"96px 48px",background:C.bg}}>
         <div style={{maxWidth:1200,margin:"0 auto"}}>
           <div className="hero-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:72,alignItems:"center"}}>
 
-            {/* Plateforme mockup (gauche) : rail de modules + panneau sur-mesure */}
+            {/* Maquette (gauche) : analyse du mois + plan d'actions */}
             <div style={{position:"relative",paddingBottom:16,paddingLeft:16}}>
               <div style={{background:"#fff",borderRadius:24,boxShadow:"0 32px 80px rgba(0,86,83,.14),0 0 0 1px rgba(0,86,83,.06)",padding:"24px 20px",animation:"float 8s ease-in-out infinite .5s"}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
                   <div>
-                    <div style={{fontSize:10,fontWeight:800,color:"#6aaca8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>Module Gestion</div>
-                    <div style={{fontSize:15,fontWeight:900,color:C.text}}>Votre plateforme de gestion</div>
+                    <div style={{fontSize:10,fontWeight:800,color:"#6aaca8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>Votre conseiller</div>
+                    <div style={{fontSize:15,fontWeight:900,color:C.text}}>Analyse du mois</div>
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:6,background:C.bg,padding:"5px 12px",borderRadius:100,border:`1px solid ${C.border}`}}>
                     <div style={{width:7,height:7,borderRadius:"50%",background:C.green,animation:"pulse-dot 2s infinite"}}/>
-                    <span style={{fontSize:10,fontWeight:800,color:C.primary}}>En direct</span>
+                    <span style={{fontSize:10,fontWeight:800,color:C.primary}}>Point mensuel</span>
                   </div>
                 </div>
 
-                <div style={{display:"flex",gap:14}}>
-                  {/* Rail de modules (icônes) */}
-                  <div style={{display:"flex",flexDirection:"column",gap:8,flexShrink:0}}>
-                    {[
-                      <path key="a" d="M2.5 6.5L9 3l6.5 3.5M2.5 6.5v6L9 16l6.5-3.5v-6M2.5 6.5L9 10m0 0l6.5-3.5M9 10v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>,
-                      <g key="b"><rect x="2.5" y="4" width="13" height="11" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M2.5 7.5h13M6 2.5v3M12 2.5v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></g>,
-                      <path key="c" d="M9 2.5c-2.2 0-4 1.8-4 4v2.5c0 .8-.3 1.6-.9 2.2L3 12.5h12l-1.1-1.3c-.6-.6-.9-1.4-.9-2.2V6.5c0-2.2-1.8-4-4-4z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>,
-                      <path key="d" d="M2.5 5a1 1 0 011-1h3.5l1.5 1.5H14a1 1 0 011 1v7a1 1 0 01-1 1H3.5a1 1 0 01-1-1V5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>,
-                      <g key="e"><path d="M3 15V9.5M9 15V3M15 15v-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M2.5 15.5h13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></g>,
-                    ].map((icon,ii)=>(
-                      <div key={ii} style={{width:38,height:38,borderRadius:11,background:"#f8fffe",border:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"center",color:"#6aaca8"}}>
-                        <svg width="16" height="16" viewBox="0 0 18 18" fill="none">{icon}</svg>
-                      </div>
-                    ))}
-                    <div style={{width:38,height:38,borderRadius:11,background:C.primary,boxShadow:"0 6px 16px rgba(0,86,83,.35)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff"}}>
-                      <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M9 3.5v11M3.5 9h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                    </div>
+                <div style={{background:C.bg,borderRadius:14,borderLeft:`3px solid ${C.green}`,padding:"12px 14px",marginBottom:16}}>
+                  <div style={{fontSize:9,fontWeight:800,color:C.primary,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:6}}>Note du conseiller</div>
+                  <div style={{fontSize:11.5,fontWeight:600,color:C.mid,lineHeight:1.55}}>
+                    Votre marge remonte de 2,1 pts depuis la révision des prix. Point de vigilance : la trésorerie de novembre, à anticiper dès maintenant.
                   </div>
+                </div>
 
-                  {/* Panneau actif : sur-mesure */}
-                  <div style={{flex:1,background:C.bg,borderRadius:14,border:`1.5px dashed ${C.light}`,padding:"18px 16px",display:"flex",flexDirection:"column",gap:10}}>
-                    <div style={{fontSize:9,fontWeight:800,color:C.primary,textTransform:"uppercase",letterSpacing:"0.06em"}}>Nouveau module</div>
-                    <div style={{fontSize:14,fontWeight:900,color:C.text,lineHeight:1.3}}>Votre outil, sur mesure</div>
-                    <div style={{fontSize:10.5,fontWeight:600,color:C.mid,lineHeight:1.5}}>Décrivez la tâche à automatiser, on la construit dans votre plateforme.</div>
-                    <div style={{background:"#fff",borderRadius:9,border:`1px dashed ${C.border}`,padding:"9px 11px",fontSize:10,fontWeight:600,color:"#9db8b5",fontStyle:"italic"}}>
-                      Ex : suivi de mes commandes fournisseurs...
+                <div style={{fontSize:9,fontWeight:800,color:"#6aaca8",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>Plan d&apos;actions</div>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {[
+                    {t:"Revoir le prix des produits les moins rentables",g:"+2,1 pts de marge",done:true},
+                    {t:"Relancer les factures de plus de 60 jours",g:"+8 400 € encaissés",done:true},
+                    {t:"Renégocier le contrat fournisseur principal",g:"+620 €/mois",done:false},
+                  ].map((r,i)=>(
+                    <div key={i} style={{display:"flex",alignItems:"center",gap:10,border:`1px solid ${C.border}`,borderRadius:11,padding:"9px 11px",background:"#fff"}}>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:11,fontWeight:800,color:C.text,lineHeight:1.35}}>{r.t}</div>
+                        <div style={{fontSize:10,fontWeight:800,color:"#059669",marginTop:2}}>{r.g}</div>
+                      </div>
+                      <span style={{flexShrink:0,fontSize:9.5,fontWeight:800,padding:"3px 9px",borderRadius:100,color:r.done?"#059669":"#b45309",background:r.done?"#f0fdf4":"#fffbeb"}}>{r.done?"Fait":"En cours"}</span>
                     </div>
-                    <div style={{alignSelf:"flex-start",background:C.primary,color:"#fff",fontSize:10,fontWeight:800,padding:"7px 14px",borderRadius:100,boxShadow:"0 4px 14px rgba(0,86,83,.25)"}}>
-                      Construire mon outil →
-                    </div>
-                    <div style={{display:"flex",alignItems:"center",gap:7,marginTop:2}}>
-                      <svg width="12" height="12" viewBox="0 0 18 18" fill="none" style={{animation:"spin-slow 3s linear infinite",flexShrink:0}}>
-                        <path d="M9 2.5v2M9 13.5v2M15.5 9h-2M4.5 9h-2M13.5 4.5l-1.4 1.4M5.9 12.1l-1.4 1.4M13.5 13.5l-1.4-1.4M5.9 5.9L4.5 4.5" stroke={C.primary} strokeWidth="1.5" strokeLinecap="round"/>
-                        <circle cx="9" cy="9" r="2.5" stroke={C.primary} strokeWidth="1.5"/>
-                      </svg>
-                      <span style={{fontSize:9.5,fontWeight:700,color:C.primary}}>Tâche automatisée en continu</span>
-                    </div>
-                  </div>
+                  ))}
+                </div>
+
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginTop:14,paddingTop:12,borderTop:`1px solid ${C.border}`}}>
+                  <span style={{fontSize:10.5,fontWeight:800,color:"#6aaca8"}}>Valeur créée depuis janvier</span>
+                  <span style={{fontSize:17,fontWeight:900,color:C.primary}}>14 300 €</span>
                 </div>
               </div>
               <div style={{position:"absolute",bottom:0,right:-16,background:"#fff",borderRadius:14,boxShadow:"0 8px 28px rgba(0,86,83,.12),0 0 0 1px rgba(0,86,83,.06)",padding:"10px 14px",display:"flex",alignItems:"center",gap:10,animation:"float2 8s ease-in-out infinite 2s"}}>
                 <div style={{width:28,height:28,borderRadius:8,background:"#f0fdf4",display:"flex",alignItems:"center",justifyContent:"center"}}>
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l3 3 7-7" stroke="#059669" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </div>
-                <div><div style={{fontSize:10,fontWeight:800,color:C.primary}}>Chaque entreprise est différente</div><div style={{fontSize:9,fontWeight:600,color:"#6aaca8"}}>On construit l'outil qui va avec</div></div>
+                <div><div style={{fontSize:10,fontWeight:800,color:C.primary}}>Chaque action est chiffrée</div><div style={{fontSize:9,fontWeight:600,color:"#6aaca8"}}>On mesure le gain, mois après mois</div></div>
               </div>
             </div>
 
             {/* Texte (droite) */}
             <div>
-              <div style={{display:"inline-block",background:"#fff",color:C.primary,fontSize:11,fontWeight:800,padding:"5px 14px",borderRadius:100,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16,border:`1px solid ${C.border}`}}>Levier rentabilité</div>
-              <h2 style={{fontSize:"clamp(26px,3vw,40px)",fontWeight:900,color:C.text,lineHeight:1.15,marginBottom:20}}>
-                Moins de temps perdu, <em style={{color:C.primary,fontStyle:"normal"}}>plus de marge.</em>
+              <div style={{display:"inline-block",background:"#fff",color:C.primary,fontSize:11,fontWeight:800,padding:"5px 14px",borderRadius:100,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16,border:`1px solid ${C.border}`}}>Notre méthode</div>
+              <h2 style={{fontSize:"clamp(26px,3vw,40px)",fontWeight:900,color:C.text,lineHeight:1.15,marginBottom:28}}>
+                Vos chiffres, analysés <em style={{color:C.primary,fontStyle:"normal"}}>chaque mois.</em>
               </h2>
-              <p style={{fontSize:15,fontWeight:600,color:C.mid,lineHeight:1.75,marginBottom:32}}>
-                Quand l'analyse montre qu'une tâche répétitive vous coûte trop cher, on met en place l'outil qui s'en charge : planning d'équipe, congés, stock, ou un outil créé sur mesure.
-              </p>
-              <a href="/automatisation-gestion-pme" style={{display:"inline-flex",alignItems:"center",gap:8,background:C.primary,color:"#fff",padding:"13px 28px",borderRadius:100,fontSize:14,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 20px rgba(0,86,83,.25)",transition:"all .2s"}}>
-                Découvrir les outils de gestion →
+              <div style={{display:"flex",flexDirection:"column",gap:20,marginBottom:32}}>
+                {[
+                  {t:"Visibilité",d:"Ventes, marges, charges, trésorerie : tous vos chiffres lisibles, au même endroit."},
+                  {t:"Analyse",d:"Chaque mois, votre conseiller regarde ce qui marche, ce qui coûte trop cher et ce qui arrive."},
+                  {t:"Actions",d:"On décide ensemble des actions, on les suit, et on mesure ce qu'elles rapportent."},
+                ].map((e,i)=>(
+                  <div key={i} style={{display:"flex",gap:14,alignItems:"flex-start"}}>
+                    <div style={{flexShrink:0,width:32,height:32,borderRadius:"50%",background:C.primary,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:900}}>{i+1}</div>
+                    <div>
+                      <div style={{fontSize:16,fontWeight:900,color:C.text,marginBottom:4}}>{e.t}</div>
+                      <p style={{fontSize:14.5,fontWeight:600,color:C.mid,lineHeight:1.65,margin:0}}>{e.d}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <a href="/services" style={{display:"inline-flex",alignItems:"center",gap:8,background:C.primary,color:"#fff",padding:"13px 28px",borderRadius:100,fontSize:14,fontWeight:800,textDecoration:"none",boxShadow:"0 4px 20px rgba(0,86,83,.25)",transition:"all .2s"}}>
+                Découvrir nos offres →
               </a>
             </div>
           </div>
@@ -634,7 +634,7 @@ export default function SitePage() {
             </div>
             <div>
               <div style={{fontSize:11,fontWeight:800,color:"rgba(255,255,255,.3)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:16}}>Navigation</div>
-              {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"},{h:"/on-vous-montre",l:"On vous montre"},{h:"/diagnostic",l:"Simulateur"},{h:"/blog",l:"Blog"},{h:"/pilotage-financier-pme",l:"Guide pilotage financier"},{h:"/automatisation-gestion-pme",l:"Guide automatisation gestion"}].map((lk,i)=>(
+              {[{h:"/",l:"Accueil"},{h:"/services",l:"Nos offres"},{h:"/on-vous-montre",l:"On vous montre"},{h:"/diagnostic",l:"Simulateur"},{h:"/blog",l:"Blog"},{h:"/pilotage-financier-pme",l:"Guide pilotage financier"},{h:"/automatisation-gestion-pme",l:"Guide réduire ses coûts de gestion"}].map((lk,i)=>(
                 <a key={i} href={lk.h} style={{display:"block",fontSize:13,fontWeight:600,color:"rgba(255,255,255,.5)",textDecoration:"none",marginBottom:10}}>{lk.l}</a>
               ))}
             </div>

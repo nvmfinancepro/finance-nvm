@@ -82,7 +82,7 @@ export default function BlogClient({ posts }: { posts: BlogPost[] }) {
           Gestion et pilotage financier des PME
         </h1>
         <p style={{ fontSize: 16, lineHeight: 1.75, color: C.mid, marginBottom: 44 }}>
-          Trésorerie, comptabilité, pilotage financier, automatisation : des articles pratiques pour dirigeants de
+          Trésorerie, comptabilité, pilotage financier, rentabilité : des articles pratiques pour dirigeants de
           TPE/PME, sans jargon.
         </p>
 

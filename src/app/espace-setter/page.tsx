@@ -70,7 +70,7 @@ const trendArrow = { up: "▲", down: "▼", flat: "•" } as const;
 const trendColor = { up: C.green, down: C.red, flat: C.light } as const;
 
 const leviers = [
-  { t: "Gagner plus", d: "Repérer ce qui coûte trop cher et ce qui rapporte le plus : prix, marges, fournisseurs, abonnements, tâches à automatiser avec des outils de gestion." },
+  { t: "Gagner plus", d: "Repérer ce qui coûte trop cher et ce qui rapporte le plus : prix, marges, fournisseurs, abonnements, charges qui dérivent." },
   { t: "Développer", d: "Savoir où investir, quand recruter, quels produits ou clients pousser, chiffres à l'appui." },
   { t: "Sécuriser", d: "Anticiper les problèmes de trésorerie, les impayés clients, les échéances fiscales. Éviter les mauvaises surprises." },
 ];
@@ -273,7 +273,7 @@ export default function Page() {
             <div style={{ marginTop: 16, padding: "14px 16px", background: C.bg, borderRadius: 12, border: `1px solid ${C.border}` }}>
               <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: C.light }}>Solutions proposées par le conseiller</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
-                {["Négociation fournisseurs", "Ajustement des prix", "Automatisation d'une tâche répétitive", "Suppression d'un abonnement inutile"].map((s, i) => (
+                {["Négociation fournisseurs", "Ajustement des prix", "Relance des factures impayées", "Suppression d'un abonnement inutile"].map((s, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, fontWeight: 700, color: C.text }}>
                     <span style={{ width: 16, height: 16, borderRadius: "50%", background: C.green, color: "#fff", fontSize: 9, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>✓</span>
                     {s}

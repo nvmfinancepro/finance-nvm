@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://www.nvm-finance.fr"),
   title: "NVM Finance | Contrôle de gestion externalisé pour PME",
   description:
-    "Contrôle de gestion externalisé pour PME françaises : pilotage de la trésorerie, alertes automatiques et développement business (outils sur mesure).",
+    "Contrôle de gestion externalisé pour PME françaises : visibilité financière et analyse mensuelle pour gagner en performance, sécuriser et développer votre entreprise.",
   verification: {
     google: "BiGXExOnRDbNP0e1Nc9X4T6drt9toOMRpyWn_G8g2Hk",
   },

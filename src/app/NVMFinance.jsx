@@ -4891,7 +4891,7 @@ function RapportIA({ clients, moisIdx:moisIdxApp, moisYear:moisYearApp, onSaveIm
 }
 
 // ─── BLOG ───────────────────────────────────────────────────────
-const BLOG_THEMES = ["Gestion de trésorerie PME","Comptabilité & facturation","Pilotage financier PME","Automatisation & outils de gestion"];
+const BLOG_THEMES = ["Gestion de trésorerie PME","Comptabilité & facturation","Pilotage financier PME","Rentabilité & performance"];
 function slugify(str) {
  return (str||"").toString().normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,80)||"article";
 }
