@@ -172,6 +172,18 @@ export default function Page() {
             qu&apos;on apporte aux entreprises, qui contacter et comment amener la discussion.
           </p>
 
+          <div style={{ marginTop: 28, borderRadius: 18, overflow: "hidden", border: `1px solid ${C.border}`, boxShadow: "0 16px 36px rgba(0,86,83,.12)" }}>
+            <video
+              src="/videos/setter-formation.mp4"
+              poster="/videos/setter-formation-poster.jpg"
+              controls
+              playsInline
+              preload="metadata"
+              style={{ display: "block", width: "100%", height: "auto", background: "#000" }}
+            />
+          </div>
+          <p style={captionStyle}>Commence par la vidéo : ce qu&apos;on fait, concrètement, en 2 minutes.</p>
+
           {/* ── REMUNERATION ── */}
           <p style={eyebrowStyle}>Ta rémunération</p>
           <h2 style={h2Style}>20 % de chaque signature, chaque mois tant que le client reste.</h2>
