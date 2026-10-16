@@ -15,9 +15,9 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/videos/demo-poster.png",
+        url: "/videos/demo-poster.jpg",
         width: 1920,
-        height: 1078,
+        height: 1080,
       },
     ],
   },

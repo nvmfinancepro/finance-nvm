@@ -76,7 +76,7 @@ export default function DemoVideoClient() {
           boxShadow: "0 2px 0 1px rgba(0,86,83,.08),0 40px 100px rgba(0,86,83,.2)" }}>
           <video
             src="/videos/demo.mp4"
-            poster="/videos/demo-poster.png"
+            poster="/videos/demo-poster.jpg"
             controls
             playsInline
             preload="metadata"
