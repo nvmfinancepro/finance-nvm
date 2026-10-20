@@ -127,6 +127,7 @@ function VueSetters({ setters, prospects, appels, rdvs, jeton, recharger, onVoir
                         style={{ ...lien, background: "none", border: "none", padding: 0, marginTop: 4, fontFamily: POLICE, fontSize: 13, cursor: "pointer" }}>
                         {ouverture === s.id ? "Ouverture…" : "Voir son espace →"}
                       </button>
+                      <AccesSetter s={s} jeton={jeton} recharger={recharger} />
                     </td>
                     <td style={cellule}>{stock.aAppeler}{stock.aVerifier > 0 && <div style={{ fontSize: 12, color: C.mid, fontWeight: 600 }}>+ {stock.aVerifier} à vérifier</div>}</td>
                     <td style={cellule}>{stats.appels}</td>
@@ -145,6 +146,47 @@ function VueSetters({ setters, prospects, appels, rdvs, jeton, recharger, onVoir
         <div style={{ fontSize: 12.5, color: C.mid, fontWeight: 600 }}>Leads à appeler : qualifiés jamais appelés ou à rappeler, aujourd&apos;hui (quelle que soit la période). Décroché : tout résultat sauf « pas de réponse » et « faux numéro ». Gains du mois : commissions du mois en cours.</div>
       </section>
       <CreerSetter jeton={jeton} recharger={recharger} />
+    </div>
+  );
+}
+
+// Couper ou rétablir l'accès d'un setter (/api/setter-access) : son historique reste ici dans tous les cas.
+function AccesSetter({ s, jeton, recharger }) {
+  const [confirmer, setConfirmer] = useState(false);
+  const [envoi, setEnvoi] = useState(false);
+  const [erreur, setErreur] = useState("");
+  const actif = s.role === "SETTER";
+  const changer = async () => {
+    setEnvoi(true); setErreur("");
+    const rep = await fetch("/api/setter-access", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${await jeton()}` },
+      body: JSON.stringify({ id: s.id, actif: !actif }),
+    }).catch(() => null);
+    const json = rep ? await rep.json().catch(() => ({})) : {};
+    setEnvoi(false);
+    if (!rep?.ok) return setErreur(json.error || "La modification n'a pas abouti.");
+    setConfirmer(false);
+    recharger();
+  };
+  const petitBouton = couleur => ({ ...lien, color: couleur, background: "none", border: "none", padding: 0, fontFamily: POLICE, fontSize: 13, cursor: "pointer" });
+  return (
+    <div style={{ marginTop: 4, display: "grid", gap: 4, justifyItems: "start", whiteSpace: "normal" }}>
+      {!actif && <Pastille couleur={C.mid} fond="#f1f5f4">Désactivé{s.desactive_le ? ` le ${new Date(s.desactive_le).toLocaleDateString("fr-FR")}` : ""}</Pastille>}
+      {confirmer ? (
+        <>
+          <span style={{ fontSize: 12.5, fontWeight: 700, color: C.mid, maxWidth: 240 }}>Il ne pourra plus se connecter. Son historique et ses commissions restent ici.</span>
+          <span style={{ display: "flex", gap: 12 }}>
+            <button disabled={envoi} onClick={changer} style={petitBouton(C.red)}>{envoi ? "Désactivation…" : "Oui, désactiver"}</button>
+            <button disabled={envoi} onClick={() => setConfirmer(false)} style={petitBouton(C.mid)}>Annuler</button>
+          </span>
+        </>
+      ) : actif ? (
+        <button onClick={() => setConfirmer(true)} style={petitBouton(C.red)}>Désactiver l&apos;accès</button>
+      ) : (
+        <button disabled={envoi} onClick={changer} style={petitBouton(C.primary)}>{envoi ? "Réactivation…" : "Réactiver l'accès"}</button>
+      )}
+      {erreur && <span style={{ fontSize: 12.5, fontWeight: 700, color: C.red, maxWidth: 240 }}>{erreur}</span>}
     </div>
   );
 }
@@ -385,7 +427,7 @@ function VueTousProspects({ setters, prospects, appels, nomSetter }) {
       <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))" }}>
         <select value={setter} onChange={e => setSetter(e.target.value)} style={champ}>
           <option value="tous">Tous les setters</option>
-          {setters.map(s => <option key={s.id} value={s.id}>{s.name || s.email}</option>)}
+          {setters.map(s => <option key={s.id} value={s.id}>{s.name || s.email}{s.role === "SETTER_INACTIF" ? " (désactivé)" : ""}</option>)}
         </select>
         <select value={statut} onChange={e => setStatut(e.target.value)} style={champ}>
           <option value="tous">Tous les statuts</option>

@@ -51,7 +51,7 @@ function texteConfirmation(avant, resultat, apres, rdv) {
 // ─── Racine ──────────────────────────────────────────────────────────────────
 
 export default function SetterApp() {
-  const [etat, setEtat] = useState("chargement"); // chargement | connexion | interdit | admin | pret
+  const [etat, setEtat] = useState("chargement"); // chargement | connexion | interdit | desactive | admin | pret
   const [admin, setAdmin] = useState(null); // données de l'espace admin (setters, prospects, appels, RDV)
   const [regard, setRegard] = useState(null); // setter dont l'admin regarde l'espace, en lecture seule
   const [profil, setProfil] = useState(null);
@@ -86,7 +86,7 @@ export default function SetterApp() {
   // Espace admin : tout ce que l'ADMIN voit (RLS « admin all » sur chaque table).
   const chargerAdmin = useCallback(async () => {
     const [s, p, a, r] = await Promise.all([
-      supabase.from("profiles").select("id,name,email,created_at").eq("role", "SETTER").order("created_at"),
+      supabase.from("profiles").select("id,name,email,role,desactive_le,created_at").in("role", ["SETTER", "SETTER_INACTIF"]).order("created_at"),
       toutLire(() => supabase.from("setter_prospects").select("id,setter_id,nom,categorie,telephone,verification,statut,dernier_appel,prochain_appel,dirigeant_prenom,dirigeant_nom,created_at").order("id")),
       toutLire(() => supabase.from("setter_appels").select("id,prospect_id,setter_id,created_at,resultat").order("id")),
       toutLire(() => supabase.from("setter_rdv").select("*").order("rdv_le", { ascending: false }).order("id")),
@@ -100,6 +100,7 @@ export default function SetterApp() {
     const { data } = await supabase.from("profiles").select("name, role").eq("id", session.user.id).maybeSingle();
     setProfil({ nom: data?.name && data.name !== session.user.email ? data.name : "", email: session.user.email });
     if (data?.role === "ADMIN") { await chargerAdmin(); return setEtat("admin"); }
+    if (data?.role === "SETTER_INACTIF") return setEtat("desactive");
     if (data?.role !== "SETTER") return setEtat("interdit");
     const liste = await charger();
     setVue(liste.some(p => p.verification === "qualifie") ? "appeler" : "trouver");
@@ -242,7 +243,7 @@ export default function SetterApp() {
 
   if (etat === "chargement") return <Fond><div style={{ padding: 60, textAlign: "center", color: C.mid, fontWeight: 700 }}>Chargement…</div></Fond>;
   if (etat === "connexion") return <Connexion onConnecte={ouvrirSession} />;
-  if (etat === "interdit") return <Interdit profil={profil} onDeconnexion={deconnexion} />;
+  if (etat === "interdit" || etat === "desactive") return <Interdit profil={profil} desactive={etat === "desactive"} onDeconnexion={deconnexion} />;
   if (etat === "admin" && !regard) {
     return admin
       ? <AdminSetters donnees={admin} setDonnees={setAdmin} recharger={chargerAdmin} supabase={supabase} jeton={jeton} profil={profil} onDeconnexion={deconnexion} onVoir={voirSetter} />
@@ -369,6 +370,8 @@ function Connexion({ onConnecte }) {
     setEnvoi(true); setErreur("");
     const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: motDePasse });
     setEnvoi(false);
+    // Compte désactivé par l'admin : connexion bloquée côté Supabase Auth (/api/setter-access).
+    if (error?.code === "user_banned") return setErreur("Votre accès à l'outil a été désactivé. Pour en parler : nathan@nvm-finance.fr.");
     if (error) return setErreur("Identifiants incorrects. Vérifiez votre e-mail et votre mot de passe.");
     onConnecte(data.session);
   };
@@ -393,16 +396,19 @@ function Connexion({ onConnecte }) {
   );
 }
 
-function Interdit({ profil, onDeconnexion }) {
+// Compte qui n'est pas setter, ou setter dont l'admin a désactivé l'accès (migration 044).
+function Interdit({ profil, desactive, onDeconnexion }) {
   return (
     <Fond>
       <div style={{ maxWidth: 440, margin: "0 auto", padding: "80px 16px" }}>
         <div style={{ ...carte, textAlign: "center", padding: "32px 24px" }}>
-          <div style={{ fontSize: 18, fontWeight: 900, color: C.primary, marginBottom: 8 }}>Espace réservé aux setters</div>
-          <div style={{ fontSize: 14, color: C.mid, marginBottom: 20 }}>Le compte {profil?.email} n&apos;est pas un compte setter.</div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: C.primary, marginBottom: 8 }}>{desactive ? "Accès désactivé" : "Espace réservé aux setters"}</div>
+          <div style={{ fontSize: 14, color: C.mid, marginBottom: 20 }}>
+            {desactive ? "L'accès du compte " + (profil?.email || "") + " à l'outil a été désactivé. Pour en parler : nathan@nvm-finance.fr." : <>Le compte {profil?.email} n&apos;est pas un compte setter.</>}
+          </div>
           <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-            <a href="/dashboard" style={{ ...bouton(C.primary), textDecoration: "none" }}>Aller à mon espace</a>
-            <button onClick={onDeconnexion} style={bouton("#fff", C.mid, C.border)}>Changer de compte</button>
+            {!desactive && <a href="/dashboard" style={{ ...bouton(C.primary), textDecoration: "none" }}>Aller à mon espace</a>}
+            <button onClick={onDeconnexion} style={bouton("#fff", C.mid, C.border)}>{desactive ? "Se déconnecter" : "Changer de compte"}</button>
           </div>
         </div>
       </div>

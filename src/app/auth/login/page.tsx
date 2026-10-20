@@ -40,10 +40,10 @@ export default function LoginPage() {
       .eq("email", user?.email ?? "")
       .single();
 
-    // Un setter va directement sur son outil, jamais sur l'espace client.
+    // Un setter (même désactivé, qui y lit pourquoi) va directement sur son outil, jamais sur l'espace client.
     const { data: profil } = await supabase.from("profiles").select("role").eq("id", user?.id ?? "").maybeSingle();
     // Redirection hard pour que les cookies Supabase soient bien envoyés au middleware
-    window.location.href = profil?.role === "SETTER" ? "/setter" : "/dashboard";
+    window.location.href = ["SETTER", "SETTER_INACTIF"].includes(profil?.role ?? "") ? "/setter" : "/dashboard";
     // setLoading reste true pendant la navigation
   };
 

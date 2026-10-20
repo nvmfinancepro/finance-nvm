@@ -312,7 +312,7 @@ function LoginPage({ onLogin }) {
           return;
         }
         // Un setter a son propre outil, hors de cet espace (aucune donnée client)
-        const {data: setterProfile} = await supabase.from("profiles").select("id").eq("id", data.user.id).eq("role","SETTER").maybeSingle();
+        const {data: setterProfile} = await supabase.from("profiles").select("id").eq("id", data.user.id).in("role",["SETTER","SETTER_INACTIF"]).maybeSingle();
         if (setterProfile) { window.location.href = "/setter"; return; }
         // Sinon chercher dans client_users
         const {data: clientUser} = await supabase.from("client_users").select("id,client_id,email,first_login,created_at").eq("email", data.user.email).single();
@@ -5101,7 +5101,7 @@ export default function App() {
         setView("clients");
         return;
       }
-      const {data:setterProfile} = await supabase.from("profiles").select("id").eq("id",session.user.id).eq("role","SETTER").maybeSingle();
+      const {data:setterProfile} = await supabase.from("profiles").select("id").eq("id",session.user.id).in("role",["SETTER","SETTER_INACTIF"]).maybeSingle();
       if(setterProfile) { window.location.replace("/setter"); return; }
       const {data:clientUser} = await supabase.from("client_users").select("id,client_id,email,first_login,created_at").eq("email",email).single();
       if(clientUser) {
@@ -5475,7 +5475,7 @@ export default function App() {
             await supabase.from("client_users").update({first_login:false}).eq("email",userEmail);
             // Vérifier si admin ou client
             const {data:adminData} = await supabase.from("admin_users").select("*").eq("email",userEmail).single();
-            const {data:setterProfile} = adminData ? {data:null} : await supabase.from("profiles").select("id").eq("id",sess.session.user.id).eq("role","SETTER").maybeSingle();
+            const {data:setterProfile} = adminData ? {data:null} : await supabase.from("profiles").select("id").eq("id",sess.session.user.id).in("role",["SETTER","SETTER_INACTIF"]).maybeSingle();
             if(adminData) {
               setTimeout(()=>{ setResetMode(false); setUser({id:"admin",email:userEmail,role:"ADMIN",name:"Administrateur NVM",firstLogin:false}); setView("clients"); },2000);
             } else if(setterProfile) {
