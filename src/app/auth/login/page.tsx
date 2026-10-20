@@ -40,15 +40,21 @@ export default function LoginPage() {
       .eq("email", user?.email ?? "")
       .single();
 
+    // Un setter va directement sur son outil, jamais sur l'espace client.
+    const { data: profil } = await supabase.from("profiles").select("role").eq("id", user?.id ?? "").maybeSingle();
     // Redirection hard pour que les cookies Supabase soient bien envoyés au middleware
-    window.location.href = "/dashboard";
+    window.location.href = profil?.role === "SETTER" ? "/setter" : "/dashboard";
     // setLoading reste true pendant la navigation
   };
 
   const handleForgot = async () => {
-    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
-      redirectTo: `${window.location.origin}/auth/reset`,
-    });
+    // Même client « simple » et même page d'arrivée que NVMFinance.jsx : le lien de l'e-mail ouvre
+    // /set-password (l'ancienne cible /auth/reset n'existait pas). Le client cookie, lui, utilise le
+    // flux PKCE, dont le lien ne peut être ouvert que par lui-même.
+    const { error } = await createPlainClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+      .auth.resetPasswordForEmail(forgotEmail, {
+        redirectTo: (process.env.NEXT_PUBLIC_SITE_URL || "https://www.nvm-finance.fr") + "/set-password",
+      });
     if (error) { setErr(error.message); return; }
 
     // Enregistrer la demande en base pour notifier l'admin

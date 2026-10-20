@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { CSSProperties } from "react";
 import { LogoSVG } from "@/components/ui/Logo";
+import { accroche, confirmation, faq, objections } from "@/lib/setter-script";
 
 const C = { primary: "#005653", green: "#21C45D", bg: "#ecfdf5", text: "#002e2c", mid: "#2d6b68", light: "#a7d4d0", border: "#c8e8e5", red: "#dc2626", redBg: "#fef2f2", amber: "#d97706", amberBg: "#fffbeb" };
 
@@ -91,27 +92,6 @@ const secteurs = [
   "Hôtels indépendants",
   "Entreprises de nettoyage et de services",
   "Cabinets dentaires et vétérinaires",
-];
-
-const faq: { q: string; a: string; note?: string }[] = [
-  { q: "« C'est quoi exactement ? »", a: "« On fait du contrôle de gestion externalisé. Chaque mois, un conseiller analyse les chiffres de votre entreprise pour améliorer votre rentabilité, sécuriser votre entreprise et vous aider à la développer. »" },
-  { q: "« Vous êtes qui, NVM Finance ? »", a: "« On est un cabinet de conseil qui accompagne les dirigeants dans le pilotage et le développement de leur entreprise. On accompagne déjà plus de 20 entreprises comme la vôtre. »" },
-  { q: "« Qui vous a donné mon numéro ? »", a: "« Je vous ai trouvé sur LinkedIn / votre site. Je contacte directement les dirigeants de votre secteur. »" },
-  { q: "« Ça coûte combien ? »", a: "« Il y a un tableau de bord gratuit, puis un suivi mensuel ou un audit complet selon vos besoins. Le conseiller vous présentera les formules pendant la visio, qui est gratuite et sans engagement. »", note: "Les prix sont présentés par le conseiller en visio, avec la formule adaptée à l'entreprise." },
-  { q: "« Vous travaillez avec qui, dans mon secteur ? »", a: "« Je ne donne pas les noms par confidentialité, mais on accompagne des [secteur] de votre taille. »" },
-  { q: "Question trop technique", a: "« Très bonne question. Moi je suis au service commercial, donc je préfère ne pas vous dire de bêtise. C'est un conseiller qui pourra vous répondre précisément. Je vous cale une visio de 30 minutes avec lui : plutôt [jour] à [heure] ou [jour] à [heure] ? »" },
-];
-
-const objections: { q: string; a: string; note?: string }[] = [
-  { q: "« J'ai déjà un comptable »", a: "« Très bien. Nous, on ne remplace pas le comptable : on suit vos chiffres chaque mois pour aller chercher de la rentabilité et développer votre entreprise. On travaille d'ailleurs souvent avec eux. »" },
-  { q: "« Pas le temps »", a: "« Je comprends, c'est pour ça que je ne vous embête pas maintenant. 30 minutes dans la semaine, vous préférez mardi ou jeudi ? »" },
-  { q: "« Pas intéressé »", a: "« Pas de souci. Juste par curiosité, c'est parce que vous êtes déjà bien accompagné là-dessus ? »", note: "S'il est déjà accompagné, on le note et on passe au suivant. S'il est suivi par son comptable, voir « J'ai déjà un comptable »." },
-  { q: "« Envoyez-moi un mail »", a: "« Pas de souci. C'est bien [adresse mail] ? Je vous envoie une présentation, et je vous rappelle [jour] pour voir si ça vous parle. »", note: "On lui envoie le lien du site (nvm-finance.fr), et la date du rappel est notée dans le fichier." },
-  { q: "« Encore un vendeur / ça marche pas, ces trucs-là »", a: "« Je comprends la méfiance, vous devez en recevoir plein. Justement, je ne vous vends rien au téléphone. On se voit 30 minutes, le conseiller regarde votre situation, et vous jugez. »" },
-  { q: "« Rappelez-moi plus tard »", a: "« Pas de problème. Quand ? La semaine prochaine, plutôt début ou fin de semaine ? »", note: "L'idée est de repartir avec une date précise." },
-  { q: "« Tout va bien, on n'a pas de problème »", a: "« Tant mieux. C'est justement quand ça tourne bien qu'on peut aller chercher plus de rentabilité et préparer la suite. »" },
-  { q: "« Je suis trop petit pour ça »", a: "« C'est justement pour les TPE qu'on l'a conçu. Les grandes entreprises ont un directeur financier, les TPE non. Nous, on joue ce rôle. »" },
-  { q: "« C'est une arnaque ? »", a: "« Je comprends la question. On est une entreprise notée 5 étoiles sur Google, vous pouvez nous vérifier. Et la visio est sans engagement. »" },
 ];
 
 function Accordion({ items }: { items: { q: string; a: string; note?: string }[] }) {
@@ -363,10 +343,7 @@ export default function Page() {
 
           <h3 style={h3Style}>1. L&apos;accroche</h3>
           <Script>
-            « Bonjour [Prénom du dirigeant], [ton prénom], de la société NVM Finance. Vous allez bien ?
-            <br />
-            Je travaille avec vos confrères sur le pilotage financier de leur entreprise. Ce serait intéressant
-            d&apos;en parler avec vous : vous seriez plutôt disponible mardi ou jeudi dans la semaine ? »
+            {accroche.map((ligne, i) => <span key={i}>{i > 0 && <br />}{ligne}</span>)}
           </Script>
           <p style={pStyle}>
             Proposer deux créneaux (« mardi ou jeudi ? ») plutôt que demander « vous auriez un moment ? » facilite la
@@ -374,10 +351,7 @@ export default function Page() {
           </p>
 
           <h3 style={h3Style}>2. La confirmation</h3>
-          <Script>
-            « Parfait, c&apos;est noté pour [jour] à [heure]. Vous allez recevoir l&apos;invitation par mail. C&apos;est bien
-            [adresse mail] ? »
-          </Script>
+          <Script>{confirmation}</Script>
 
           {/* ── QUESTIONS ── */}
           <p style={eyebrowStyle}>Pendant l&apos;appel</p>
