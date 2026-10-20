@@ -84,6 +84,7 @@ const STATUTS_A_APPELER = ["a_appeler", "rappel", "pas_de_reponse"];
 function VueSetters({ setters, prospects, appels, rdvs, jeton, recharger, onVoir }) {
   const [periode, setPeriode] = useState("mois");
   const [ouverture, setOuverture] = useState(null); // setter dont l'espace est en train de s'ouvrir
+  const [info, setInfo] = useState(""); // résultat de la dernière désactivation / suppression
   const p = periodes()[periode];
   const mois = moisCourant();
   const lignes = setters.map(s => {
@@ -94,7 +95,8 @@ function VueSetters({ setters, prospects, appels, rdvs, jeton, recharger, onVoir
       aAppeler: leurs.filter(x => x.verification === "qualifie" && STATUTS_A_APPELER.includes(x.statut)).length,
       aVerifier: leurs.filter(x => x.verification === "a_verifier").length,
     };
-    return { s, stock, stats: statsSetter(appels.filter(a => a.setter_id === s.id), leursRdv, p.depuis, p.avant), gains };
+    const aHistorique = leursRdv.length > 0 || appels.some(a => a.setter_id === s.id);
+    return { s, stock, aHistorique, stats: statsSetter(appels.filter(a => a.setter_id === s.id), leursRdv, p.depuis, p.avant), gains };
   });
   const cellule = { padding: "9px 10px", borderBottom: `1px solid ${C.bg}`, fontSize: 14, fontWeight: 700, color: C.text, textAlign: "right", whiteSpace: "nowrap" };
   return (
@@ -119,7 +121,7 @@ function VueSetters({ setters, prospects, appels, rdvs, jeton, recharger, onVoir
                 ))}</tr>
               </thead>
               <tbody>
-                {lignes.map(({ s, stock, stats, gains }) => (
+                {lignes.map(({ s, stock, aHistorique, stats, gains }) => (
                   <tr key={s.id}>
                     <td style={{ ...cellule, textAlign: "left" }}>
                       {s.name || "—"}<div style={{ fontSize: 12, color: C.mid, fontWeight: 600 }}>{s.email}</div>
@@ -127,7 +129,7 @@ function VueSetters({ setters, prospects, appels, rdvs, jeton, recharger, onVoir
                         style={{ ...lien, background: "none", border: "none", padding: 0, marginTop: 4, fontFamily: POLICE, fontSize: 13, cursor: "pointer" }}>
                         {ouverture === s.id ? "Ouverture…" : "Voir son espace →"}
                       </button>
-                      <AccesSetter s={s} jeton={jeton} recharger={recharger} />
+                      <AccesSetter s={s} aHistorique={aHistorique} jeton={jeton} recharger={recharger} annoncer={setInfo} />
                     </td>
                     <td style={cellule}>{stock.aAppeler}{stock.aVerifier > 0 && <div style={{ fontSize: 12, color: C.mid, fontWeight: 600 }}>+ {stock.aVerifier} à vérifier</div>}</td>
                     <td style={cellule}>{stats.appels}</td>
@@ -143,6 +145,7 @@ function VueSetters({ setters, prospects, appels, rdvs, jeton, recharger, onVoir
             </table>
           </div>
         )}
+        {info && <div role="status" style={{ fontSize: 13.5, fontWeight: 700, color: "#047857" }}>{info}</div>}
         <div style={{ fontSize: 12.5, color: C.mid, fontWeight: 600 }}>Leads à appeler : qualifiés jamais appelés ou à rappeler, aujourd&apos;hui (quelle que soit la période). Décroché : tout résultat sauf « pas de réponse » et « faux numéro ». Gains du mois : commissions du mois en cours.</div>
       </section>
       <CreerSetter jeton={jeton} recharger={recharger} />
@@ -150,43 +153,58 @@ function VueSetters({ setters, prospects, appels, rdvs, jeton, recharger, onVoir
   );
 }
 
-// Couper ou rétablir l'accès d'un setter (/api/setter-access) : son historique reste ici dans tous les cas.
-function AccesSetter({ s, jeton, recharger }) {
-  const [confirmer, setConfirmer] = useState(false);
+// Désactiver, réactiver ou supprimer un setter (/api/setter-access). Supprimer n'est proposé qu'à un
+// compte qui n'a jamais appelé (faute de frappe dans l'e-mail) : sinon on désactive, l'historique reste.
+const CONFIRMATIONS = {
+  desactiver: { texte: "Il ne pourra plus se connecter. Ses leads jamais appelés repartent pour les autres setters ; son historique et ses commissions restent ici.", oui: "Oui, désactiver", envoi: "Désactivation…" },
+  supprimer: { texte: "Le compte est supprimé définitivement (par exemple, faute de frappe dans l'e-mail). Ses leads jamais appelés repartent pour les autres setters.", oui: "Oui, supprimer", envoi: "Suppression…" },
+};
+
+function AccesSetter({ s, aHistorique, jeton, recharger, annoncer }) {
+  const [confirmer, setConfirmer] = useState(null); // desactiver | supprimer
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState("");
   const actif = s.role === "SETTER";
-  const changer = async () => {
+  const nom = s.name || s.email;
+  const agir = async action => {
     setEnvoi(true); setErreur("");
     const rep = await fetch("/api/setter-access", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${await jeton()}` },
-      body: JSON.stringify({ id: s.id, actif: !actif }),
+      body: JSON.stringify({ id: s.id, action }),
     }).catch(() => null);
     const json = rep ? await rep.json().catch(() => ({})) : {};
     setEnvoi(false);
     if (!rep?.ok) return setErreur(json.error || "La modification n'a pas abouti.");
-    setConfirmer(false);
+    const n = json.liberes || 0;
+    const repartis = n ? ` ${n} lead${n > 1 ? "s" : ""} jamais appelé${n > 1 ? "s" : ""} ${n > 1 ? "repartent" : "repart"} pour les autres setters.` : "";
+    annoncer(action === "reactiver" ? `${nom} a de nouveau accès à l'outil.`
+      : action === "supprimer" ? `Compte ${s.email} supprimé.${repartis}` : `${nom} n'a plus accès à l'outil.${repartis}`);
+    setConfirmer(null);
     recharger();
   };
   const petitBouton = couleur => ({ ...lien, color: couleur, background: "none", border: "none", padding: 0, fontFamily: POLICE, fontSize: 13, cursor: "pointer" });
+  const c = CONFIRMATIONS[confirmer];
   return (
     <div style={{ marginTop: 4, display: "grid", gap: 4, justifyItems: "start", whiteSpace: "normal" }}>
       {!actif && <Pastille couleur={C.mid} fond="#f1f5f4">Désactivé{s.desactive_le ? ` le ${new Date(s.desactive_le).toLocaleDateString("fr-FR")}` : ""}</Pastille>}
-      {confirmer ? (
+      {c ? (
         <>
-          <span style={{ fontSize: 12.5, fontWeight: 700, color: C.mid, maxWidth: 240 }}>Il ne pourra plus se connecter. Son historique et ses commissions restent ici.</span>
+          <span style={{ fontSize: 12.5, fontWeight: 700, color: C.mid, maxWidth: 260 }}>{c.texte}</span>
           <span style={{ display: "flex", gap: 12 }}>
-            <button disabled={envoi} onClick={changer} style={petitBouton(C.red)}>{envoi ? "Désactivation…" : "Oui, désactiver"}</button>
-            <button disabled={envoi} onClick={() => setConfirmer(false)} style={petitBouton(C.mid)}>Annuler</button>
+            <button disabled={envoi} onClick={() => agir(confirmer)} style={petitBouton(C.red)}>{envoi ? c.envoi : c.oui}</button>
+            <button disabled={envoi} onClick={() => setConfirmer(null)} style={petitBouton(C.mid)}>Annuler</button>
           </span>
         </>
-      ) : actif ? (
-        <button onClick={() => setConfirmer(true)} style={petitBouton(C.red)}>Désactiver l&apos;accès</button>
       ) : (
-        <button disabled={envoi} onClick={changer} style={petitBouton(C.primary)}>{envoi ? "Réactivation…" : "Réactiver l'accès"}</button>
+        <span style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          {actif
+            ? <button onClick={() => setConfirmer("desactiver")} style={petitBouton(C.red)}>Désactiver l&apos;accès</button>
+            : <button disabled={envoi} onClick={() => agir("reactiver")} style={petitBouton(C.primary)}>{envoi ? "Réactivation…" : "Réactiver l'accès"}</button>}
+          {!aHistorique && <button onClick={() => setConfirmer("supprimer")} style={petitBouton(C.red)}>Supprimer</button>}
+        </span>
       )}
-      {erreur && <span style={{ fontSize: 12.5, fontWeight: 700, color: C.red, maxWidth: 240 }}>{erreur}</span>}
+      {erreur && <span style={{ fontSize: 12.5, fontWeight: 700, color: C.red, maxWidth: 260 }}>{erreur}</span>}
     </div>
   );
 }
