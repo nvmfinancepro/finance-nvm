@@ -124,6 +124,7 @@ export default function Page() {
           .st-grid9{ grid-template-columns:repeat(2,1fr); }
           .st-grid3{ grid-template-columns:1fr; }
         }
+        @media(max-width:420px){ .st-tag{ display:none; } }
       `}</style>
 
       <header style={{ background: "#fff", borderBottom: `1px solid ${C.border}`, padding: "16px 24px" }}>
@@ -132,7 +133,12 @@ export default function Page() {
             <LogoSVG width={36} />
             <span style={{ fontSize: 15, fontWeight: 900, color: C.primary }}>NVM Finance</span>
           </a>
-          <Tag color={C.primary} bg={C.bg}>Espace setter</Tag>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span className="st-tag"><Tag color={C.primary} bg={C.bg}>Espace setter</Tag></span>
+            <a href="/setter" style={{ background: C.primary, color: "#fff", padding: "9px 18px", borderRadius: 100, fontSize: 14, fontWeight: 800, textDecoration: "none", whiteSpace: "nowrap" }}>
+              Se connecter →
+            </a>
+          </div>
         </div>
       </header>
 
