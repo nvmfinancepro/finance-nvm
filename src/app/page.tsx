@@ -9,12 +9,12 @@ export const metadata: Metadata = {
   title,
   description,
   alternates: {
-    canonical: "https://www.nvm-finance.fr/",
+    canonical: "https://nvm-finance.fr/",
   },
   openGraph: {
     title,
     description,
-    url: "https://www.nvm-finance.fr/",
+    url: "https://nvm-finance.fr/",
     type: "website",
   },
   twitter: {
@@ -37,7 +37,7 @@ export default function Page() {
             description:
               "Contrôle de gestion externalisé pour PME françaises : visibilité financière, analyse mensuelle par un conseiller, rentabilité, développement et sécurisation de l'entreprise.",
             serviceType: "Contrôle de gestion externalisé",
-            url: "https://www.nvm-finance.fr",
+            url: "https://nvm-finance.fr",
             email: "nathan@nvm-finance.fr",
             telephone: "+33783657639",
             areaServed: "FR",

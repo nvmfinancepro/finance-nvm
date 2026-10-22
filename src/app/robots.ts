@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: ["/dashboard", "/auth", "/set-password", "/api"],
     },
-    sitemap: "https://www.nvm-finance.fr/sitemap.xml",
+    sitemap: "https://nvm-finance.fr/sitemap.xml",
   };
 }

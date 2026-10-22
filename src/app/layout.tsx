@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "@/styles/globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.nvm-finance.fr"),
+  metadataBase: new URL("https://nvm-finance.fr"),
   title: "NVM Finance | Contrôle de gestion externalisé pour PME",
   description:
     "Contrôle de gestion externalisé pour PME françaises : visibilité financière et analyse mensuelle pour gagner en performance, sécuriser et développer votre entreprise.",

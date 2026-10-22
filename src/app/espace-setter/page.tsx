@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   title: "Espace setter | NVM Finance",
   description: "Comment on fonctionne, ce qu'on vend et comment décrocher un rendez-vous.",
   robots: { index: false, follow: false },
+  alternates: { canonical: "https://nvm-finance.fr/espace-setter" },
 };
 
 const sectionStyle: CSSProperties = { maxWidth: 760, margin: "0 auto", padding: "0 24px" };

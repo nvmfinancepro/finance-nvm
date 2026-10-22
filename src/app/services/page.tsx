@@ -9,12 +9,12 @@ export const metadata: Metadata = {
   title,
   description,
   alternates: {
-    canonical: "https://www.nvm-finance.fr/services",
+    canonical: "https://nvm-finance.fr/services",
   },
   openGraph: {
     title,
     description,
-    url: "https://www.nvm-finance.fr/services",
+    url: "https://nvm-finance.fr/services",
     type: "website",
   },
   twitter: {

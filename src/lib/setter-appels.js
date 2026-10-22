@@ -3,7 +3,7 @@
 // Les heures sont celles du navigateur du setter (en France).
 
 export const CALENDLY = "https://calendly.com/nvmfinance-pro/30min";
-export const SITE = "https://www.nvm-finance.fr";
+export const SITE = "https://nvm-finance.fr";
 
 // Où en est le prospect (colonne setter_prospects.statut).
 export const STATUTS_APPEL = {

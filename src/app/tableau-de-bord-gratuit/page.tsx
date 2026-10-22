@@ -12,10 +12,11 @@ export const metadata: Metadata = {
   title,
   description,
   robots: { index: false, follow: false },
+  alternates: { canonical: "https://nvm-finance.fr/tableau-de-bord-gratuit" },
   openGraph: {
     title,
     description,
-    url: "https://www.nvm-finance.fr/tableau-de-bord-gratuit",
+    url: "https://nvm-finance.fr/tableau-de-bord-gratuit",
     type: "website",
   },
   twitter: {

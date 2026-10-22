@@ -2,6 +2,14 @@
 const nextConfig = {
   async redirects() {
     return [
+      // Domaine officiel = https://nvm-finance.fr (sans www) : une seule 301 directe,
+      // chemin conservé. /api exclu pour ne pas casser un webhook configuré sur www.
+      {
+        source: "/:path((?!api/).*)",
+        has: [{ type: "host", value: "www.nvm-finance.fr" }],
+        destination: "https://nvm-finance.fr/:path",
+        statusCode: 301,
+      },
       {
         source: "/demo",
         destination: "/on-vous-montre",

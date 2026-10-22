@@ -53,7 +53,7 @@ export default function LoginPage() {
     // flux PKCE, dont le lien ne peut être ouvert que par lui-même.
     const { error } = await createPlainClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
       .auth.resetPasswordForEmail(forgotEmail, {
-        redirectTo: (process.env.NEXT_PUBLIC_SITE_URL || "https://www.nvm-finance.fr") + "/set-password",
+        redirectTo: (process.env.NEXT_PUBLIC_SITE_URL || "https://nvm-finance.fr") + "/set-password",
       });
     if (error) { setErr(error.message); return; }
 

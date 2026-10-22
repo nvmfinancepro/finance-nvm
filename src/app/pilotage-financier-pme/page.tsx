@@ -13,12 +13,12 @@ export const metadata: Metadata = {
   title,
   description,
   alternates: {
-    canonical: "https://www.nvm-finance.fr/pilotage-financier-pme",
+    canonical: "https://nvm-finance.fr/pilotage-financier-pme",
   },
   openGraph: {
     title,
     description,
-    url: "https://www.nvm-finance.fr/pilotage-financier-pme",
+    url: "https://nvm-finance.fr/pilotage-financier-pme",
     type: "article",
   },
   twitter: {
@@ -36,14 +36,14 @@ const jsonLd = {
   author: {
     "@type": "Organization",
     name: "NVM Finance",
-    url: "https://www.nvm-finance.fr",
+    url: "https://nvm-finance.fr",
   },
   publisher: {
     "@type": "Organization",
     name: "NVM Finance",
-    url: "https://www.nvm-finance.fr",
+    url: "https://nvm-finance.fr",
   },
-  mainEntityOfPage: "https://www.nvm-finance.fr/pilotage-financier-pme",
+  mainEntityOfPage: "https://nvm-finance.fr/pilotage-financier-pme",
 };
 
 const sectionStyle: CSSProperties = { maxWidth: 760, margin: "0 auto", padding: "0 24px" };

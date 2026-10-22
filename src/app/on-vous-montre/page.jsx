@@ -8,12 +8,12 @@ export const metadata = {
   title,
   description,
   alternates: {
-    canonical: "https://www.nvm-finance.fr/on-vous-montre",
+    canonical: "https://nvm-finance.fr/on-vous-montre",
   },
   openGraph: {
     title,
     description,
-    url: "https://www.nvm-finance.fr/on-vous-montre",
+    url: "https://nvm-finance.fr/on-vous-montre",
     type: "website",
     images: ["/videos/demo-poster.jpg"],
   },

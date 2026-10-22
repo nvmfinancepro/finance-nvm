@@ -371,7 +371,7 @@ function LoginPage({ onLogin }) {
   const handleForgot = async () => {
     setErr("");
     await supabase.auth.resetPasswordForEmail(forgotEmail, {
-      redirectTo: (process.env.NEXT_PUBLIC_SITE_URL||"https://www.nvm-finance.fr")+"/set-password",
+      redirectTo: (process.env.NEXT_PUBLIC_SITE_URL||"https://nvm-finance.fr")+"/set-password",
     });
     // Message générique dans tous les cas (compte existant ou non) pour ne pas
     // laisser deviner quelles adresses ont un compte.
@@ -4757,7 +4757,7 @@ function AdminAcces({ clients }) {
   const handleReset = async (email) => {
     setErrors(prev=>({...prev,[email]:null}));
     const {error} = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: (process.env.NEXT_PUBLIC_SITE_URL||"https://www.nvm-finance.fr")+"/set-password",
+      redirectTo: (process.env.NEXT_PUBLIC_SITE_URL||"https://nvm-finance.fr")+"/set-password",
     });
     if (error) { setErrors(prev=>({...prev,[email]:error.message})); return; }
     setSent(prev=>({...prev,[email]:true}));

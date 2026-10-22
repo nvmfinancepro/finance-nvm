@@ -4,7 +4,7 @@ import { getPublishedPosts } from "@/lib/blog";
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = "https://www.nvm-finance.fr";
+  const base = "https://nvm-finance.fr";
   const posts = await getPublishedPosts();
 
   return [
@@ -20,6 +20,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     {
       url: `${base}/on-vous-montre`,
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${base}/diagnostic`,
       changeFrequency: "monthly",
       priority: 0.7,
     },

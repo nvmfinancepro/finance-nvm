@@ -7,12 +7,16 @@ export const revalidate = 60;
 
 type Props = { params: Promise<{ slug: string }> };
 
+// canonical_url vient de la base (blog_posts) : on retire un éventuel www pour que
+// la canonique désigne toujours le domaine officiel https://nvm-finance.fr.
+const sansWww = (url: string | null) => url?.replace("://www.nvm-finance.fr", "://nvm-finance.fr") || null;
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const post = await getPostBySlug(slug);
   if (!post) return {};
-  const url = `https://www.nvm-finance.fr/blog/${post.slug}`;
-  const canonical = post.canonical_url || url;
+  const url = `https://nvm-finance.fr/blog/${post.slug}`;
+  const canonical = sansWww(post.canonical_url) || url;
   return {
     title: `${post.title} | Blog NVM Finance`,
     description: post.excerpt,
@@ -34,9 +38,9 @@ export default async function Page({ params }: Props) {
     description: post.excerpt,
     image: post.image_url || undefined,
     datePublished: post.published_at,
-    author: { "@type": "Organization", name: "NVM Finance", url: "https://www.nvm-finance.fr" },
-    publisher: { "@type": "Organization", name: "NVM Finance", url: "https://www.nvm-finance.fr" },
-    mainEntityOfPage: post.canonical_url || `https://www.nvm-finance.fr/blog/${post.slug}`,
+    author: { "@type": "Organization", name: "NVM Finance", url: "https://nvm-finance.fr" },
+    publisher: { "@type": "Organization", name: "NVM Finance", url: "https://nvm-finance.fr" },
+    mainEntityOfPage: sansWww(post.canonical_url) || `https://nvm-finance.fr/blog/${post.slug}`,
   };
 
   return (

@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
 
   const { data: invited, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
     data: { clientId: newClient.id, name: companyName, role: "CLIENT" },
-    redirectTo: (process.env.NEXT_PUBLIC_SITE_URL || "https://www.nvm-finance.fr") + "/set-password",
+    redirectTo: (process.env.NEXT_PUBLIC_SITE_URL || "https://nvm-finance.fr") + "/set-password",
   });
 
   if (inviteError) {

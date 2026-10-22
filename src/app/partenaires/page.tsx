@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   title,
   description,
   robots: { index: false, follow: false },
+  alternates: { canonical: "https://nvm-finance.fr/partenaires" },
 };
 
 const sectionStyle: CSSProperties = { maxWidth: 760, margin: "0 auto", padding: "0 24px" };
