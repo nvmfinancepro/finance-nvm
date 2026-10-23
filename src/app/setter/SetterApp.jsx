@@ -2,10 +2,10 @@
 // Outil de travail des setters (/setter) : importer ses prospects (Google Maps), les appeler un
 // par un, noter chaque résultat en 1 clic, suivre ses rappels et ses RDV.
 // Volontairement hors de NVMFinance.jsx : un setter ne charge jamais l'espace client.
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { LogoSVG } from "@/components/ui/Logo";
-import { RESULTATS, fileDAppels, formaterQuand, nomDirigeant } from "@/lib/setter-appels";
+import { RESULTATS, estMailEnvoye, fileDAppels, formaterQuand, nomDirigeant } from "@/lib/setter-appels";
 import { creerLimiteur, faitsEntreprise, rechercherEntreprise, zoneDuPoint } from "@/lib/setter-import";
 import AdminSetters from "./AdminSetters";
 import AjoutProspect from "./AjoutProspect";
@@ -22,6 +22,8 @@ import { C, Fond, POLICE, bouton, carte, champ, lien } from "./ui";
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 const jeton = async () => (await supabase.auth.getSession()).data.session?.access_token;
 
+const AUCUN = [];
+
 // Erreurs levées exprès par setter_noter_appel() (messages déjà en français).
 const ERREURS_METIER = new Set(["22023", "P0002", "42501"]);
 
@@ -37,13 +39,13 @@ async function toutLire(requete) {
   }
 }
 
-function texteConfirmation(avant, resultat, apres, rdv) {
+function texteConfirmation(avant, resultat, apres, appel, rdv) {
   if (resultat === "pas_de_reponse") {
     return apres.statut === "injoignable"
       ? `${avant.nom} : 3 appels sans réponse, il passe en « injoignable ».`
       : `Pas de réponse : nouvel essai ${formaterQuand(apres.prochain_appel)}.`;
   }
-  if (resultat === "rappel") return `Rappel prévu ${formaterQuand(apres.prochain_appel)}.`;
+  if (resultat === "rappel") return `${estMailEnvoye(appel) ? "Mail envoyé noté. " : ""}Rappel prévu ${formaterQuand(apres.prochain_appel)}.`;
   if (resultat === "rdv" && rdv) return `RDV enregistré pour ${formaterQuand(rdv.rdv_le)}. Bravo !`;
   return `Noté : ${RESULTATS[resultat]}.`;
 }
@@ -69,6 +71,15 @@ export default function SetterApp() {
   const minuteur = useRef(null);
   const prospectsRef = useRef([]);
   const rappelsAnnonces = useRef(new Set());
+  // Appels de chaque prospect, du plus récent au plus ancien (les listes en lisent un par ligne).
+  const appelsParProspect = useMemo(() => {
+    const m = new Map();
+    for (const a of appels) {
+      if (!m.has(a.prospect_id)) m.set(a.prospect_id, []);
+      m.get(a.prospect_id).push(a);
+    }
+    return m;
+  }, [appels]);
 
   // setterId : l'admin qui regarde l'espace d'un setter (la RLS lui ouvre tous les setters).
   const charger = useCallback(async setterId => {
@@ -188,7 +199,7 @@ export default function SetterApp() {
     setAppels(as => [data.appel, ...as]);
     if (data.rdv) setRdvs(rs => [...rs, data.rdv]);
     setMaintenant(new Date());
-    annoncer(texteConfirmation(p, resultat, data.prospect, data.rdv), data.appel.id);
+    annoncer(texteConfirmation(p, resultat, data.prospect, data.appel, data.rdv), data.appel.id);
     return { ok: true };
   };
 
@@ -250,7 +261,7 @@ export default function SetterApp() {
       : <Fond><div style={{ padding: 60, textAlign: "center", color: C.red, fontWeight: 700 }}>{erreur || "Chargement…"}</div></Fond>;
   }
 
-  const appelsDe = id => appels.filter(a => a.prospect_id === id);
+  const appelsDe = id => appelsParProspect.get(id) || AUCUN;
   const rdvsDe = id => rdvs.filter(r => r.prospect_id === id);
   const qui = regard ? { nom: regard.name || "", email: regard.email } : profil;
   const prenomSetter = (qui?.nom || "").split(/\s+/)[0] || "";
@@ -272,7 +283,7 @@ export default function SetterApp() {
         {vue === "appeler" && <VueAppels prospects={prospects} maintenant={maintenant} allerA={allerA} {...communs} />}
         {vue === "agenda" && <VueAgenda prospects={prospects} rdvs={rdvs} appelsDe={appelsDe} maintenant={maintenant} ouvrirFiche={setFicheId} />}
         {vue === "prospects" && (
-          <VueProspects prospects={prospects} filtre={filtre} setFiltre={setFiltre} recherche={recherche} setRecherche={setRecherche}
+          <VueProspects prospects={prospects} appelsDe={appelsDe} filtre={filtre} setFiltre={setFiltre} recherche={recherche} setRecherche={setRecherche}
             ouvrirFiche={setFicheId} onTrancher={actions.onTrancher} onReverifier={actions.onReverifier} onAjouter={regard ? null : () => setAjout(true)} />
         )}
         {vue === "gains" && <VueGains rdvs={rdvs} prospects={prospects} />}

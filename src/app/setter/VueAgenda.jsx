@@ -1,7 +1,8 @@
 "use client";
 // Écran « Agenda » : rappels datés, relances automatiques et RDV à venir, jour par jour.
 import { useState } from "react";
-import { agenda, formaterJour, nomDirigeant } from "@/lib/setter-appels";
+import { agenda, formaterJour, mailEnvoyeLe, nomDirigeant } from "@/lib/setter-appels";
+import { PastilleMail } from "./Fiche";
 import { C, POLICE, Pastille, bouton, carte, titre } from "./ui";
 
 // Notification du navigateur à l'heure de chaque rappel (tant que l'outil est ouvert).
@@ -57,6 +58,7 @@ export default function VueAgenda({ prospects, rdvs, appelsDe, maintenant, ouvri
                   <span style={{ minWidth: 0, display: "grid", gap: 3 }}>
                     <span style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                       <Pastille couleur={t.couleur} fond={t.fond}>{t.label}</Pastille>
+                      {it.type !== "rdv" && <PastilleMail le={mailEnvoyeLe(appelsDe(p.id))} />}
                       <span style={{ fontSize: 15, fontWeight: 900, color: C.text }}>{p.nom}</span>
                     </span>
                     <span style={{ fontSize: 13, color: C.mid, fontWeight: 600 }}>

@@ -7,8 +7,8 @@ import { formaterTelephone, montantCourt, normaliserTelephone } from "@/lib/sett
 import { accroche, confirmation, faq, objections } from "@/lib/setter-script";
 import { EFFECTIFS } from "@/lib/setter-secteurs";
 import {
-  MAX_SANS_REPONSE, RAISONS_PAS_INTERESSE, RAISONS_PAS_LA_CIBLE, RESULTATS, SITE, STATUTS_APPEL,
-  formaterQuand, lienCalendly, nomDirigeant, personnaliser, prochainEssai, raccourcisRappel, versChampDate,
+  MAIL_ENVOYE, MAX_SANS_REPONSE, RAISONS_PAS_INTERESSE, RAISONS_PAS_LA_CIBLE, RESULTATS, SITE, STATUTS_APPEL,
+  estMailEnvoye, formaterQuand, lienCalendly, mailEnvoyeLe, nomDirigeant, personnaliser, prochainEssai, raccourcisRappel, versChampDate,
 } from "@/lib/setter-appels";
 import {
   Accordeon, C, COULEURS_STATUT, POLICE, Pastille, Sep, VERIFICATIONS, ancienneteTexte, bouton, carte, champ,
@@ -29,7 +29,7 @@ export default function Fiche({ p, appels, rdvs, prenomSetter, onNoter, onTranch
       <style>{CSS}</style>
       {enTete}
       <div className="fiche-grille">
-        <div style={{ gridArea: "infos" }}><Infos key={p.id} p={p} onModifier={onModifier} /></div>
+        <div style={{ gridArea: "infos" }}><Infos key={p.id} p={p} mailLe={mailEnvoyeLe(appels)} onModifier={onModifier} /></div>
         <div style={{ gridArea: "script" }} className="fiche-script"><ScriptAppel p={p} prenomSetter={prenomSetter} /></div>
         <div style={{ gridArea: "resultat" }}>
           {p.verification !== "qualifie" ? <PasEncoreQualifie p={p} onTrancher={onTrancher} onReverifier={onReverifier} />
@@ -56,13 +56,19 @@ export function PastilleStatut({ p }) {
   return <Pastille couleur={c.couleur} fond={c.fond}>{texte}</Pastille>;
 }
 
+// Le contact a reçu un mail (rappel « Mail envoyé ») : l'étiquette reste, même sans réponse.
+export function PastilleMail({ le }) {
+  if (!le) return null;
+  return <Pastille couleur="#fff" fond={C.primary}>{MAIL_ENVOYE} · {new Date(le).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</Pastille>;
+}
+
 const IconeTel = ({ taille = 22 }) => (
   <svg width={taille} height={taille} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" />
   </svg>
 );
 
-function Infos({ p, onModifier }) {
+function Infos({ p, mailLe, onModifier }) {
   const [edition, setEdition] = useState(false);
   const bloque = p.statut === "ne_plus_appeler";
   const dirigeant = nomDirigeant(p);
@@ -78,7 +84,10 @@ function Infos({ p, onModifier }) {
           <h2 style={{ fontSize: 21, fontWeight: 900, margin: 0, color: C.text, overflowWrap: "anywhere" }}>{p.nom}</h2>
           {p.categorie && <div style={{ fontSize: 13.5, color: C.mid, fontWeight: 700, marginTop: 2 }}>{p.categorie}</div>}
         </div>
-        <PastilleStatut p={p} />
+        <span style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <PastilleMail le={mailLe} />
+          <PastilleStatut p={p} />
+        </span>
       </div>
 
       <div style={{ fontSize: 15, color: C.mid, fontWeight: 600, lineHeight: 1.6 }}>
@@ -283,7 +292,7 @@ function ResultatAppel({ p, onNoter, onPasser }) {
           </button>
         ))}
       </div>
-      {choix === "rappel" && <FormRappel envoi={envoi} onValider={champs => noter("rappel", champs)} onAnnuler={() => setChoix(null)} />}
+      {choix === "rappel" && <FormRappel p={p} envoi={envoi} onValider={champs => noter("rappel", champs)} onAnnuler={() => setChoix(null)} />}
       {choix === "rdv" && <FormRdv p={p} envoi={envoi} onValider={champs => noter("rdv", champs)} onAnnuler={() => setChoix(null)} />}
       {choix === "pas_interesse" && <FormRaison raisons={RAISONS_PAS_INTERESSE} avecNote envoi={envoi} onValider={champs => noter("pas_interesse", champs)} onAnnuler={() => setChoix(null)} />}
       {choix === "pas_la_cible" && <FormRaison raisons={RAISONS_PAS_LA_CIBLE} envoi={envoi} onValider={champs => noter("pas_la_cible", champs)} onAnnuler={() => setChoix(null)} />}
@@ -313,15 +322,27 @@ const Actions = ({ envoi, libelle, onAnnuler, desactive }) => (
 
 const cadreForm = { display: "grid", gap: 12, background: C.bg, borderRadius: 12, padding: 14 };
 
-function FormRappel({ envoi, onValider, onAnnuler }) {
+// Rappel daté. « Il demande un mail » : la case garde la trace du mail (étiquette « Mail envoyé »)
+// et enregistre son adresse sur la fiche ; le rappel le remet dans la file s'il ne répond pas.
+function FormRappel({ p, envoi, onValider, onAnnuler }) {
   const [quand, setQuand] = useState("");
   const [note, setNote] = useState("");
+  const [mail, setMail] = useState(false);
+  const [email, setEmail] = useState(p.email_dirigeant || "");
+  const [erreur, setErreur] = useState("");
   const [copie, setCopie] = useState(false);
   const copier = async () => {
     try { await navigator.clipboard.writeText(SITE); setCopie(true); } catch { setCopie(false); }
   };
+  const valider = e => {
+    e.preventDefault();
+    if (!quand) return;
+    const adresse = mail ? email.trim() : "";
+    if (adresse && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adresse)) return setErreur("Adresse e-mail invalide.");
+    onValider({ prochain: new Date(quand), note, raison: mail ? MAIL_ENVOYE : null, email: adresse });
+  };
   return (
-    <form onSubmit={e => { e.preventDefault(); if (quand) onValider({ prochain: new Date(quand), note }); }} style={cadreForm}>
+    <form onSubmit={valider} style={cadreForm}>
       <div>
         <span style={etiquette}>Quand le rappeler ?</span>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
@@ -332,17 +353,32 @@ function FormRappel({ envoi, onValider, onAnnuler }) {
         </div>
         <input type="datetime-local" required value={quand} onChange={e => setQuand(e.target.value)} style={champ} />
       </div>
+      <div style={{ display: "grid", gap: 10, background: "#fff", border: `1.5px solid ${mail ? C.primary : C.border}`, borderRadius: 12, padding: "11px 13px" }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14.5, fontWeight: 800, color: C.text, cursor: "pointer" }}>
+          <input type="checkbox" checked={mail} onChange={e => { setMail(e.target.checked); setErreur(""); }} style={{ width: 20, height: 20, accentColor: C.primary, flex: "0 0 auto" }} />
+          Il a demandé un mail : mail envoyé
+        </label>
+        {mail && (
+          <>
+            <div>
+              <label style={etiquette}>E-mail du dirigeant (enregistré sur la fiche)</label>
+              <input type="email" value={email} onChange={e => { setEmail(e.target.value); setErreur(""); }} placeholder="prenom@entreprise.fr" style={champ} />
+            </div>
+            <div style={{ fontSize: 13, color: C.mid, fontWeight: 600 }}>
+              Le lien du site à glisser dans le mail :{" "}
+              <button type="button" onClick={copier} style={{ ...lien, background: "none", border: "none", padding: 0, fontFamily: POLICE, fontSize: 13, cursor: "pointer" }}>
+                {copie ? "lien copié ✓" : "copier nvm-finance.fr"}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
       <div>
         <label style={etiquette}>Note (facultatif)</label>
-        <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} placeholder="Ex. : a demandé un mail, lien du site envoyé" style={{ ...champ, resize: "vertical" }} />
+        <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} placeholder={mail ? "Ex. : veut d'abord regarder le site" : "Ex. : en rendez-vous, rappeler en fin de journée"} style={{ ...champ, resize: "vertical" }} />
       </div>
-      <div style={{ fontSize: 13, color: C.mid, fontWeight: 600 }}>
-        Il vous demande un mail ? Envoyez-lui le lien du site :{" "}
-        <button type="button" onClick={copier} style={{ ...lien, background: "none", border: "none", padding: 0, fontFamily: POLICE, fontSize: 13, cursor: "pointer" }}>
-          {copie ? "lien copié ✓" : "copier nvm-finance.fr"}
-        </button>
-      </div>
-      <Actions envoi={envoi} libelle="Enregistrer le rappel" onAnnuler={onAnnuler} desactive={!quand} />
+      {erreur && <div role="alert" style={{ color: C.red, fontSize: 13.5, fontWeight: 700 }}>{erreur}</div>}
+      <Actions envoi={envoi} libelle={mail ? "Enregistrer le mail et le rappel" : "Enregistrer le rappel"} onAnnuler={onAnnuler} desactive={!quand} />
     </form>
   );
 }
@@ -454,7 +490,7 @@ function Historique({ appels, rdvs }) {
             return (
               <li key={a.id} style={{ borderLeft: `3px solid ${C.border}`, paddingLeft: 10, fontSize: 13.5, color: C.mid, fontWeight: 600, lineHeight: 1.5 }}>
                 <div><b style={{ color: C.text }}>{RESULTATS[a.resultat]}</b><Sep />{formaterQuand(a.created_at)}</div>
-                {a.raison && <div>Raison : {a.raison}</div>}
+                {a.raison && <div>{estMailEnvoye(a) ? "Mail envoyé au dirigeant" : `Raison : ${a.raison}`}</div>}
                 {a.rappel_le && <div>{a.resultat === "rappel" ? "Rappel prévu" : "Nouvel essai prévu"} {formaterQuand(a.rappel_le)}</div>}
                 {rdv && <div>RDV le {formaterQuand(rdv.rdv_le)}{rdv.ca_approximatif ? ` · CA ≈ ${rdv.ca_approximatif}` : ""}{rdv.enjeux ? ` · ${rdv.enjeux}` : ""}</div>}
                 {a.note && <div style={{ fontStyle: "italic" }}>« {a.note} »</div>}

@@ -29,6 +29,13 @@ export const RESULTATS = {
   ne_plus_appeler: "Ne plus m'appeler",
 };
 
+// « Envoyez-moi un mail » : rappel daté dont la raison (setter_appels.raison, libre pour un
+// rappel) est « Mail envoyé ». Le contact garde ensuite l'étiquette, même après d'autres appels.
+export const MAIL_ENVOYE = "Mail envoyé";
+export const estMailEnvoye = a => a.resultat === "rappel" && a.raison === MAIL_ENVOYE;
+// Date du dernier mail envoyé (appels du plus récent au plus ancien).
+export const mailEnvoyeLe = appels => appels.find(estMailEnvoye)?.created_at || null;
+
 export const RAISONS_PAS_INTERESSE = [
   "Déjà bien accompagné",
   "Son comptable s'en occupe",

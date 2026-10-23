@@ -1,17 +1,23 @@
 "use client";
-// Écran « Prospects » : recherche par nom ou numéro, filtres par étape du suivi, tri des
-// « à vérifier ». Un clic sur un contact ouvre sa fiche (pour noter un appel à tout moment).
+// Écran « Prospects » : recherche par nom ou numéro, filtres par étape du suivi, « Déjà appelés »
+// (du plus récent au plus ancien, avec la dernière note), « Mails envoyés », tri des « à vérifier ».
+// Un clic sur un contact ouvre sa fiche (pour noter un appel à tout moment).
 import { formaterTelephone, montantCourt } from "@/lib/setter-import";
-import { STATUTS_APPEL, correspond, formaterQuand, nomDirigeant } from "@/lib/setter-appels";
+import { STATUTS_APPEL, correspond, estMailEnvoye, formaterQuand, mailEnvoyeLe, nomDirigeant } from "@/lib/setter-appels";
 import { EFFECTIFS } from "@/lib/setter-secteurs";
-import { PastilleStatut, Proposition } from "./Fiche";
+import { PastilleMail, PastilleStatut, Proposition } from "./Fiche";
 import { C, POLICE, Sep, VERIFICATIONS, ancienneteTexte, bouton, carte, champ, normaliser } from "./ui";
 
-export default function VueProspects({ prospects, filtre, setFiltre, recherche, setRecherche, ouvrirFiche, onTrancher, onReverifier, onAjouter }) {
+export default function VueProspects({ prospects, appelsDe, filtre, setFiltre, recherche, setRecherche, ouvrirFiche, onTrancher, onReverifier, onAjouter }) {
   const qualifies = prospects.filter(p => p.verification === "qualifie");
   const nbStatut = s => qualifies.filter(p => p.statut === s).length;
+  const appeles = qualifies.filter(p => p.dernier_appel).sort((a, b) => new Date(b.dernier_appel) - new Date(a.dernier_appel));
+  const mails = qualifies.map(p => ({ p, le: mailEnvoyeLe(appelsDe(p.id)) })).filter(x => x.le)
+    .sort((a, b) => new Date(b.le) - new Date(a.le)).map(x => x.p);
   const filtres = [
     { id: "tous", label: "Tous les qualifiés", n: qualifies.length },
+    { id: "appeles", label: "Déjà appelés", n: appeles.length },
+    ...(mails.length ? [{ id: "mails", label: "Mails envoyés", n: mails.length }] : []),
     ...Object.entries(STATUTS_APPEL).map(([id, s]) => ({ id, label: s.court, n: nbStatut(id) })).filter(f => f.n || f.id === "a_appeler"),
     { ...VERIFICATIONS.a_verifier, id: "a_verifier", label: "À vérifier", n: prospects.filter(p => p.verification === "a_verifier").length },
     { ...VERIFICATIONS.rejete, id: "rejete", label: "Rejetés à l'import", n: prospects.filter(p => p.verification === "rejete").length },
@@ -20,10 +26,12 @@ export default function VueProspects({ prospects, filtre, setFiltre, recherche, 
   const enRecherche = recherche.trim().length > 0;
   const liste = enRecherche
     ? prospects.filter(p => correspond(p, recherche))
-    : prospects.filter(p =>
-      filtre === "tous" ? p.verification === "qualifie"
-        : filtre === "a_verifier" || filtre === "rejete" ? p.verification === filtre
-          : p.verification === "qualifie" && p.statut === filtre);
+    : filtre === "appeles" ? appeles
+      : filtre === "mails" ? mails
+        : prospects.filter(p =>
+          filtre === "tous" ? p.verification === "qualifie"
+            : filtre === "a_verifier" || filtre === "rejete" ? p.verification === filtre
+              : p.verification === "qualifie" && p.statut === filtre);
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
@@ -53,15 +61,18 @@ export default function VueProspects({ prospects, filtre, setFiltre, recherche, 
           {prospects.length ? "Aucun prospect ici." : "Aucun prospect pour l'instant : importez votre premier fichier Google Maps."}
         </div>
       ) : liste.map(p => (p.verification === "qualifie"
-        ? <LigneProspect key={p.id} p={p} onOuvrir={() => ouvrirFiche(p.id)} />
+        ? <LigneProspect key={p.id} p={p} appels={appelsDe(p.id)} onOuvrir={() => ouvrirFiche(p.id)} />
         : <CarteATrier key={p.id} p={p} onOuvrir={() => ouvrirFiche(p.id)} onTrancher={onTrancher} onReverifier={onReverifier} />))}
     </div>
   );
 }
 
-// Un prospect qualifié : une ligne cliquable qui ouvre sa fiche.
-function LigneProspect({ p, onOuvrir }) {
+// Un prospect qualifié : une ligne cliquable qui ouvre sa fiche, avec la raison et la note
+// du dernier appel.
+function LigneProspect({ p, appels, onOuvrir }) {
   const dirigeant = nomDirigeant(p);
+  const dernier = appels[0];
+  const suivi = dernier ? [dernier.raison && !estMailEnvoye(dernier) && dernier.raison, dernier.note && `« ${dernier.note} »`].filter(Boolean) : [];
   return (
     <button onClick={onOuvrir} style={{ ...carte, padding: "14px 16px", display: "grid", gap: 6, textAlign: "left", cursor: "pointer", fontFamily: POLICE, width: "100%" }}>
       <span style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start", flexWrap: "wrap" }}>
@@ -69,12 +80,20 @@ function LigneProspect({ p, onOuvrir }) {
           <span style={{ display: "block", fontSize: 16, fontWeight: 900, color: C.text, overflowWrap: "anywhere" }}>{p.nom}</span>
           <span style={{ display: "block", fontSize: 13, color: C.mid, fontWeight: 600 }}>{[p.categorie, dirigeant].filter(Boolean).join(" · ")}</span>
         </span>
-        <PastilleStatut p={p} />
+        <span style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <PastilleMail le={mailEnvoyeLe(appels)} />
+          <PastilleStatut p={p} />
+        </span>
       </span>
       <span style={{ fontSize: 13.5, color: C.mid, fontWeight: 600 }}>
         <b style={{ color: C.text }}>{formaterTelephone(p.telephone)}</b>
         {p.dernier_appel && <><Sep />dernier appel {formaterQuand(p.dernier_appel)}</>}
       </span>
+      {suivi.length > 0 && (
+        <span style={{ fontSize: 13, color: C.mid, fontWeight: 600, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflowWrap: "anywhere" }}>
+          {suivi.map((x, i) => <span key={i}>{i > 0 && <Sep />}{x}</span>)}
+        </span>
+      )}
     </button>
   );
 }
