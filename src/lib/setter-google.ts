@@ -23,7 +23,10 @@ type Prospect = {
   ligne_directe: string | null; statut: string; prochain_appel: string | null; google_event_id: string | null;
 };
 
-export const googleDisponible = () => !!(process.env.GOOGLE_OAUTH_CLIENT_ID && process.env.GOOGLE_OAUTH_CLIENT_SECRET);
+// Espaces retirés : une valeur collée dans Vercel avec un espace devant fait refuser l'identifiant par Google.
+const clientId = () => (process.env.GOOGLE_OAUTH_CLIENT_ID || "").trim();
+const codeSecret = () => (process.env.GOOGLE_OAUTH_CLIENT_SECRET || "").trim();
+export const googleDisponible = () => !!(clientId() && codeSecret());
 const adresseRetour = (origine: string) => `${origine}/api/setter/google/retour`;
 
 // Le paramètre « state » relie le retour de Google au setter qui a cliqué : signé avec une clé
@@ -33,7 +36,7 @@ const signature = (texte: string) =>
 export function lienConnexion(origine: string, setterId: string) {
   const texte = `${setterId}.${Date.now() + 10 * 60000}`;
   const p = new URLSearchParams({
-    client_id: process.env.GOOGLE_OAUTH_CLIENT_ID as string, redirect_uri: adresseRetour(origine), response_type: "code",
+    client_id: clientId(), redirect_uri: adresseRetour(origine), response_type: "code",
     scope: `openid email ${DROIT_AGENDA}`, access_type: "offline", prompt: "consent", state: `${texte}.${signature(texte)}`,
   });
   return `${AUTH}?${p}`;
@@ -50,7 +53,7 @@ export async function echangerCode(origine: string, code: string) {
   const rep = await fetch(JETON, {
     method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      code, client_id: process.env.GOOGLE_OAUTH_CLIENT_ID as string, client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET as string,
+      code, client_id: clientId(), client_secret: codeSecret(),
       redirect_uri: adresseRetour(origine), grant_type: "authorization_code",
     }),
   });
@@ -72,7 +75,7 @@ export async function jetonAcces(admin: SupabaseClient, c: ConnexionGoogle) {
   const rep = await fetch(JETON, {
     method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: process.env.GOOGLE_OAUTH_CLIENT_ID as string, client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET as string,
+      client_id: clientId(), client_secret: codeSecret(),
       refresh_token: c.refresh_token, grant_type: "refresh_token",
     }),
   });
