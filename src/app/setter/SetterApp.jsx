@@ -39,6 +39,22 @@ async function toutLire(requete) {
   }
 }
 
+// Google Agenda (migration 045) : les routes /api/setter/google/* gardent le jeton Google côté serveur.
+async function routeGoogle(methode, chemin = "", corps) {
+  const rep = await fetch(`/api/setter/google${chemin}`, {
+    method: methode,
+    headers: { Authorization: `Bearer ${await jeton()}`, ...(corps ? { "Content-Type": "application/json" } : {}) },
+    body: corps ? JSON.stringify(corps) : undefined,
+  }).catch(() => null);
+  const json = rep ? await rep.json().catch(() => ({})) : {};
+  return rep?.ok ? json : { erreur: json.error || "Google Agenda ne répond pas." };
+}
+
+const RETOUR_GOOGLE = {
+  refuse: "Google Agenda n'est pas connecté : l'accès à l'agenda n'a pas été autorisé sur l'écran de Google.",
+  erreur: "La connexion à Google Agenda n'a pas abouti. Réessayez depuis l'onglet Agenda.",
+};
+
 function texteConfirmation(avant, resultat, apres, appel, rdv) {
   if (resultat === "pas_de_reponse") {
     return apres.statut === "injoignable"
@@ -67,6 +83,7 @@ export default function SetterApp() {
   const [erreur, setErreur] = useState("");
   const [confirmation, setConfirmation] = useState(null); // { texte, appelId? }
   const [ajout, setAjout] = useState(false);
+  const [google, setGoogle] = useState(null); // { disponible, connecte, email } : connexion à Google Agenda
   const [maintenant, setMaintenant] = useState(() => new Date());
   const minuteur = useRef(null);
   const prospectsRef = useRef([]);
@@ -80,6 +97,31 @@ export default function SetterApp() {
     }
     return m;
   }, [appels]);
+
+  // Message en bas d'écran ; après un résultat d'appel, il propose « Annuler » pendant 8 secondes.
+  const annoncer = useCallback((texte, appelId = null) => {
+    setConfirmation({ texte, appelId });
+    clearTimeout(minuteur.current);
+    minuteur.current = setTimeout(() => setConfirmation(null), appelId ? 8000 : 5000);
+  }, []);
+
+  // Met Google Agenda d'accord avec un prospect ({ prospect }) ou tous les rappels à venir ({ tout }).
+  // Le résultat est déjà enregistré dans l'outil : un échec ici est seulement signalé.
+  const synchroGoogle = useCallback(async (corps, appelId = null) => {
+    const r = await routeGoogle("POST", "/synchro", corps);
+    if (r.erreur) { setErreur("C'est bien enregistré dans l'outil, mais Google Agenda n'a pas été mis à jour."); return r; }
+    if (r.deconnecte) {
+      setGoogle(g => g && { ...g, connecte: false, email: null });
+      setErreur("La connexion à Google Agenda a expiré : reconnectez-la depuis l'onglet Agenda.");
+      return r;
+    }
+    const parId = new Map((r.evenements || []).map(e => [e.id, e.google_event_id]));
+    setProspects(ps => ps.map(x => (parId.has(x.id) ? { ...x, google_event_id: parId.get(x.id) } : x)));
+    if (appelId && [...parId.values()].some(Boolean)) {
+      setConfirmation(c => (c?.appelId === appelId ? { ...c, texte: `${c.texte} Ajouté à Google Agenda.` } : c));
+    }
+    return r;
+  }, []);
 
   // setterId : l'admin qui regarde l'espace d'un setter (la RLS lui ouvre tous les setters).
   const charger = useCallback(async setterId => {
@@ -114,9 +156,20 @@ export default function SetterApp() {
     if (data?.role === "SETTER_INACTIF") return setEtat("desactive");
     if (data?.role !== "SETTER") return setEtat("interdit");
     const liste = await charger();
-    setVue(liste.some(p => p.verification === "qualifie") ? "appeler" : "trouver");
+    // Retour de l'écran d'autorisation de Google (/setter?google=ok|refuse|erreur).
+    const retour = new URLSearchParams(window.location.search).get("google");
+    if (retour) window.history.replaceState(null, "", "/setter");
+    setVue(retour ? "agenda" : liste.some(p => p.verification === "qualifie") ? "appeler" : "trouver");
     setEtat("pret");
-  }, [charger, chargerAdmin]);
+    const g = await routeGoogle("GET");
+    setGoogle(g.erreur ? null : g);
+    if (retour === "ok") {
+      annoncer("Google Agenda connecté : ajout de vos rappels à venir…");
+      const r = await synchroGoogle({ tout: true });
+      const n = (r.evenements || []).filter(e => e.google_event_id).length;
+      if (r.connecte) annoncer(n ? `Google Agenda connecté : ${n} rappel${n > 1 ? "s" : ""} à venir ajouté${n > 1 ? "s" : ""}.` : "Google Agenda connecté : vos prochains rappels s'y ajouteront tout seuls.");
+    } else if (retour) setErreur(RETOUR_GOOGLE[retour] || RETOUR_GOOGLE.erreur);
+  }, [charger, chargerAdmin, annoncer, synchroGoogle]);
 
   // Session existante au chargement, puis déconnexion (y compris depuis un autre onglet).
   // setTimeout : supabase-js déconseille d'appeler ses méthodes dans ce callback.
@@ -152,7 +205,7 @@ export default function SetterApp() {
     return () => clearInterval(t);
   }, []);
 
-  const deconnexion = async () => { setEtat("connexion"); setProspects([]); setAppels([]); setRdvs([]); setAdmin(null); setRegard(null); await supabase.auth.signOut(); };
+  const deconnexion = async () => { setEtat("connexion"); setProspects([]); setAppels([]); setRdvs([]); setAdmin(null); setRegard(null); setGoogle(null); await supabase.auth.signOut(); };
 
   // L'admin ouvre l'espace d'un setter tel que celui-ci le voit, sans pouvoir rien y modifier.
   const voirSetter = async s => {
@@ -163,13 +216,6 @@ export default function SetterApp() {
   const quitterRegard = () => {
     setRegard(null); setProspects([]); setAppels([]); setRdvs([]); setFicheId(null); setErreur("");
     window.scrollTo(0, 0);
-  };
-
-  // Message en bas d'écran ; après un résultat d'appel, il propose « Annuler » pendant 8 secondes.
-  const annoncer = (texte, appelId = null) => {
-    setConfirmation({ texte, appelId });
-    clearTimeout(minuteur.current);
-    minuteur.current = setTimeout(() => setConfirmation(null), appelId ? 8000 : 5000);
   };
 
   // « Valider » passe un « à vérifier » en qualifié tel quel (il entre dans la file) ; « Rejeter » l'écarte.
@@ -200,6 +246,7 @@ export default function SetterApp() {
     if (data.rdv) setRdvs(rs => [...rs, data.rdv]);
     setMaintenant(new Date());
     annoncer(texteConfirmation(p, resultat, data.prospect, data.appel, data.rdv), data.appel.id);
+    if (google?.connecte && (data.prospect.statut === "rappel" || data.prospect.google_event_id)) synchroGoogle({ prospect: data.prospect.id }, data.appel.id);
     return { ok: true };
   };
 
@@ -212,6 +259,20 @@ export default function SetterApp() {
     setAppels(as => as.filter(a => a.id !== appelId));
     setRdvs(rs => rs.filter(r => r.appel_id !== appelId));
     annoncer(`Annulé : ${data.prospect.nom} est revenu comme avant.`);
+    if (google?.connecte && (data.prospect.statut === "rappel" || data.prospect.google_event_id)) synchroGoogle({ prospect: data.prospect.id });
+  };
+
+  // Google Agenda : la page part sur l'écran d'autorisation de Google, qui revient sur /setter.
+  const connecterGoogle = async () => {
+    const r = await routeGoogle("POST");
+    if (r.erreur || !r.url) { setErreur(r.erreur || RETOUR_GOOGLE.erreur); return false; }
+    window.location.href = r.url;
+  };
+  const deconnecterGoogle = async () => {
+    const r = await routeGoogle("DELETE");
+    if (r.erreur) return setErreur("La déconnexion de Google Agenda n'a pas abouti. Réessayez.");
+    setGoogle(g => ({ ...g, connecte: false, email: null }));
+    annoncer(`Google Agenda déconnecté. Les rappels déjà ajoutés restent dans l'agenda « Rappels NVM ».`);
   };
 
   // « Revérifier » un « à vérifier » : nouvelle recherche dans la base officielle, verdict du serveur.
@@ -281,7 +342,10 @@ export default function SetterApp() {
           <div role="alert" onClick={() => setErreur("")} style={{ ...carte, background: C.redBg, borderColor: "#fecaca", color: C.red, fontWeight: 700, marginBottom: 16, cursor: "pointer" }}>{erreur}</div>
         )}
         {vue === "appeler" && <VueAppels prospects={prospects} maintenant={maintenant} allerA={allerA} {...communs} />}
-        {vue === "agenda" && <VueAgenda prospects={prospects} rdvs={rdvs} appelsDe={appelsDe} maintenant={maintenant} ouvrirFiche={setFicheId} />}
+        {vue === "agenda" && (
+          <VueAgenda prospects={prospects} rdvs={rdvs} appelsDe={appelsDe} maintenant={maintenant} ouvrirFiche={setFicheId}
+            google={regard ? null : google} onConnecterGoogle={connecterGoogle} onDeconnecterGoogle={deconnecterGoogle} />
+        )}
         {vue === "prospects" && (
           <VueProspects prospects={prospects} appelsDe={appelsDe} filtre={filtre} setFiltre={setFiltre} recherche={recherche} setRecherche={setRecherche}
             ouvrirFiche={setFicheId} onTrancher={actions.onTrancher} onReverifier={actions.onReverifier} onAjouter={regard ? null : () => setAjout(true)} />

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { agenda, formaterJour, mailEnvoyeLe, nomDirigeant } from "@/lib/setter-appels";
 import { PastilleMail } from "./Fiche";
-import { C, POLICE, Pastille, bouton, carte, titre } from "./ui";
+import { C, POLICE, Pastille, bouton, carte, lien, titre } from "./ui";
 
 // Notification du navigateur à l'heure de chaque rappel (tant que l'outil est ouvert).
 function AlertesRappels() {
@@ -19,17 +19,49 @@ function AlertesRappels() {
   );
 }
 
+// Connexion à Google Agenda (migration 045) : chaque rappel daté y devient un événement.
+function CarteGoogle({ google, onConnecter, onDeconnecter }) {
+  const [envoi, setEnvoi] = useState(false);
+  if (!google?.disponible) return null;
+  if (google.connecte) {
+    return (
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", fontSize: 13.5, fontWeight: 700, color: C.mid }}>
+        <span>✓ Vos rappels s&apos;ajoutent à Google Agenda (agenda « Rappels NVM »{google.email ? ` de ${google.email}` : ""}).</span>
+        <button onClick={async () => { setEnvoi(true); await onDeconnecter(); setEnvoi(false); }} disabled={envoi}
+          style={{ ...lien, background: "none", border: "none", padding: 0, fontFamily: POLICE, fontSize: 13, color: C.mid, textDecoration: "underline", cursor: "pointer" }}>
+          Déconnecter
+        </button>
+      </div>
+    );
+  }
+  return (
+    <section style={{ ...carte, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+      <div style={{ minWidth: 0, flex: "1 1 260px" }}>
+        <div style={{ fontSize: 15, fontWeight: 900, color: C.text }}>Google Agenda</div>
+        <div style={{ fontSize: 13.5, fontWeight: 600, color: C.mid, marginTop: 2 }}>
+          Chaque rappel daté s&apos;y ajoute tout seul, avec le numéro et la note, et Google prévient sur le téléphone.
+        </div>
+      </div>
+      <button onClick={async () => { setEnvoi(true); if (await onConnecter() === false) setEnvoi(false); }} disabled={envoi} style={{ ...bouton(C.primary), opacity: envoi ? 0.6 : 1 }}>
+        {envoi ? "Ouverture de Google…" : "Connecter mon Google Agenda"}
+      </button>
+    </section>
+  );
+}
+
 const TYPES = {
   rappel: { label: "Rappel", couleur: "#1d4ed8", fond: "#eff6ff" },
   pas_de_reponse: { label: "Relance", couleur: C.amber, fond: C.amberBg },
   rdv: { label: "RDV visio", couleur: "#047857", fond: "#d1fae5" },
 };
 
-export default function VueAgenda({ prospects, rdvs, appelsDe, maintenant, ouvrirFiche }) {
+export default function VueAgenda({ prospects, rdvs, appelsDe, maintenant, ouvrirFiche, google, onConnecterGoogle, onDeconnecterGoogle }) {
   const groupes = agenda(prospects, rdvs, maintenant);
+  const carteGoogle = <CarteGoogle google={google} onConnecter={onConnecterGoogle} onDeconnecter={onDeconnecterGoogle} />;
   if (!groupes.length) {
     return (
       <div style={{ display: "grid", gap: 14 }}>
+        {carteGoogle}
         <AlertesRappels />
         <section style={{ ...carte, textAlign: "center", padding: 32, color: C.mid, fontWeight: 600 }}>
           Rien de prévu. Les rappels, relances et RDV que vous programmez apparaîtront ici.
@@ -39,6 +71,7 @@ export default function VueAgenda({ prospects, rdvs, appelsDe, maintenant, ouvri
   }
   return (
     <div style={{ display: "grid", gap: 14 }}>
+      {carteGoogle}
       <AlertesRappels />
       {groupes.map(g => (
         <section key={g.cle} style={carte}>
