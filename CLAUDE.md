@@ -107,7 +107,7 @@ GROQ_API_KEY                # server-only — used by /api/ai, /api/planning/gen
 TOMTOM_API_KEY              # server-only — setter number lookup (Freemium account)
 GOOGLE_PLACES_API_KEY       # server-only — site reviews, and setter number lookup when TomTom has nothing
 GOOGLE_OAUTH_CLIENT_ID      # server-only — setters' Google Agenda (OAuth web client, redirect https://nvm-finance.fr/api/setter/google/retour)
-GOOGLE_OAUTH_CLIENT_SECRET  # server-only — its secret; also signs the OAuth state
+GOOGLE_OAUTH_CLIENT_SECRET  # server-only — its secret (the OAuth state is signed with a key derived from SUPABASE_SERVICE_ROLE_KEY, not with it)
 CALLMEBOT_PHONE             # server-only — WhatsApp notification target for /api/free-dashboard
 CALLMEBOT_APIKEY            # server-only — CallMeBot key for that notification
 NEXT_PUBLIC_SITE_URL

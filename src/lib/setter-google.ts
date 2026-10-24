@@ -26,9 +26,10 @@ type Prospect = {
 export const googleDisponible = () => !!(process.env.GOOGLE_OAUTH_CLIENT_ID && process.env.GOOGLE_OAUTH_CLIENT_SECRET);
 const adresseRetour = (origine: string) => `${origine}/api/setter/google/retour`;
 
-// Le paramètre « state » relie le retour de Google au setter qui a cliqué : signé avec le code
-// secret OAuth, valable 10 minutes.
-const signature = (texte: string) => createHmac("sha256", process.env.GOOGLE_OAUTH_CLIENT_SECRET as string).update(texte).digest("base64url");
+// Le paramètre « state » relie le retour de Google au setter qui a cliqué : signé avec une clé
+// propre au serveur (pas le code secret OAuth, pour qu'il ne suffise pas à le forger), valable 10 minutes.
+const signature = (texte: string) =>
+  createHmac("sha256", `setter-google-state:${process.env.SUPABASE_SERVICE_ROLE_KEY}`).update(texte).digest("base64url");
 export function lienConnexion(origine: string, setterId: string) {
   const texte = `${setterId}.${Date.now() + 10 * 60000}`;
   const p = new URLSearchParams({
