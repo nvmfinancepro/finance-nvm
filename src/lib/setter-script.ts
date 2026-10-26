@@ -21,6 +21,7 @@ export const faq: QuestionReponse[] = [
 ];
 
 export const objections: QuestionReponse[] = [
+  { q: "« Ça sert à quoi ? / Ça consiste en quoi, le pilotage financier ? »", a: "« Concrètement, on permet à votre entreprise d'avoir une visibilité financière, gratuitement. Ensuite, si vous le souhaitez, un conseiller peut analyser vos chiffres : ça va vous permettre de gagner en rentabilité et de développer votre entreprise. »", note: "Question très fréquente juste après l'accroche." },
   { q: "« J'ai déjà un comptable »", a: "« Très bien. Nous, on ne remplace pas le comptable : on suit vos chiffres chaque mois pour aller chercher de la rentabilité et développer votre entreprise. On travaille d'ailleurs souvent avec eux. »" },
   { q: "« Pas le temps »", a: "« Je comprends, c'est pour ça que je ne vous embête pas maintenant. 30 minutes dans la semaine, vous préférez mardi ou jeudi ? »" },
   { q: "« Pas intéressé »", a: "« Pas de souci. Juste par curiosité, c'est parce que vous êtes déjà bien accompagné là-dessus ? »", note: "S'il est déjà accompagné, on le note et on passe au suivant. S'il est suivi par son comptable, voir « J'ai déjà un comptable »." },
