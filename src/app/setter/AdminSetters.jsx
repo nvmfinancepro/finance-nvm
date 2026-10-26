@@ -236,7 +236,7 @@ function CreerSetter({ jeton, recharger }) {
         <div><label style={etiquette}>Prénom et nom</label><input required value={nom} onChange={e => setNom(e.target.value)} placeholder="Ex. : Léa Martin" style={champ} /></div>
         <div><label style={etiquette}>E-mail</label><input required type="email" value={email} onChange={e => setEmail(e.target.value)} style={champ} /></div>
       </div>
-      <div style={{ fontSize: 12.5, color: C.mid, fontWeight: 600 }}>Le prénom apparaît dans l&apos;accroche de son script (« Bonjour Kamil, Léa, de la société NVM Finance »).</div>
+      <div style={{ fontSize: 12.5, color: C.mid, fontWeight: 600 }}>Le prénom apparaît dans l&apos;accroche de son script (« Bonjour, Léa, de la société NVM Finance »).</div>
       {message && <div role="status" style={{ fontSize: 13.5, fontWeight: 700, color: message.erreur ? C.red : "#047857" }}>{message.texte}</div>}
       <button type="submit" disabled={envoi} style={{ ...bouton(C.primary), justifySelf: "start", opacity: envoi ? 0.6 : 1 }}>{envoi ? "Envoi…" : "Envoyer l'invitation"}</button>
     </form>

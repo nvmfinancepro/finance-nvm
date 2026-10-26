@@ -99,7 +99,7 @@ Les en-têtes sont des classes CSS de Google Maps (`hfpxzc href`, `xxVWCe`, `W4E
 5. **Afficher le résultat de l'import** : nombre de qualifiés, à vérifier et rejetés, avec la raison de
    chaque rejet.
 
-Garder le prénom du dirigeant : le script commence par « Bonjour [Prénom] ».
+Garder le prénom et le nom du dirigeant : le script demande « Je suis bien avec [Prénom Nom] ? ».
 
 **Validation de l'étape 1 :** tester avec `google.xlsx` et montrer le résultat à Nathan avant de passer à
 la suite.
@@ -118,8 +118,8 @@ La fiche à l'écran affiche :
 - l'historique des appels.
 
 ### Script et objections pendant l'appel
-- Le script reste affiché pendant l'appel : l'accroche, personnalisée avec le prénom du dirigeant et celui
-  du setter, plus les objections et la FAQ.
+- Le script reste affiché pendant l'appel : l'accroche, personnalisée avec le prénom et le nom du
+  dirigeant et le prénom du setter, plus les objections et la FAQ.
 - **Une seule source de contenu :** extraire les tableaux `objections` et `faq` de
   `espace-setter/page.tsx` dans un module partagé (par ex. `src/lib/setter-script.ts`), utilisé par la page
   publique ET par l'outil.

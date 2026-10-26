@@ -169,11 +169,9 @@ export function lienCalendly(p, email) {
 }
 
 // Remplace les champs du script par ce qu'on sait. Ce qui reste inconnu reste entre crochets.
-export function personnaliser(texte, { prenomDirigeant, prenomSetter }) {
+export function personnaliser(texte, { dirigeant, prenomSetter }) {
   let t = String(texte);
-  t = prenomDirigeant
-    ? t.replace("[Prénom du dirigeant]", prenomDirigeant)
-    : t.replace("Bonjour [Prénom du dirigeant], ", "Bonjour, ");
+  t = t.replace("[Prénom Nom du dirigeant]", dirigeant || "le dirigeant");
   if (prenomSetter) t = t.replace("[ton prénom]", prenomSetter);
   return t;
 }

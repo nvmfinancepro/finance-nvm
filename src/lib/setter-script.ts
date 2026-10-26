@@ -5,8 +5,8 @@ export type QuestionReponse = { q: string; a: string; note?: string };
 
 // L'accroche et la confirmation, avec leurs champs à remplir entre crochets.
 export const accroche = [
-  "« Bonjour [Prénom du dirigeant], [ton prénom], de la société NVM Finance. Vous allez bien ?",
-  "Je travaille avec vos confrères sur le pilotage financier de leur entreprise. Ce serait intéressant d'en parler avec vous : vous seriez plutôt disponible mardi ou jeudi dans la semaine ? »",
+  "« Bonjour, [ton prénom], de la société NVM Finance. Je suis bien avec [Prénom Nom du dirigeant] ? »",
+  "« Super, je vous appelle car je travaille avec vos confrères sur le pilotage financier de leur entreprise. Ce serait intéressant d'en parler avec vous : vous seriez plutôt disponible mardi ou jeudi dans la semaine ? »",
 ];
 
 export const confirmation = "« Parfait, c'est noté pour [jour] à [heure]. Vous allez recevoir l'invitation par mail. C'est bien [adresse mail] ? »";

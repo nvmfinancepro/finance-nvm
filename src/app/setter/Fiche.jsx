@@ -449,14 +449,15 @@ function FormRaison({ raisons, avecNote, envoi, onValider, onAnnuler }) {
 const insecables = t => String(t).replace(/ ([?!:;»])/g, "\u00a0$1").replace(/« /g, "«\u00a0");
 
 function ScriptAppel({ p, prenomSetter }) {
-  const valeurs = { prenomDirigeant: p.dirigeant_prenom, prenomSetter };
+  // Sans le prénom, « Je suis bien avec MASSON ? » sonne mal : on demande alors le dirigeant.
+  const valeurs = { dirigeant: p.dirigeant_prenom ? nomDirigeant(p) : null, prenomSetter };
   const bloc = { borderLeft: `4px solid ${C.primary}`, background: C.bg, borderRadius: "0 12px 12px 0", padding: "12px 14px", fontSize: 15, fontWeight: 700, color: C.text, lineHeight: 1.6 };
   return (
     <section style={{ ...carte, display: "grid", gap: 14 }}>
       <div>
         <h3 style={titre}>L&apos;accroche</h3>
         <div style={bloc}>{accroche.map((l, i) => <span key={i}>{i > 0 && <br />}{insecables(personnaliser(l, valeurs))}</span>)}</div>
-        {!p.dirigeant_prenom && <div style={{ fontSize: 12.5, color: C.amber, fontWeight: 700, marginTop: 6 }}>Prénom du dirigeant inconnu : demandez à parler au dirigeant ou au gérant.</div>}
+        {!p.dirigeant_prenom && <div style={{ fontSize: 12.5, color: C.amber, fontWeight: 700, marginTop: 6 }}>Prénom du dirigeant inconnu : demandez à parler au dirigeant.</div>}
       </div>
       <div>
         <h3 style={titre}>La confirmation</h3>
