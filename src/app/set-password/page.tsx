@@ -14,13 +14,35 @@ function SetPasswordForm() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
+  const [lienHs, setLienHs] = useState(false);
+  const [aValider, setAValider] = useState<{ token_hash: string; type: "invite" | "recovery" } | null>(null);
 
   useEffect(() => {
-    // Supabase gère automatiquement le token depuis le hash de l'URL
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (session) setSessionReady(true);
+    // Lien classique (/auth/v1/verify) : Supabase pose la session dans le hash de l'URL,
+    // ou l'erreur (lien expiré ou déjà utilisé) s'il n'est plus valable.
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+    // Lien ?token_hash=… : rien n'est consommé à l'ouverture, seulement au clic sur le bouton.
+    // Un aperçu de lien (WhatsApp, SMS, antivirus de messagerie) ne peut donc plus le griller.
+    const query = new URLSearchParams(window.location.search);
+    const token_hash = query.get("token_hash");
+    const type = query.get("type");
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) { setSessionReady(true); return; }
+      if (event !== "INITIAL_SESSION") return;
+      if (token_hash && (type === "invite" || type === "recovery")) setAValider({ token_hash, type });
+      else if (hash.get("error_code") || hash.get("error")) setLienHs(true);
     });
+    return () => subscription.unsubscribe();
   }, []);
+
+  const validerLien = async () => {
+    if (!aValider) return;
+    setLoading(true); setError("");
+    const { error } = await supabase.auth.verifyOtp(aValider);
+    setLoading(false);
+    if (error) { setLienHs(true); return; }
+    setSessionReady(true);
+  };
 
   const handleSubmit = async () => {
     if (password.length < 8) { setError("Le mot de passe doit contenir au moins 8 caractères."); return; }
@@ -61,7 +83,17 @@ function SetPasswordForm() {
           <div style={{fontSize:13,color:C.textLight,marginTop:4,letterSpacing:"0.1em",textTransform:"uppercase"}}>Définir votre mot de passe</div>
         </div>
 
-        {!sessionReady ? (
+        {lienHs && !sessionReady ? (
+          <div style={{textAlign:"center",color:C.text,fontSize:14,lineHeight:1.6}}>
+            {"Ce lien n'est plus valable : il a déjà été utilisé ou il a dépassé 24 heures."}<br/>
+            {"Demandez un nouveau lien à la personne qui vous a invité."}
+          </div>
+        ) : aValider && !sessionReady ? (
+          <button onClick={validerLien} disabled={loading}
+            style={{width:"100%",padding:"14px",background:C.primary,color:"white",border:"none",borderRadius:12,fontSize:15,fontWeight:800,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>
+            {loading ? "Vérification..." : "Choisir mon mot de passe →"}
+          </button>
+        ) : !sessionReady ? (
           <div style={{textAlign:"center",color:C.textLight,fontSize:14}}>
             Vérification du lien en cours...
           </div>
