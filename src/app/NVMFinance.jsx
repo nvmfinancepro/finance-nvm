@@ -594,7 +594,7 @@ function NavItem({ icon, label, badge, badgeColor, active, onClick, locked }) {
 function AdminSidebar({ view, setView, onLogout, clientCount, alertCount, open, onClose, role }) {
  const nav=[{id:"clients",icon:"",label:"Gestion clients",badge:clientCount},{id:"acces",icon:"",label:"Accès clients"},{id:"saisie",icon:"",label:"Imports (FEC, CSV)"},{id:"financier",icon:"",label:"Données financières"},{id:"alertes",icon:"",label:"Alertes",badge:alertCount,badgeColor:C.red},{id:"rapports",icon:"",label:"Rapports IA"}];
  // Le blog du site public et la création de cabinets partenaires restent strictement réservés à l'admin de la plateforme
- if(role!=="CABINET") nav.push({id:"blog",icon:"",label:"Blog"},{id:"cabinets",icon:"",label:"Cabinets partenaires"},{id:"setters",icon:"",label:"Setters (prospection)",href:"/setter"});
+ if(role!=="CABINET") nav.push({id:"blog",icon:"",label:"Blog"},{id:"cabinets",icon:"",label:"Cabinets partenaires"},{id:"setters",icon:"",label:"Setters (prospection)",href:"/setter"},{id:"tvaoutil",icon:"",label:"Rapprochement CA / CA3 (test)",href:"/tva"});
  return <SidebarBase role={role==="CABINET"?"Espace Cabinet":"Espace Administrateur"} onLogout={onLogout} open={open} onClose={onClose}><nav style={{flex:1,padding:"10px 8px",overflowY:"auto"}}>{nav.map(item=><NavItem key={item.id} {...item} active={view===item.id} onClick={()=>{if(item.href){window.location.href=item.href;return;}setView(item.id);onClose&&onClose();}}/>)}</nav></SidebarBase>;
 }
 function ClientSidebar({ view, setView, onLogout, clientName, alertCount, planningEnabled, congesEnabled, pointageEnabled, notesFraisEnabled, tachesEnabled, equipeTachesEnabled, stockEnabled, open, onClose, freePlan, canImport, modeConseiller=false }) {
