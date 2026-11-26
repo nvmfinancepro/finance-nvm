@@ -44,7 +44,7 @@ const DOCUMENTS = [
   { type: "fbl3n", titre: "FBL3N avec le code TVA (un ou plusieurs fichiers)", niveau: "requis", aide: "Postes des comptes par code TVA (colonne Tx), résumés par compte. Plusieurs fichiers se complètent (3F, 3I, Z3 et Z4…) ; un code déjà reçu dans un autre fichier est remplacé par le plus récent." },
   { type: "rfumsv", titre: "RFUMSV00 (bases par code TVA)", niveau: "conseillé", aide: "État SAP « Tax on sales/purchases » du mois (photo 6) : remplit la colonne I de « LIGNE 02 + 02A » (3A + 3B + 3C, section ESA) et place sur son compte un code de vente absent du FBL3N (le 3O à 10 %)." },
   { type: "rapport", titre: "État de déclaration TVA (par case)", niveau: "conseillé", aide: "Montants par case de la CA3, code TVA, facture ou avoir (photo 7) : remplit les lignes « ligne B5 », « ligne F8 » et « prestataires non établis ligne 3B » avec le détail par code." },
-  { type: "ca3", titre: "Déclaration CA3 déposée (PDF)", niveau: "contrôle", aide: "La « Synthèse de la déclaration » téléchargée sur impots.gouv.fr : sert au contrôle sous le tableau et remplit la case A3 (colonne G de « LIGNE 02 + 02A »)." },
+  { type: "ca3", titre: "Déclaration CA3 déposée (PDF)", niveau: "contrôle", aide: "La « Synthèse de la déclaration » téléchargée sur impots.gouv.fr : sert au contrôle sous le tableau et remplit la case A3 (colonne G de « LIGNE 02 + 02A »). Plusieurs CA3 peuvent être déposées d'un coup : chacune va dans son mois, lu dans le PDF." },
 ];
 const ETAT_MOIS = {
   vide: { color: C.borderLight, label: "aucun fichier" },
@@ -405,15 +405,7 @@ function Controle({ controles, ca3 }) {
 const NOMS_COLONNES = { c10: "Base 10 % (C)", c55: "Base 5,5 % (E)", c196: "Base 19,6 % (G)", c20: "Base 20 % (I)", exp: "Exportations (K)", etr: "Code TVA étrangère (L)", intra: "Livraisons intra (M)", autres: "Autres opérations non imposables (N)", nd: "Non déclarable (O)", reclass: "Reclassement (P)" };
 function CodesInconnus({ v, onAffecter }) {
   const codes = [...new Set(v.codesInconnus.map((x) => x.code))];
-  if (!codes.length && !v.sansCompte.length) return null;
-  if (!codes.length) return (
-    <Card style={{ borderColor: C.orange }}>
-      <SectionHead title="Codes du RFUMSV00 à placer" sub="Absents du FBL3N, et aucun compte n'a ce montant en reste sans code : à saisir sur le bon compte" />
-      <div style={{ padding: "10px 16px 16px", display: "flex", flexDirection: "column", gap: 6 }}>
-        {v.sansCompte.map((x) => <div key={x.code} style={{ fontSize: 13, fontWeight: 700 }}><span style={{ fontWeight: 900, marginRight: 10 }}>{x.code}</span>{eur(x.montant)}</div>)}
-      </div>
-    </Card>
-  );
+  if (!codes.length) return null;
   return (
     <Card style={{ borderColor: C.red }}>
       <SectionHead title="Codes TVA à ranger" sub="Ces codes du FBL3N ne sont associés à aucune colonne : leur montant reste en écart" />
@@ -488,16 +480,25 @@ export default function TvaApp() {
     const msgs = [];
     const ajout = {};
     const fbl = {}; // FBL3N reçus : nom de fichier → lignes
+    const ca3ParMois = {}; // CA3 reçues : mois → lecture
     for (const fichier of fichiers) {
       try {
         const lu = await lireFichierDepose(fichier);
         if (lu.pdf) {
           const ca3 = lireCa3(lu.pages);
-          if (!ca3) { msgs.push({ erreur: true, texte: `${fichier.name} : PDF non reconnu comme une déclaration CA3.` }); continue; }
-          ajout.ca3 = { ...ca3, fichier: fichier.name };
-          msgs.push(ca3.periode && ca3.periode !== cle
-            ? { alerte: true, texte: `${fichier.name} : CA3 de ${nomMois(ca3.periode)}, pas de ${nomMois(cle)}. Vérifiez le mois choisi.` }
-            : { texte: `${fichier.name} : déclaration CA3 lue.` });
+          if (!ca3) {
+            const sansTexte = !lu.pages.flat().join("").trim();
+            msgs.push({ erreur: true, texte: sansTexte
+              ? `${fichier.name} : ce PDF ne contient pas de texte (scan ou image). Téléchargez la « Synthèse de la déclaration » sur impots.gouv.fr.`
+              : `${fichier.name} : ce PDF n'est pas reconnu comme la « Synthèse de la déclaration » CA3 d'impots.gouv.fr.` });
+            continue;
+          }
+          // Chaque CA3 va dans son mois (lu dans le PDF), quel que soit le mois affiché.
+          const k = ca3.periode || cle;
+          ca3ParMois[k] = { ...ca3, fichier: fichier.name };
+          msgs.push(k === cle
+            ? { texte: `${fichier.name} : déclaration CA3 de ${nomMois(k)} lue.` }
+            : { alerte: !moisListe.includes(k), texte: `${fichier.name} : CA3 de ${nomMois(k)}, rangée dans ce mois${moisListe.includes(k) ? "" : " (hors de l'exercice affiché : changez le premier mois dans les réglages)"}.` });
           continue;
         }
         const trouves = reconnaitre(lu.feuilles);
@@ -537,6 +538,13 @@ export default function TvaApp() {
         parFichier[nom] = lignes;
       }
       majMois((x) => ({ ...x, ...ajout, fbl3n: { parFichier }, majLe: new Date().toISOString() }));
+    }
+    if (Object.keys(ca3ParMois).length) {
+      maj((mem) => {
+        const mois = { ...mem.mois };
+        for (const [k, c] of Object.entries(ca3ParMois)) mois[k] = { ...(mois[k] || {}), ca3: c };
+        return { ...mem, mois };
+      });
     }
     setMessages(msgs);
     setLecture(false);

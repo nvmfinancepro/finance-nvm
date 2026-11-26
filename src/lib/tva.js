@@ -62,7 +62,7 @@ export const SPECIALES = [
   { id: "prov", libelle: "290300 & diverses prov", q: "complet" },
   { id: "avoirSansBase", libelle: "avoir TVA (sans base)", q: "complet" },
   { id: "gratuites", libelle: "Gratuités", q: "sansI" },
-  { id: "l02", libelle: "LIGNE 02 + 02A", aide: "Colonne I : bases 3A + 3B (+ 3C) du RFUMSV00 (section ESA). Colonne G : case A3 de la CA3, reprise du PDF.", auto: { G: "ca3:A3", I: "rfumsv:3A+3B+3C" }, q: "sansI" },
+  { id: "l02", libelle: "LIGNE 02 + 02A", aide: "Colonne C : ventes à 10 % en code 3O, absentes du FBL3N, reprises du RFUMSV00 (sinon de l'état de déclaration, case 9B). Colonne I : bases 3A + 3B (+ 3C) du RFUMSV00 (section ESA). Colonne G : case A3 de la CA3, reprise du PDF.", auto: { C: "vente:3O", G: "ca3:A3", I: "rfumsv:3A+3B+3C" }, q: "sansI" },
   { id: "acqIntra", libelle: "Acquisitions intra-communautaires", aide: "Colonne I : total 3I, colonne E : total E2, repris du FBL3N (sinon du RFUMSV00). Colonne G = G (LIGNE 02) − I (LIGNE 02).", auto: { E: "achat:E2", I: "achat:3I" }, formules: { G: "G{l02}-I{l02}" }, q: "sansI" },
   { id: "l3b", libelle: "prestataires non établis en France ligne 3B", aide: "Colonne G : avoirs 3A / 3B déclarés en B5, repris de l'état de déclaration TVA.", auto: { G: "rapport:B5:3A+3B+3C" }, q: "sansI" },
   { id: "f8", libelle: "ligne F8 régularisation ITC CN", aide: "Avoirs déclarés en F8, repris de l'état de déclaration TVA : A2 en K, E6 + EA en M, A0 + A1 + EG en N, 3X en O. Colonne G = contrôle de la case A3 (doit être à 0). Colonne R = total F8.", auto: { K: "rapport:F8:A2", M: "rapport:F8:E6+EA", N: "rapport:F8:A0+A1+EG", O: "rapport:F8:3X" }, formules: { G: "G{acqIntra}-G{l3b}", R: "K{f8}+M{f8}+N{f8}+O{f8}" }, q: "sansI" },
@@ -88,10 +88,9 @@ export const TOLERANCE = 1; // la CA3 est en euros entiers
 export const lignesFbl3n = (m) => Object.values(m?.fbl3n?.parFichier || {}).flat();
 
 // ─── Ventilation automatique des comptes 7 ────────────────────────────────────────────────────
-// Chaque compte : montant de la balance, réparti par colonne selon les codes TVA du FBL3N. Un code
-// de vente présent dans le RFUMSV00 mais dans aucun FBL3N (le 3O à 10 % en mars 2026) est placé
-// sur le compte dont le reste sans code est exactement ce montant (731540 : 1 658,83). Le reste
-// sans code va ensuite en « non déclarable » (famille connue ou choix de la cliente) ou en écart.
+// Chaque compte : montant de la balance, réparti par colonne selon les codes TVA du FBL3N. Le reste
+// sans code reste en écart, ou va en « non déclarable » si la cliente classe le compte ainsi. Un
+// code de vente absent des FBL3N (le 3O à 10 %) va sur la ligne « LIGNE 02 + 02A » (règle du client).
 export function ventiler(m, regles = {}) {
   const regComptes = regles.comptes || {};
   const regCodes = regles.codes || {};
@@ -122,19 +121,6 @@ export function ventiler(m, regles = {}) {
     else { l.inconnu += montant; codesInconnus.push({ compte: f.compte, code: f.code, montant: arrondi(montant) }); }
   }
   const reste = (l) => arrondi(l.balance - Object.values(l.cols).reduce((s, x) => s + x, 0) - l.inconnu);
-  const places = [];
-  const sansCompte = [];
-  for (const r of (m?.rfumsv?.lignes || []).filter((x) => x.trs === "MWS" && !codesFbl.has(x.code) && Math.abs(x.base) >= 0.005)) {
-    const col = colonneDuCode(r.code, regCodes);
-    if (!col) continue;
-    const l = [...parCompte.values()].find((x) => x.dansBalance && Math.abs(reste(x) - r.base) < 0.01);
-    if (l) {
-      l.cols[col] += r.base;
-      l.codes[r.code] = arrondi((l.codes[r.code] || 0) + r.base);
-      l.places = [...(l.places || []), r.code];
-      places.push({ compte: l.compte, code: r.code, montant: r.base });
-    } else sansCompte.push({ code: r.code, montant: r.base });
-  }
   const lignes = [...parCompte.values()].sort((a, b) => a.compte.localeCompare(b.compte)).map((l) => {
     const sansCode = reste(l);
     const famille = familleDe(l.compte);
@@ -148,10 +134,10 @@ export function ventiler(m, regles = {}) {
     return {
       compte: l.compte, libelle: l.libelle, balance: arrondi(l.balance),
       cols: Object.fromEntries(Object.entries(l.cols).map(([k, x]) => [k, arrondi(x)])),
-      codes: l.codes, places: l.places || [], sansCode, famille: famille?.id || null, classement, horsBalance: !l.dansBalance,
+      codes: l.codes, sansCode, famille: famille?.id || null, classement, horsBalance: !l.dansBalance,
     };
   });
-  return { lignes, achats, codesInconnus, places, sansCompte };
+  return { lignes, achats, codesInconnus, codesFbl: [...codesFbl] };
 }
 
 // Calcul d'une valeur reprise des fichiers, écrit comme dans Excel (« 4459723,63+9002350,39 ») :
@@ -191,11 +177,19 @@ export function calculerGrille(m, regles = {}, comptes = null) {
     return o;
   };
   const rf = m?.rfumsv ? basesNettes(m.rfumsv.lignes.filter((l) => l.trs !== "MWS" && l.trs !== "VST")) : {};
+  const rfVentes = m?.rfumsv ? basesNettes(m.rfumsv.lignes.filter((l) => l.trs === "MWS")) : {};
   // « rapport:B5:A6+E2 », « rfumsv:3A+3B+3C », « achat:3I », « ca3:A3 » → { valeur, detail, origine }.
   const sourceAuto = (def) => {
     if (!def) return null;
     const [type, a, b] = def.split(":");
     if (type === "ca3") return a in ca3 ? { valeur: ca3[a], detail: [], origine: "CA3 déposée" } : null;
+    // Code de vente absent des FBL3N : RFUMSV00 (ventes, MWS), sinon état de déclaration (9B, A1).
+    if (type === "vente") {
+      if (v.codesFbl.includes(a)) return null;
+      if (a in rfVentes) return { valeur: rfVentes[a], detail: [], origine: `RFUMSV00, code ${a} (absent du FBL3N)` };
+      for (const cas of ["9B", "A1"]) { const x = parCase(cas)[a]; if (x) return { valeur: x, detail: [], origine: `état de déclaration, case ${cas}, code ${a}` }; }
+      return null;
+    }
     if (type === "achat") {
       if (a in v.achats) return { valeur: v.achats[a], detail: [], origine: "FBL3N" };
       return a in rf ? { valeur: rf[a], detail: [], origine: "RFUMSV00" } : null;
@@ -214,11 +208,7 @@ export function calculerGrille(m, regles = {}, comptes = null) {
   const lignes = liste.map(({ compte, libelle }) => {
     const a = parCompte.get(compte);
     const cells = { B: cellule(compte, "B", a ? a.balance : 0) };
-    for (const col of COLONNES) {
-      const place = a?.places.find((code) => colonneDuCode(code, regles.codes) === col.id);
-      const source = place ? { detail: [], origine: `RFUMSV00, code ${place} absent du FBL3N : placé sur ce compte, dont le reste sans code est ce montant` } : null;
-      cells[col.lettre] = cellule(compte, col.lettre, a ? a.cols[col.id] : 0, source);
-    }
+    for (const col of COLONNES) cells[col.lettre] = cellule(compte, col.lettre, a ? a.cols[col.id] : 0);
     const l = completer({ id: compte, type: "compte", compte, libelle: a?.libelle || libelle || "", cells, auto: a || null });
     l.cells.Q = { valeur: arrondi(ORDRE_Q.reduce((s, k) => s + l.cells[k].valeur, 0)), calcule: true, note: notes[compte]?.Q || null };
     l.cells.R = { valeur: arrondi(l.cells.B.valeur - l.cells.Q.valeur), calcule: true, note: notes[compte]?.R || null };

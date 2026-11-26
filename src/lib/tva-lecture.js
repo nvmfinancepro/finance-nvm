@@ -222,26 +222,61 @@ export function lireRapportTva(lignes) {
 }
 
 // ─── Déclaration CA3 (PDF « Synthèse de la déclaration » d'impots.gouv) ───────────────────────
-// `pages` : pour chaque page, la liste des morceaux de texte de pdf.js. Une case (« A1 », « 08 »)
-// est suivie de ses montants ; les cases de TVA brute ont une base puis une taxe. L'annexe 3310-A
-// (taxes assimilées) est ignorée : ses numéros de commune ressemblent à des cases.
+// `pages` : pour chaque page, les morceaux de texte de pdf.js, « \n » marquant une fin de ligne
+// (`pageDepuisPdfjs`). Selon l'outil qui a imprimé le PDF, un morceau porte une case entière
+// (mars 2026) ou des bouts de mots (« A|1| |Ve|nt|e|s », août 2026) : chaque ligne est donc
+// recollée, sa case lue au début et ses montants à la fin (les montants restent des morceaux
+// entiers dans les deux cas). Une case dont le libellé passe à la ligne garde les montants des
+// lignes suivantes. L'identification (page 1), l'encadré « pour information » et l'annexe 3310-A
+// (taxes assimilées) sont ignorés.
 const CASES_BASE_TAXE = new Set(["08", "09", "9B", "10", "11", "13", "14", "I1", "I2", "I3", "I4", "I5", "I6", "T1", "T2", "T3", "T4", "T5", "T6", "T7"]);
-const RE_CASE_CA3 = /^(A[1-5]|B[1-5]|E[1-6]|F[1-9]|0[89]|9B|1[0-9]|2[0-9]|3[0-2]|I[1-6]|T[1-9]|5B|2C|X[1-5]|Y[1-5]|Z[1-5]|AA|AB)$/;
-const RE_MONTANT_CA3 = /^-?\d{1,3}(?:[\s  ]\d{3})*(?:,\d+)?$/;
+const RE_CASE_CA3 = /^(A[1-5]|B[1-5]|E[1-6]|F[1-9]|0[89]|9B|1[0-9]|2[0-9]|3[0-2]|I[1-6]|T[1-9]|TD|5B|2C|X[1-5]|Y[1-5]|Z[1-5]|AA|AB)$/;
+const RE_MONTANT_CA3 = /^-?\d{1,3}(?:[\s\u00a0\u202f]\d{3})*(?:,\d+)?$/;
 const MOIS = ["janvier", "fevrier", "mars", "avril", "mai", "juin", "juillet", "aout", "septembre", "octobre", "novembre", "decembre"];
 
+export const pageDepuisPdfjs = (items) => items.flatMap((it) => (it.hasEOL ? [it.str || "", "\n"] : [it.str || ""]));
+
+function lignesDePage(page) {
+  const avecFins = page.includes("\n"); // ancien format : un morceau par ligne
+  const lignes = [];
+  let cur = [];
+  for (const x of page) {
+    if (x === "\n") { lignes.push(cur); cur = []; continue; }
+    cur.push(String(x ?? ""));
+    if (!avecFins) { lignes.push(cur); cur = []; }
+  }
+  if (cur.length) lignes.push(cur);
+  return lignes.map((morceaux) => {
+    const montants = [];
+    for (let i = morceaux.length - 1; i >= 0; i--) {
+      const m = morceaux[i].trim();
+      if (!m) continue;
+      if (RE_MONTANT_CA3.test(m)) montants.unshift(nombre(m)); else break;
+    }
+    return { texte: morceaux.join("").replace(/\s+/g, " ").trim(), montants };
+  });
+}
+
 export function lireCa3(pages) {
-  const tout = pages.map((p) => p.join(" ")).join(" ");
-  if (!/3310\s*[-−–]\s*CA3/i.test(tout)) return null;
+  const parPage = pages.map(lignesDePage);
+  const tout = parPage.flat().map((l) => l.texte).join(" ");
+  if (!/3310\s*[-−–]?\s*CA\s*3/i.test(tout)) return null;
   const valeurs = {};
-  for (const p of pages) {
-    if (p.some((x) => /imprime a fournir en annexe/.test(norm(x)))) continue;
+  let formulaire = false;
+  for (const lignes of parPage) {
+    if (lignes.some((l) => /imprime a fournir en annexe/.test(norm(l.texte)))) continue;
     let cur = null;
-    for (const brut of p) {
-      const x = texte(brut);
-      if (!x) continue;
-      if (RE_CASE_CA3.test(x)) { cur = x; valeurs[cur] = valeurs[cur] || []; continue; }
-      if (cur && RE_MONTANT_CA3.test(x)) valeurs[cur].push(nombre(x));
+    for (const l of lignes) {
+      const t = norm(l.texte);
+      if (/montant des operations realisees/.test(t)) formulaire = true;
+      if (/pour information/.test(t)) { formulaire = false; cur = null; }
+      if (!formulaire) continue;
+      const debut = l.texte.match(/^([A-Z0-9]{1,2})(?:\s|$)/);
+      if (debut && RE_CASE_CA3.test(debut[1]) && !RE_MONTANT_CA3.test(l.texte)) {
+        cur = debut[1];
+        valeurs[cur] = valeurs[cur] || [];
+      }
+      if (cur) valeurs[cur].push(...l.montants);
     }
   }
   const cases = {}, taxes = {};
@@ -253,8 +288,9 @@ export function lireCa3(pages) {
   const siren = (tout.match(/SIREN\s*:\s*(\d[\d\s]{7,12}\d)/) || [])[1]?.replace(/\s/g, "") || "";
   const per = norm(tout).match(/periode declaree\s*:\s*([a-z]+)\s+(\d{4})/);
   const periode = per && MOIS.includes(per[1]) ? `${per[2]}-${String(MOIS.indexOf(per[1]) + 1).padStart(2, "0")}` : "";
-  const i = pages.flat().findIndex((x) => /pour le compte de/i.test(x));
-  const societe = i >= 0 ? texte(pages.flat().slice(i + 1).find((x) => texte(x)) || "") : "";
+  const lignes = parPage.flat();
+  const i = lignes.findIndex((l) => /pour le compte de/.test(norm(l.texte)));
+  const societe = i >= 0 ? (lignes.slice(i + 1).find((l) => l.texte)?.texte || "") : "";
   return Object.keys(cases).length ? { type: "ca3", cases, taxes, siren, periode, societe } : null;
 }
 

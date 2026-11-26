@@ -6,7 +6,7 @@
 // du bas, RECHERCHEX vers l'onglet Export, TVA = base × taux, total balance, écart. SheetJS et
 // pdf.js sont chargés à la demande (gros modules).
 import { BASES, CONTROLES, GRILLE, ORDRE_Q, SPECIALES, calculerGrille, controlesCa3, lignesFbl3n, nomExport, nomMois, resumeMois } from "./tva.js";
-import { compteDe, formuleExcel, nombre, norm } from "./tva-lecture.js";
+import { compteDe, formuleExcel, nombre, norm, pageDepuisPdfjs } from "./tva-lecture.js";
 
 let PDFJS = null;
 async function chargerPdfjs() {
@@ -28,7 +28,7 @@ export async function lireFichierDepose(fichier) {
     const pdfjs = await chargerPdfjs();
     const pdf = await pdfjs.getDocument({ data: octets, isEvalSupported: false, useSystemFonts: false }).promise;
     const pages = [];
-    for (let i = 1; i <= pdf.numPages; i++) pages.push((await (await pdf.getPage(i)).getTextContent()).items.map((it) => it.str).filter((s) => s && s.trim()));
+    for (let i = 1; i <= pdf.numPages; i++) pages.push(pageDepuisPdfjs((await (await pdf.getPage(i)).getTextContent()).items));
     await pdf.destroy();
     return { pdf: true, pages };
   }
