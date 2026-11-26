@@ -53,7 +53,9 @@ export const GRILLE = [
 export const BASES = GRILLE.filter((c) => c.saisie).map((c) => c.l); // C E G I K L M N O P
 export const ORDRE_Q = ["C", "K", "G", "E", "M", "N", "O", "P", "L", "I"]; // ordre de la formule du client
 
-// Lignes de régularisation sous les comptes (libellés du fichier du client). `q` : formule de la
+// Lignes de régularisation sous les comptes (libellés du fichier du client). Seuls les exports les
+// remplissent (la CA3 déposée sert uniquement au contrôle) ; `actifSi` : les formules de la colonne
+// G (contrôle de la case A3) restent vides tant que G de « LIGNE 02 + 02A » l'est. `q` : formule de la
 // colonne Q de cette ligne dans l'onglet de mars (« complet », « sansI » = sans la colonne I, ou
 // aucune) ; le TOTAL de Q ne reprend que les comptes et la première ligne. `auto` : valeur
 // reprise des fichiers tant que rien n'est saisi ; `formules` : cellules calculées (lettre →
@@ -62,10 +64,10 @@ export const SPECIALES = [
   { id: "prov", libelle: "290300 & diverses prov", q: "complet" },
   { id: "avoirSansBase", libelle: "avoir TVA (sans base)", q: "complet" },
   { id: "gratuites", libelle: "Gratuités", q: "sansI" },
-  { id: "l02", libelle: "LIGNE 02 + 02A", aide: "Colonne C : ventes à 10 % en code 3O, absentes du FBL3N, reprises du RFUMSV00 (sinon de l'état de déclaration, case 9B). Colonne I : bases 3A + 3B (+ 3C) du RFUMSV00 (section ESA). Colonne G : case A3 de la CA3, reprise du PDF.", auto: { C: "vente:3O", G: "ca3:A3", I: "rfumsv:3A+3B+3C" }, q: "sansI" },
-  { id: "acqIntra", libelle: "Acquisitions intra-communautaires", aide: "Colonne I : total 3I, colonne E : total E2, repris du FBL3N (sinon du RFUMSV00). Colonne G = G (LIGNE 02) − I (LIGNE 02).", auto: { E: "achat:E2", I: "achat:3I" }, formules: { G: "G{l02}-I{l02}" }, q: "sansI" },
+  { id: "l02", libelle: "LIGNE 02 + 02A", aide: "Colonne C : ventes à 10 % en code 3O, absentes du FBL3N, reprises du RFUMSV00 (sinon de l'état de déclaration, case 9B). Colonne I : bases 3A + 3B (+ 3C) du RFUMSV00 (section ESA). Colonne G : case A3 de l'état de déclaration (3A + 3B), pour le contrôle de la ligne F8 ; la CA3 déposée ne remplit rien, elle sert seulement à vérifier.", auto: { C: "vente:3O", G: "rapport:A3:3A+3B+3C", I: "rfumsv:3A+3B+3C" }, q: "sansI" },
+  { id: "acqIntra", libelle: "Acquisitions intra-communautaires", aide: "Colonne I : total 3I, colonne E : total E2, repris du FBL3N (sinon du RFUMSV00). Colonne G = G (LIGNE 02) − I (LIGNE 02).", auto: { E: "achat:E2", I: "achat:3I" }, formules: { G: "G{l02}-I{l02}" }, actifSi: "l02", q: "sansI" },
   { id: "l3b", libelle: "prestataires non établis en France ligne 3B", aide: "Colonne G : avoirs 3A / 3B déclarés en B5, repris de l'état de déclaration TVA.", auto: { G: "rapport:B5:3A+3B+3C" }, q: "sansI" },
-  { id: "f8", libelle: "ligne F8 régularisation ITC CN", aide: "Avoirs déclarés en F8, repris de l'état de déclaration TVA : A2 en K, E6 + EA en M, A0 + A1 + EG en N, 3X en O. Colonne G = contrôle de la case A3 (doit être à 0). Colonne R = total F8.", auto: { K: "rapport:F8:A2", M: "rapport:F8:E6+EA", N: "rapport:F8:A0+A1+EG", O: "rapport:F8:3X" }, formules: { G: "G{acqIntra}-G{l3b}", R: "K{f8}+M{f8}+N{f8}+O{f8}" }, q: "sansI" },
+  { id: "f8", libelle: "ligne F8 régularisation ITC CN", aide: "Avoirs déclarés en F8, repris de l'état de déclaration TVA : A2 en K, E6 + EA en M, A0 + A1 + EG en N, 3X en O. Colonne G = contrôle de la case A3 (doit être à 0). Colonne R = total F8.", auto: { K: "rapport:F8:A2", M: "rapport:F8:E6+EA", N: "rapport:F8:A0+A1+EG", O: "rapport:F8:3X" }, formules: { G: "G{acqIntra}-G{l3b}", R: "K{f8}+M{f8}+N{f8}+O{f8}" }, actifSi: "l02", q: "sansI" },
   { id: "creances", libelle: "cpte 654 = créances irrécouvrables cpte 832210" },
   { id: "b5", libelle: "ligne B5 réintégration ITC CN déclaré ligne 21", aide: "Avoirs déclarés en B5, repris de l'état de déclaration TVA : A7 / 3O en C, A6 + E2 en E, 3F + 3I + 3A + 3B en I. Colonne R = E + I, comme dans le fichier (le contrôle B5 ajoute la colonne C).", auto: { C: "rapport:B5:A7+3O", E: "rapport:B5:A6+E2", I: "rapport:B5:3F+3I+3A+3B+3C" }, formules: { R: "E{b5}+I{b5}" } },
   { id: "deb", libelle: "DEB déclarée à part (PRI)", aide: "Livraisons intracommunautaires déclarées à part (DEB), en M : montant à saisir, il ne figure dans aucun export SAP." },
@@ -178,11 +180,10 @@ export function calculerGrille(m, regles = {}, comptes = null) {
   };
   const rf = m?.rfumsv ? basesNettes(m.rfumsv.lignes.filter((l) => l.trs !== "MWS" && l.trs !== "VST")) : {};
   const rfVentes = m?.rfumsv ? basesNettes(m.rfumsv.lignes.filter((l) => l.trs === "MWS")) : {};
-  // « rapport:B5:A6+E2 », « rfumsv:3A+3B+3C », « achat:3I », « ca3:A3 » → { valeur, detail, origine }.
+  // « rapport:B5:A6+E2 », « rfumsv:3A+3B+3C », « achat:3I », « vente:3O » → { valeur, detail, origine }.
   const sourceAuto = (def) => {
     if (!def) return null;
     const [type, a, b] = def.split(":");
-    if (type === "ca3") return a in ca3 ? { valeur: ca3[a], detail: [], origine: "CA3 déposée" } : null;
     // Code de vente absent des FBL3N : RFUMSV00 (ventes, MWS), sinon état de déclaration (9B, A1).
     if (type === "vente") {
       if (v.codesFbl.includes(a)) return null;
@@ -230,6 +231,11 @@ export function calculerGrille(m, regles = {}, comptes = null) {
   // Cellules calculées des lignes spéciales (formules du client), dans l'ordre des lignes.
   for (const sp of SPECIALES) {
     for (const [lettre, f] of Object.entries(sp.formules || {})) {
+      // Contrôle de la case A3 (colonne G) : rien tant que G de « LIGNE 02 + 02A » est vide.
+      if (lettre === "G" && sp.actifSi && Math.abs(parId[sp.actifSi].cells.G.valeur || 0) < 0.005) {
+        parId[sp.id].cells[lettre] = { valeur: 0, calcule: true, formule: f, inactif: true, note: notes[`s:${sp.id}`]?.[lettre] || null };
+        continue;
+      }
       const valeur = f.split(/(?=[+-])/).reduce((s, terme) => {
         const m2 = terme.match(/^([+-]?)([A-R])\{(\w+)\}$/);
         const x = m2 ? parId[m2[3]].cells[m2[2]]?.valeur || 0 : 0;

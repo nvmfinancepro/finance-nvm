@@ -44,7 +44,7 @@ const DOCUMENTS = [
   { type: "fbl3n", titre: "FBL3N avec le code TVA (un ou plusieurs fichiers)", niveau: "requis", aide: "Postes des comptes par code TVA (colonne Tx), résumés par compte. Plusieurs fichiers se complètent (3F, 3I, Z3 et Z4…) ; un code déjà reçu dans un autre fichier est remplacé par le plus récent." },
   { type: "rfumsv", titre: "RFUMSV00 (bases par code TVA)", niveau: "conseillé", aide: "État SAP « Tax on sales/purchases » du mois (photo 6) : remplit la colonne I de « LIGNE 02 + 02A » (3A + 3B + 3C, section ESA) et place sur son compte un code de vente absent du FBL3N (le 3O à 10 %)." },
   { type: "rapport", titre: "État de déclaration TVA (par case)", niveau: "conseillé", aide: "Montants par case de la CA3, code TVA, facture ou avoir (photo 7) : remplit les lignes « ligne B5 », « ligne F8 » et « prestataires non établis ligne 3B » avec le détail par code." },
-  { type: "ca3", titre: "Déclaration CA3 déposée (PDF)", niveau: "contrôle", aide: "La « Synthèse de la déclaration » téléchargée sur impots.gouv.fr : sert au contrôle sous le tableau et remplit la case A3 (colonne G de « LIGNE 02 + 02A »). Plusieurs CA3 peuvent être déposées d'un coup : chacune va dans son mois, lu dans le PDF." },
+  { type: "ca3", titre: "Déclaration CA3 déposée (PDF)", niveau: "contrôle", aide: "La « Synthèse de la déclaration » téléchargée sur impots.gouv.fr : elle ne remplit pas le tableau, elle sert uniquement au contrôle (lignes « CA3 déposée » et « Écart » sous le total, tableau « Contrôle avec la CA3 »). Plusieurs CA3 peuvent être déposées d'un coup : chacune va dans son mois, lu dans le PDF." },
 ];
 const ETAT_MOIS = {
   vide: { color: C.borderLight, label: "aucun fichier" },

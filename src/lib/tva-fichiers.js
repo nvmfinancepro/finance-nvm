@@ -146,6 +146,7 @@ function ongletMois(cle, m, regles, comptes, societe, exp) {
     poser(ws, `A${r}`, sp.libelle);
     for (const lettre of BASES) if (!sp.formules?.[lettre]) base(l, lettre, r);
     for (const [lettre, f] of Object.entries(sp.formules || {})) {
+      if (l.cells[lettre]?.inactif) continue; // contrôle A3 sans montant en G de LIGNE 02 : case vide
       const formule = f.replace(/\{(\w+)\}/g, (_, id) => rangDe[id]);
       poser(ws, `${lettre}${r}`, l.cells[lettre].valeur, { f: formule });
     }
